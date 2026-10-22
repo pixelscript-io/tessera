@@ -1,0 +1,39 @@
+{
+  "comments": { "blockComment": ["<!--", "-->"] },
+  "brackets": [
+    ["<!--", "-->"],
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+  ],
+  "autoClosingPairs": [
+    { "open": "{", "close": "}" },
+    { "open": "[", "close": "]" },
+    { "open": "(", "close": ")" },
+    { "open": "\"", "close": "\"", "notIn": ["comment"] },
+    { "open": "'", "close": "'", "notIn": ["string", "comment"] },
+    { "open": "`", "close": "`", "notIn": ["string", "comment"] },
+    { "open": "<!--", "close": "-->", "notIn": ["comment", "string"] }
+  ],
+  "surroundingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["\"", "\""],
+    ["'", "'"],
+    ["<", ">"]
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\s*<(contract|script|template|style|page)\b",
+      "end": "^\s*</(contract|script|template|style|page)>"
+    }
+  },
+  "onEnterRules": [
+    {
+      "beforeText": "<(?!(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr|slot)\b)([A-Za-z][\w.:-]*)(?:\s[^>]*)?>[^<]*$",
+      "afterText": "^</([A-Za-z][\w.:-]*)\s*>",
+      "action": { "indent": "indentOutdent" }
+    }
+  ]
+}

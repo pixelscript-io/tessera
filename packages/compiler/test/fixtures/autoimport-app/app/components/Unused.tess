@@ -1,0 +1,7 @@
+<contract>
+{ "name": "Unused", "role": "group", "parts": ["root"] }
+</contract>
+
+<template>
+  <div class="root">UNUSED_MARKER_8f3a</div>
+</template>

@@ -1,0 +1,49 @@
+<contract>
+{
+  "name": "Link",
+  "role": "link",
+  "description": "Goes to another page of the app. A real link underneath, so it can be opened in a new tab and read by assistive technology.",
+  "since": "0.1.0",
+  "parts": ["root"],
+  "variants": {},
+  "states": ["hover", "focus-visible"],
+  "slots": {
+    "default": "link text"
+  }
+}
+</contract>
+
+<script>
+import { shouldHandleClick } from '@tessera/router'
+
+const { to } = props({ to: '/' })
+const route = useRoute()
+const current = derived(() => route.path === to.value.split(/[?#]/)[0])
+
+function go(event) {
+  if (!shouldHandleClick(event)) return
+  event.preventDefault()
+  navigate(to.value)
+}
+</script>
+
+<template>
+  <a class="root" :href="to" :aria-current="current ? 'page' : undefined" @click="go"><slot /></a>
+</template>
+
+<style>
+.root {
+  color: $color.action.primary.text;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+}
+</style>

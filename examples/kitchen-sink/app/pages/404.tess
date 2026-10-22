@@ -1,0 +1,11 @@
+<page>
+{ "title": "Page not found" }
+</page>
+
+<template>
+  <main>
+    <h1>Page not found</h1>
+    <p>There is nothing at this address.</p>
+    <Link to="/">Back to the home page</Link>
+  </main>
+</template>

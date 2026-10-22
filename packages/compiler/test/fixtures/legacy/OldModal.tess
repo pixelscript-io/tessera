@@ -1,0 +1,16 @@
+<template>
+  <div class="modal"><h1 class="title">Old modal</h1></div>
+</template>
+
+<style>
+.modal {
+  padding: 13px;
+  background: #fafafa;
+  border-radius: 5px;
+  color: $color.nothing.here;
+}
+.title {
+  font-size: 19px;
+  margin: 7px;
+}
+</style>

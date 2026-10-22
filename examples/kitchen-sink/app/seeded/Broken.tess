@@ -1,0 +1,24 @@
+<!--
+  Seeded violations for exercising editor diagnostics and `tessera check`.
+  This file is never imported by the app.
+-->
+<contract>
+{ "name": "Broken", "role": "group", "parts": ["root"] }
+</contract>
+
+<script>
+import Counter from '../components/Counter.tess'
+</script>
+
+<template>
+  <div class="root">
+    <Counter tone="primry" />
+  </div>
+</template>
+
+<style>
+.root {
+  padding: $space.9;
+  background: $color.surface.defalt;
+}
+</style>

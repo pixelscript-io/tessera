@@ -1,0 +1,12 @@
+node_modules
+dist
+.tessera
+website/content/.vitepress/cache
+website/content/.vitepress/dist
+website/content/reference/errors
+website/content/reference/api
+website/content/reference/cli.md
+website/content/reference/config.md
+website/content/reference/contract.md
+website/content/reference/tokens.md
+website/content/.vitepress/theme/tokens.css

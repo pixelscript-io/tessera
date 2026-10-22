@@ -1,0 +1,11 @@
+{
+  "name": "system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@tessera/a11y": "workspace:*",
+    "@tessera/behavior": "workspace:*",
+    "@tessera/core": "workspace:*"
+  }
+}

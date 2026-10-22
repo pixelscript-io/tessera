@@ -1,0 +1,35 @@
+{
+  "name": "@tessera/compiler",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@tessera/contract": "workspace:*",
+    "acorn": "^8.14.0",
+    "@tessera/tokens": "workspace:*",
+    "@tessera/behavior": "workspace:*",
+    "@tessera/router": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0 || ^7.0.0",
+    "@tessera/core": "workspace:*",
+    "@tessera/behavior": "workspace:*"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite": {
+      "types": "./src/vite.ts",
+      "default": "./dist/vite.js"
+    },
+    "./node": "./src/node.ts",
+    "./project": "./src/project-entry.ts"
+  },
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@tessera/core": "workspace:*"
+  }
+}

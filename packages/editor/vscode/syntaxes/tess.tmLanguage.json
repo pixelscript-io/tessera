@@ -1,0 +1,585 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Tessera",
+  "scopeName": "source.tess",
+  "fileTypes": ["tess"],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#contract-block"
+    },
+    {
+      "include": "#page-block"
+    },
+    {
+      "include": "#script-block"
+    },
+    {
+      "include": "#style-block"
+    },
+    {
+      "include": "#template-block"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.block.html",
+      "begin": "<!--",
+      "end": "-->",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.html"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.html"
+        }
+      }
+    },
+    "contract-block": {
+      "name": "meta.block.contract.tess",
+      "begin": "(<)(contract)(?=[\\s>])([^>]*)(>)",
+      "end": "(</)(contract)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#plain-attribute"
+            }
+          ]
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "contentName": "meta.embedded.block.contract",
+      "patterns": [
+        {
+          "include": "source.json.comments"
+        }
+      ]
+    },
+    "page-block": {
+      "name": "meta.block.page.tess",
+      "begin": "(<)(page)(?=[\\s>])([^>]*)(>)",
+      "end": "(</)(page)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#plain-attribute"
+            }
+          ]
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "contentName": "meta.embedded.block.page",
+      "patterns": [
+        {
+          "include": "source.json.comments"
+        }
+      ]
+    },
+    "script-block": {
+      "name": "meta.block.script.tess",
+      "begin": "(<)(script)(?=[\\s>])([^>]*)(>)",
+      "end": "(</)(script)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#plain-attribute"
+            }
+          ]
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "contentName": "meta.embedded.block.script",
+      "patterns": [
+        {
+          "include": "source.ts"
+        }
+      ]
+    },
+    "style-block": {
+      "name": "meta.block.style.tess",
+      "begin": "(<)(style)(?=[\\s>])([^>]*)(>)",
+      "end": "(</)(style)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#plain-attribute"
+            }
+          ]
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "contentName": "meta.embedded.block.style",
+      "patterns": [
+        {
+          "include": "#style-token"
+        },
+        {
+          "include": "#style-raw"
+        },
+        {
+          "include": "source.css"
+        }
+      ]
+    },
+    "style-token": {
+      "match": "\\$[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)+",
+      "name": "variable.other.token.tess"
+    },
+    "style-raw": {
+      "match": "\\b(raw)(?=\\()",
+      "name": "support.function.raw.tess"
+    },
+    "template-block": {
+      "name": "meta.block.template.tess",
+      "begin": "(<)(template)(?=[\\s>])([^>]*)(>)",
+      "end": "(</)(template)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#plain-attribute"
+            }
+          ]
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.block.tess"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "contentName": "meta.embedded.block.template",
+      "patterns": [
+        {
+          "include": "#template-content"
+        }
+      ]
+    },
+    "template-content": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#interpolation"
+        },
+        {
+          "include": "#closing-tag"
+        },
+        {
+          "include": "#component-tag"
+        },
+        {
+          "include": "#slot-tag"
+        },
+        {
+          "include": "#html-tag"
+        }
+      ]
+    },
+    "interpolation": {
+      "name": "meta.interpolation.tess",
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.interpolation.begin.tess"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.interpolation.end.tess"
+        }
+      },
+      "contentName": "meta.embedded.expression.tess",
+      "patterns": [
+        {
+          "include": "source.ts#expression"
+        }
+      ]
+    },
+    "closing-tag": {
+      "patterns": [
+        {
+          "match": "(</)(slot)(\\s*)(>)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.tess"
+            },
+            "2": {
+              "name": "entity.name.tag.slot.tess"
+            },
+            "4": {
+              "name": "punctuation.definition.tag.end.tess"
+            }
+          }
+        },
+        {
+          "match": "(</)([A-Z][\\w.:-]*)(\\s*)(>)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.tess"
+            },
+            "2": {
+              "name": "entity.name.tag.component.tess support.class.component.tess"
+            },
+            "4": {
+              "name": "punctuation.definition.tag.end.tess"
+            }
+          }
+        },
+        {
+          "match": "(</)([a-z][\\w.:-]*)(\\s*)(>)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.tess"
+            },
+            "2": {
+              "name": "entity.name.tag.html.tess"
+            },
+            "4": {
+              "name": "punctuation.definition.tag.end.tess"
+            }
+          }
+        }
+      ]
+    },
+    "component-tag": {
+      "name": "meta.tag.component.tess",
+      "begin": "(<)([A-Z][\\w.:-]*)",
+      "end": "(/?>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.component.tess support.class.component.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#attribute"
+        }
+      ]
+    },
+    "slot-tag": {
+      "name": "meta.tag.slot.tess",
+      "begin": "(<)(slot)(?![\\w.:-])",
+      "end": "(/?>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.slot.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#attribute"
+        }
+      ]
+    },
+    "html-tag": {
+      "name": "meta.tag.html.tess",
+      "begin": "(<)([a-z][\\w.:-]*)",
+      "end": "(/?>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.tess"
+        },
+        "2": {
+          "name": "entity.name.tag.html.tess"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.end.tess"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#attribute"
+        }
+      ]
+    },
+    "attribute": {
+      "patterns": [
+        {
+          "include": "#directive-attribute"
+        },
+        {
+          "include": "#control-attribute"
+        },
+        {
+          "include": "#plain-attribute"
+        }
+      ]
+    },
+    "directive-attribute": {
+      "comment": ":attr, @event and bind:prop attributes hold a JavaScript expression (or statements).",
+      "patterns": [
+        {
+          "begin": "(:|@|bind:)([\\w.-]+)\\s*(=)\\s*(\")",
+          "end": "\"",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.definition.directive.tess"
+            },
+            "2": {
+              "name": "entity.other.attribute-name.directive.tess"
+            },
+            "3": {
+              "name": "punctuation.separator.key-value.html"
+            },
+            "4": {
+              "name": "punctuation.definition.string.begin.html"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.html"
+            }
+          },
+          "contentName": "meta.embedded.expression.tess",
+          "patterns": [
+            {
+              "include": "source.ts#expression"
+            }
+          ]
+        },
+        {
+          "begin": "(:|@|bind:)([\\w.-]+)\\s*(=)\\s*(')",
+          "end": "'",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.definition.directive.tess"
+            },
+            "2": {
+              "name": "entity.other.attribute-name.directive.tess"
+            },
+            "3": {
+              "name": "punctuation.separator.key-value.html"
+            },
+            "4": {
+              "name": "punctuation.definition.string.begin.html"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.html"
+            }
+          },
+          "contentName": "meta.embedded.expression.tess",
+          "patterns": [
+            {
+              "include": "source.ts#expression"
+            }
+          ]
+        },
+        {
+          "match": "(:|@|bind:)([\\w.-]+)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.directive.tess"
+            },
+            "2": {
+              "name": "entity.other.attribute-name.directive.tess"
+            }
+          }
+        }
+      ]
+    },
+    "control-attribute": {
+      "comment": "if, else-if, else, each and key take an expression; slot takes a name.",
+      "patterns": [
+        {
+          "begin": "(?<![\\w:@.-])(if|else-if|each|key)\\s*(=)\\s*(\")",
+          "end": "\"",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.tess"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.html"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.html"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.html"
+            }
+          },
+          "contentName": "meta.embedded.expression.tess",
+          "patterns": [
+            {
+              "include": "source.ts#expression"
+            }
+          ]
+        },
+        {
+          "begin": "(?<![\\w:@.-])(if|else-if|each|key)\\s*(=)\\s*(')",
+          "end": "'",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.tess"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.html"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.html"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.html"
+            }
+          },
+          "contentName": "meta.embedded.expression.tess",
+          "patterns": [
+            {
+              "include": "source.ts#expression"
+            }
+          ]
+        },
+        {
+          "match": "(?<![\\w:@.-])(else)(?![\\w:@.-])",
+          "name": "keyword.control.directive.tess"
+        }
+      ]
+    },
+    "plain-attribute": {
+      "patterns": [
+        {
+          "match": "([A-Za-z_][\\w:.-]*)\\s*(=)\\s*(\"[^\"]*\"|'[^']*'|[^\\s\"'>]+)",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.html"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.html"
+            },
+            "3": {
+              "name": "string.quoted.html"
+            }
+          }
+        },
+        {
+          "match": "[A-Za-z_][\\w:.-]*",
+          "name": "entity.other.attribute-name.html"
+        }
+      ]
+    }
+  }
+}

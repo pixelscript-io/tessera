@@ -1,0 +1,13 @@
+# Guide: design systems
+
+The essentials guides show how to write components and pages. These pages are for the people who own a design system and use Tessera to enforce it.
+
+- [Token architecture](/guide/design-systems/token-architecture): primitive, semantic and component tokens, and why the tiers exist.
+- [Theming, density and multiple brands](/guide/design-systems/theming): themes as data attributes.
+- [Enforcement](/guide/design-systems/enforcement): errors, the baseline, exceptions and severity.
+- [Accessibility](/guide/design-systems/accessibility): what generated tests cover and what they do not.
+- [Designing contracts](/guide/design-systems/contracts): what belongs in a contract.
+- [Extending and ejecting](/guide/design-systems/extending): wrapping, `tessera eject` and `forkedFrom`.
+- [Versioning and deprecation](/guide/design-systems/versioning): `since`, `deprecated` and `renamedFrom`.
+
+Some parts of the design-systems story are not built yet: the generated docs app for your own system, agent exports and the MCP server, Figma and Penpot interchange, and codemods for renames. They are listed on [the roadmap](/releases/roadmap) so you can see what to expect and what not to rely on.

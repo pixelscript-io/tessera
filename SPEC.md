@@ -1,0 +1,942 @@
+# Tessera — Design-System-First Frontend Framework
+
+**Working name:** Tessera (rename freely; it is only used in package names and file extensions below).
+**Status:** Spec v0.2 (hardened after user-feedback research on 2026-10-22; see section 17). Intended to be handed to Claude Code and built milestone by milestone.
+
+> The code snippets in this document illustrate _syntax and behavior_. They are not an implementation. Where a snippet and the prose disagree, the prose wins; flag the conflict instead of guessing.
+
+---
+
+## 0. How to use this document
+
+1. After each milestone: run the full test suite, commit, and update the "Decisions log" (section 16) with anything that deviated from this spec.
+2. The evidence behind the v0.2 hardening decisions is in the research report ("Design system tooling user feedback"). Keep it in the repo (for example `docs/research.md`) and consult it before reversing any decision in section 17.
+
+---
+
+## 1. Vision
+
+Most frameworks make the _component_ the core abstraction and treat the design system as something bolted on afterward (tokens in a separate tool, accessibility in a library, docs in Storybook, enforcement in a linter nobody runs).
+
+Tessera makes the **design system the core abstraction**. A component is a small file that declares a _contract_ (anatomy, variants, states, accessibility), a _template_, and _token-constrained styles_. The compiler enforces the system, so drifting from it is a build error rather than a code review comment.
+
+### One-sentence pitch
+
+A Vue/Svelte-simple framework where tokens, accessibility, variants, docs, and versioning are built in and enforced at compile time.
+
+---
+
+## 2. Principles
+
+1. **Simple first.** Authoring should feel as light as Vue or Svelte single-file components. If a feature needs a paragraph of explanation to use, simplify it or cut it.
+2. **No JSX.** Templates are HTML-like. No `className`, no expression-soup in return statements.
+3. **The system is enforced, not suggested.** Off-scale values, unknown tokens, missing a11y roles, and undeclared variants fail the build with a clear message.
+4. **One source of truth.** Types, docs, the playground, accessibility tests, and changelogs are all derived from the contract. Nothing is maintained twice.
+5. **Standards over invention.** Use CSS custom properties, `@layer`, `data-*` attributes, ARIA, and the W3C DTCG token format. No proprietary formats where a standard exists.
+6. **Small core, swappable renderer.** The reactivity and rendering layer is deliberately minimal and sits behind an adapter interface so it can be replaced later without touching the design-system layer.
+7. **Great errors.** Every compiler error names the file, line, what was wrong, and the closest valid alternative ("Did you mean `$space.4`?"), plus an autofix when the repair is unambiguous.
+8. **Convention over configuration.** File location carries meaning: components in the components folders auto-register, and files in `pages/` become routes. No registration code, no route tables.
+9. **Strict, but accountable.** Hard errors are only tolerable when there is a way in (a baseline for existing code), a way to fix (a suggested repair), and a visible way out (exceptions that are reasoned, counted, and can expire). Enforcement that arrives as an unfixable wall gets routed around.
+
+## 3. Non-goals (v0.x)
+
+- Competing with React/Vue/Svelte on renderer performance or ecosystem.
+- SSR, hydration, streaming, and islands (design for them; do not build them).
+- A full-stack or backend framework. This is frontend only.
+- Native mobile targets.
+- A visual editor or Figma plugin (tokens import/export via files only).
+- A global store or data-fetching layer in v0.1 (see "Later" in section 15). Basic file-based routing (6.7) and single-level layouts (6.8) are in scope; nested routes, guards, and data loaders are not.
+
+---
+
+## 4. Tech constraints
+
+- **Language:** TypeScript (strict) for all packages.
+- **Package manager:** pnpm workspaces.
+- **Build/dev:** Vite (the compiler ships as a Vite plugin). Library builds with tsup or Vite library mode.
+- **Tests:** Vitest for unit and compiler tests; Playwright (or Vitest browser mode) for DOM and a11y tests, with axe-core as the engine behind generated accessibility tests.
+- **Runtime dependencies:** zero in `@tessera/core` and `@tessera/router`. Compiler and CLI may use well-known parsing libraries (e.g. `parse5` or `htmlparser2`, `postcss`, `jsonc-parser`) but each must be justified in the Decisions log.
+- **Output:** ESM only. Modern evergreen browsers only.
+- **Style output:** plain CSS using custom properties and `@layer`. No CSS-in-JS at runtime.
+- **Browser-safe compiler core:** `@tessera/compiler`'s parse, validate, and generate steps do not touch the filesystem or Node-only APIs directly (file access is injected). Only the Vite plugin and CLI wrap it with Node. This lets a future docs playground compile `.tess` in the browser and lets the editor language service reuse it.
+
+---
+
+## 5. Repository layout
+
+```
+tessera/
+  SPEC.md
+  CLAUDE.md
+  pnpm-workspace.yaml
+  packages/
+    core/          # signals runtime + renderer + renderer adapter interface
+    tokens/        # DTCG parsing, resolution, theming, CSS + type output, DTCG import/export
+    contract/      # contract schema, validation, derived artifacts
+    behavior/      # headless interaction primitives (press, toggle, ...)
+    compiler/      # SFC parser, validators, codegen, auto-import registry, Vite plugin
+    router/        # file-based routing runtime (History API), <Link>, navigate, useRoute
+    agent/         # manifest generator, read-only MCP server, AGENTS.md/llms.txt output (10.1)
+    editor/        # TextMate grammar, VS Code extension, language service (11.1)
+    cli/           # `tessera` command
+    docs/          # design system docs app: generated playground + docs (14.1)
+    create-tessera/  # `pnpm create tessera` entry point (calls `tessera init`)
+  website/         # framework documentation site (14.2): Markdown content, snippets, playground
+  examples/
+    kitchen-sink/  # real app (own app/pages, app/components) used to dogfood every milestone
+  system/          # the design system itself (dogfooded)
+    tokens/        # *.tokens.json (DTCG)
+    components/    # *.tess files
+```
+
+---
+
+## 6. Authoring model: components, pages, and auto-imports
+
+A component is one file with up to four blocks, in any order: `<contract>`, `<script>`, `<template>`, `<style>`. Pages use the same format with an optional `<page>` block instead of `<contract>` (see 6.7).
+
+### 6.1 Illustrative example: Button
+
+```html
+<contract>
+  { "name": "Button", "role": "button", "parts": ["root", "icon", "label"], "variants": { "tone":
+  ["primary", "neutral", "danger"], // first value is the default "size": ["sm", "md", "lg"],
+  "emphasis": ["solid", "outline", "ghost"] }, "states": ["hover", "focus-visible", "pressed",
+  "disabled"], "behavior": "press", "slots": { "default": "label content", "icon": "optional leading
+  icon" }, "events": { "press": "fired on click, Enter, or Space" } }
+</contract>
+
+<script>
+  const { disabled } = props({ disabled: false })
+</script>
+
+<template>
+  <button class="root" :disabled="disabled" @press="emit('press')">
+    <span class="icon"><slot name="icon" /></span>
+    <span class="label"><slot /></span>
+  </button>
+</template>
+
+<style>
+  .root {
+    background: $color.action.primary.bg;
+    color: $color.action.primary.fg;
+    padding: $space.2 $space.4;
+    border-radius: $radius.md;
+    font: $type.label.md;
+
+    &[data-tone='danger'] {
+      background: $color.action.danger.bg;
+    }
+    &[data-emphasis='ghost'] {
+      background: transparent;
+    }
+    &:hover {
+      background: $color.action.primary.bg-hover;
+    }
+    &:disabled {
+      opacity: $opacity.disabled;
+    }
+  }
+</style>
+```
+
+### 6.2 Block rules
+
+**`<contract>`** (JSON, with `//` comments allowed, i.e. JSONC)
+
+- Required for every component in `system/components/` and `app/components/`. A component without a valid contract is a compile error. Pages and layouts do not have contracts.
+- Config option `contracts: { app: 'required' | 'optional' }` (default `required`) relaxes this for `app/components/` only; `system/components/` always requires contracts. An `optional` component without a contract is registered by its filename, is not documented or a11y-tested, and is counted in the contract-coverage number in `tessera report`.
+- A JSON Schema for contracts is published so editors give autocomplete and inline errors.
+- Fields: `name` (PascalCase, must match filename), `role` (a valid ARIA role or native element role), `parts`, `variants`, `states`, `behavior`, `slots`, `events`, `description` (optional), `contrast` (optional, declared foreground/background pairings across parts; see 8.4), `since` / `deprecated` / `renamedFrom` (optional, used by versioning), `forkedFrom` (set by `tessera eject`, see 6.6).
+- Variants: each variant is a named set of allowed values; the first is the default. Variants become typed props automatically. Authors do not redeclare them in `<script>`.
+- `parts` is the anatomy: the public, documented class names of the component. Every listed part must appear as a `class` in the template, and the component's root element must carry the part named `root`.
+- Classes in the template that are **not** listed as parts are allowed. They are private helpers: scoped to the component, not documented, and not meant to be overridden by consumers.
+
+**`<script>`** (TypeScript)
+
+- Optional. Runs once per component instance.
+- Available without import: `props()`, `state()`, `derived()`, `effect()`, `emit()`, `onMount()`, `onCleanup()`. (Explicit imports from `@tessera/core` are also allowed.)
+- Reactive values are signals. In `<script>` read/write with `.value`; in `<template>` a top-level binding is used bare and auto-unwrapped.
+- **Unwrapping is top-level only.** It applies to top-level bindings (`count`, `label`, destructured props). A signal stored inside an object, array, or class is not unwrapped. When the compiler can detect this it is an error (`Signal "user.name" is nested inside an object and will not unwrap in the template. Destructure it to a top-level binding or read .value.`); otherwise it is a dev-mode warning. This is the exact papercut Vue's documentation lists for nested refs.
+- `props()` returns an object whose properties are read-only signals: the contract's variant props plus any extra props. Defaults are passed as `props({ disabled: false })`. Destructuring only copies signal references, so reactivity is never lost, and there is no compiler magic on destructuring (a lesson from Vue's dropped Reactivity Transform).
+
+```html
+<script>
+  const { disabled } = props({ disabled: false })
+  const count = state(0)
+  const label = derived(() => `Clicked ${count.value} times`)
+  function inc() {
+    count.value++
+  }
+</script>
+```
+
+**`<template>`** (HTML-like)
+
+- Plain HTML plus the directives in 6.3. No JSX. No arbitrary JS statements, only expressions.
+- Exactly one root element in v0.1. "Root" means the single outermost element of the template (e.g. the `<button>` in Button). It is where variant `data-*` attributes, extra `class` values, and ARIA attributes land. Two sibling elements at the top level (e.g. an `<h2>` and a `<p>` side by side) are a compile error with a message suggesting a wrapper element. Revisit after the first components are built.
+
+**`<style>`** (CSS with token references)
+
+- Styles are written with **normal CSS classes** (`.root`, `.icon`, `.label`). The compiler scopes every class to the component by rewriting it to a deterministic, readable name such as `.t-Button__root` (not hashed, so consumers can override public parts predictably and devtools stay legible).
+- Variants are exposed on the root element as `data-*` attributes (e.g. `data-tone="danger"`) and targeted with attribute selectors via nesting; states use pseudo-classes or `[data-state="..."]` (the compiler maps declared states).
+- Values must use `$token.path` references (see section 8) or be explicitly escaped (section 8.4).
+- Nesting is allowed (`&`), plain CSS nesting syntax.
+
+### 6.3 Template syntax
+
+Keep it minimal and obvious:
+
+| Feature            | Syntax                                              | Notes                                                                                                          |
+| ------------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Text interpolation | `{expr}`                                            | Escaped by default                                                                                             |
+| Attribute binding  | `:attr="expr"`                                      | Boolean attrs follow HTML rules                                                                                |
+| Event handler      | `@event="handler"` or `@event="expr"`               | Includes behavior events like `@press`                                                                         |
+| Two-way binding    | `bind:value="signal"`                               | Form inputs only in v0.1                                                                                       |
+| Conditional        | `if="expr"`, `else-if="expr"`, `else`               | Attribute on the element                                                                                       |
+| List               | `each="item in items" key="item.id"`                | `key` required                                                                                                 |
+| Slot               | `<slot />`, `<slot name="icon" />`                  | Slots must be declared in the contract                                                                         |
+| Class / part       | `class="name"`                                      | A class matching a name in the contract's `parts` is a public part; other classes are private to the component |
+| Component use      | `<Button tone="danger" @press="save">Save</Button>` | Components auto-imported from the system                                                                       |
+
+Not in v0.1: dynamic components, portals, transitions (design the grammar so they can be added without breaking the above).
+
+### 6.4 Using components
+
+Components are auto-imported across the whole app (see 6.6): pages, layouts, and other components use them by tag name with no import lines. Variant attributes are statically checked against the contract:
+
+```html
+<button tone="dangr">Delete</button>
+<!-- ERROR page.tess:3:9  Button.tone has no value "dangr". Did you mean "danger"? -->
+```
+
+### 6.5 Project structure
+
+```
+my-app/
+  index.html
+  tessera.config.ts
+  app/
+    main.ts              # createApp().mount('#app')
+    pages/               # every .tess file here becomes a route
+      index.tess         # "/"
+      about.tess         # "/about"
+      blog/
+        index.tess       # "/blog"
+        [slug].tess      # "/blog/:slug"
+      404.tess           # shown when no route matches
+    components/          # app-specific components (auto-imported)
+    layouts/             # reserved for later (see 6.8)
+  system/
+    tokens/              # *.tokens.json (DTCG)
+    components/          # design system components (auto-imported)
+```
+
+- Directory names are defaults, overridable in `tessera.config.ts`.
+- `app/main.ts` is the only boilerplate. It is a two-line illustration (`createApp()` then `.mount('#app')`); `createApp()` wires up the generated routes automatically.
+- Token enforcement (8.4) applies to `<style>` blocks in **every** `.tess` file, pages included.
+
+### 6.6 Auto-imports
+
+Nothing in a `.tess` file needs an import line for framework APIs or for components.
+
+**Components**
+
+- Every `.tess` file in `system/components/**` and `app/components/**` is registered under its contract `name` (PascalCase, must match the filename).
+- Subfolders are organizational only. Names are globally unique across both folders. A duplicate name, including an app component that reuses a system component's name, is an error that names both files. No shadowing in v0.1.
+- Resolution happens **at compile time**. The compiler finds component tags in each template, looks them up in the registry, and emits real imports only for components that file actually uses. Result: tree-shaking and per-page code splitting work normally, and there is no runtime registry or global registration.
+- Consequence: no dynamic component lookup (e.g. choosing a tag name from a variable) in v0.1. This is consistent with the non-goals in section 6.3.
+- An unknown tag is an error with a suggestion: `Unknown component <Buton>. Did you mean <Button>?`
+- An explicit `import` of a `.tess` file is still allowed and takes precedence, but is never required.
+- Config: `autoImports: true` (default) or `false` to require explicit imports everywhere (components stay registered for docs and the manifest). Explicit paths always exist, e.g. `import { state } from '@tessera/core'` and `import { useRoute } from '@tessera/router'`.
+
+**Script APIs**
+
+- Available without import in `<script>`: `props`, `state`, `derived`, `effect`, `emit`, `onMount`, `onCleanup`, plus `navigate` and `useRoute` (6.7).
+- Auto-imports apply **only inside `.tess` files**. Using an auto-imported name in a plain `.ts` file is an error that names the import to add: `Unresolved identifier "useRoute" in app/utils/nav.ts. Auto-imports only apply inside .tess files; import it from "@tessera/router".` (Nuxt documents a failure where an auto-imported helper is undefined in code that runs before resolution. Compile-time resolution avoids most of that, and this error covers the rest.)
+
+**Built-in components**
+
+- The router ships `<Link>`. It is a normal component with its own contract (native `<a>` underneath), so it appears in the docs and gets the generated a11y tests like any other.
+
+**Extending and ejecting**
+
+- To customize a system component, wrap it: an app component can use `<Button tone="danger">` inside its own template and add behavior or layout around it. This keeps one source of truth and upgrades for free.
+- To own a component outright, run `tessera eject Button FancyButton`. It copies the `.tess` file and contract into `app/components/` under the new name, records `forkedFrom` (component and version) in the contract, and `tessera diff` later reports when upstream has changed. Ownership is the praised part of copy-paste libraries such as shadcn/ui, and the cost is silent drift; recording `forkedFrom` is how Tessera keeps that drift visible.
+
+**Tooling**
+
+- The compiler generates `.tessera/components.d.ts` and `.tessera/routes.d.ts` (gitignored) so editors know every component tag, its props, and every valid route path.
+- Adding, removing, or renaming a component file updates the registry through HMR with no dev-server restart.
+
+### 6.7 Pages and routing
+
+Any `.tess` file under `app/pages/` becomes a route. The path comes from the file path.
+
+| File                     | Route                         |
+| ------------------------ | ----------------------------- |
+| `pages/index.tess`       | `/` (the default page)        |
+| `pages/about.tess`       | `/about`                      |
+| `pages/blog/index.tess`  | `/blog`                       |
+| `pages/blog/[slug].tess` | `/blog/:slug`                 |
+| `pages/404.tess`         | fallback when nothing matches |
+
+Rules:
+
+- `index.tess` is the default for its folder. `pages/index.tess` is the app's home page.
+- Two files that resolve to the same route (e.g. `blog.tess` and `blog/index.tess`) are an error.
+- Dynamic segments use `[name]`. Catch-all `[...rest]` is deferred.
+- If there is no `404.tess`, the router renders a minimal built-in not-found view.
+
+**What a page is**
+
+- A normal `.tess` file with `<script>`, `<template>`, and `<style>` blocks, the single-root rule from 6.2, and all auto-imports from 6.6.
+- **No `<contract>`.** Pages are not part of the design system, so they have no variants/parts/a11y contract. They still can't use off-scale values (token enforcement applies).
+- An optional `<page>` block (JSON/JSONC) holds page metadata. v0.1 fields: `title` (used for `document.title` and the route announcement) and `layout` (reserved, see 6.8).
+
+```html
+<page>
+{ "title": "Blog post" }
+</page>
+
+<script>
+const route = useRoute()          // reactive: route.path, route.params, route.query
+const slug = derived(() => route.params.slug)
+</script>
+
+<template>
+  <article>
+    <h1>{slug}</h1>
+    <Link to="/blog">Back to all posts</Link>
+  </article>
+</template>
+```
+
+**Navigation**
+
+- `<Link to="/about">About</Link>` for in-app links. `to` is type-checked against the generated route list; an unknown literal path is a compile error (dynamic `to` expressions are not checked).
+- `navigate('/about')` for programmatic navigation. Normal `<a href>` works for external links.
+
+**Router behavior (v0.1)**
+
+- Client-side only, History API (no hash mode). The dev server serves `index.html` for all paths.
+- Each page is a separate lazy-loaded chunk.
+- On navigation: scroll to top (restore on back/forward), update `document.title` from `<page>.title`, announce the new page to assistive tech (a polite live region), and move focus to the page's root element.
+- The route manifest is a virtual module (`virtual:tessera/routes`) built from `app/pages/`. Adding, removing, or renaming a page updates it through HMR.
+
+**Not in v0.1:** nested routes, route guards/middleware, data loaders, prefetching, hash mode, SSR, i18n routing, typed query params.
+
+### 6.8 Layouts (reserved now, built in Milestone 10)
+
+Layouts are built in Milestone 10, immediately after pages and routing, because shared layouts are a headline feature of the file-based routers developers compare against. Until then, the spec does the following to avoid painting into a corner:
+
+- Reserve the `app/layouts/` folder and the `layout` field in `<page>`.
+- If a page sets `layout`, the compiler fails with a clear "layouts are not supported yet" error instead of silently ignoring it.
+- Without layouts, a page renders directly into the app mount point.
+
+Intended shape (non-binding, to be designed in its own milestone):
+
+- A layout is a `.tess` file in `app/layouts/` with a default `<slot />` where the page renders.
+- A `default.tess` layout applies to every page automatically; a page can opt into another with `layout` or opt out.
+- Layouts use the same auto-imports and token enforcement as everything else.
+- Nested layouts are out of scope for the first layout milestone.
+
+---
+
+## 7. Runtime (`@tessera/core`)
+
+Minimal and boring on purpose.
+
+### 7.1 Reactivity
+
+- Fine-grained signals: `state`, `derived` (lazy, memoized), `effect`.
+- Batched updates (microtask flush). Glitch-free derived values.
+- `derived()` must be pure. Assigning a signal or calling `emit` inside a `derived()` callback is a compile warning that points to `effect()` instead (side effects inside derived values were the most common mistake reported in Svelte 5 migrations).
+- Cleanup via `onCleanup` and automatic disposal when a component unmounts.
+
+### 7.2 Rendering
+
+- **No virtual DOM.** The compiler turns each template into a function that creates DOM nodes once and wires effects to the specific nodes/attributes that depend on signals.
+- Keyed list reconciliation for `each`.
+- Slots implemented by passing child render functions.
+
+### 7.3 Renderer adapter (important boundary)
+
+Define a small interface (`RendererAdapter`) covering: create element, set attribute/property, set text, insert/remove/move node, add/remove listener. The design-system layer (tokens, contracts, behaviors) must only talk to the DOM through this interface or through generated code, so the renderer can be replaced later (e.g. with a different engine) without rewriting everything above it.
+
+---
+
+## 8. Tokens (`@tessera/tokens`)
+
+### 8.1 Format
+
+- Authoring format is **W3C DTCG** JSON (`*.tokens.json`), with `$type`, `$value`, `$description`, and aliases using `{group.token}` syntax.
+- Three tiers by convention, enforced by lint rules:
+  1. **Primitive:** raw scales (`color.blue.500`, `space.4`).
+  2. **Semantic:** purpose (`color.action.primary.bg`). Aliases to primitives.
+  3. **Component (optional):** component-specific overrides. Aliases to semantic tokens.
+- Components may only reference **semantic or component** tokens by default. Referencing a primitive from `<style>` is a warning (configurable to error).
+
+### 8.2 Output
+
+- CSS custom properties, emitted inside `@layer tessera.tokens`. Names: `--t-color-action-primary-bg`.
+- A generated `tokens.d.ts` giving typed token paths (powers editor autocomplete and compiler errors).
+- A JSON manifest of all tokens (powers docs and the `diff` command).
+
+### 8.3 Theming
+
+- A theme is a set of token overrides scoped to a selector, e.g. `[data-theme="dark"]`, `[data-density="compact"]`, `[data-brand="acme"]`.
+- Themes live in `system/tokens/themes/*.tokens.json` and declare `$extends` for the base.
+- Themes **only override values**; they cannot add new token names (prevents themes from diverging structurally). Violations are build errors.
+- Runtime API: `setTheme(name)`, `setDensity(name)`, `getTheme()`. These only change a `data-*` attribute on a root element. No re-render.
+- Respect `prefers-color-scheme` and `prefers-reduced-motion` via an opt-in `auto` theme mode.
+
+### 8.4 Enforcement rules (the headline feature)
+
+In `<style>` blocks the compiler checks every declaration value:
+
+| Situation                                                                                                            | Result                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `$token.path` that exists                                                                                            | OK                                                                                                                            |
+| `$token.path` that doesn't exist                                                                                     | **Error** with nearest-match suggestion                                                                                       |
+| Raw color literal (`#fff`, `rgb()`, named colors)                                                                    | **Error**, with the closest token suggested                                                                                   |
+| Raw length (`13px`) in a token-governed property (padding, margin, gap, radius, font-size, etc.)                     | **Error**, with the nearest scale step suggested (and an autofix when unambiguous)                                            |
+| Raw value in a non-governed property (`display`, `position`, `z-index` if not tokenized, etc.)                       | OK                                                                                                                            |
+| `raw(value, "reason"[, "YYYY-MM-DD"])` escape hatch, e.g. `padding: raw(13px, "legacy modal spacing", "2027-03-01")` | Allowed only with a reason; emits a warning, is counted in `tessera report`, and becomes an error after its expiry date (8.5) |
+| `0`, `auto`, `100%`, `inherit`, `currentColor` and other keywords                                                    | OK                                                                                                                            |
+
+- The list of governed properties and which token `$type` each accepts (e.g. `padding` accepts `dimension` tokens from the `space` group) lives in a single config file, `tessera.config.ts`, with sensible defaults.
+- Contrast check: when a part sets both `color` and `background` via tokens, the compiler computes WCAG contrast for each theme and mode and fails the build below a configurable threshold (default AA). Text is often in a child part of the one that sets the background, so the contract can declare pairings across parts (`"contrast": [{ "foreground": "label", "background": "root" }]`), which are checked the same way. Contrast can only be verified where the pairing is explicit; pairs the compiler cannot see are listed in the docs as unchecked.
+
+### 8.5 Accountable enforcement: baselines, severity, exceptions, and fixes
+
+Research basis: teams reject hard errors that arrive as an unfixable wall, and they game metrics that count imports. Hard errors work when there is a way in for existing code, a repair suggestion, and exceptions that are visible, counted, and can expire.
+
+**Baseline (adopting Tessera in an existing codebase)**
+
+- `tessera baseline` writes `tessera.baseline.json`, a committed file recording per-file, per-rule violation counts for existing code. With a baseline present, `check` and builds fail only on violations beyond the recorded counts, and counts can only go down. `tessera baseline --prune` removes entries that no longer apply. Remaining baseline debt is listed in `tessera report`.
+- Applies to the token rules (8.4) and contrast. Contract validity errors are never baselined.
+
+**Severity per path**
+
+- `tessera.config.ts` sets severity per rule and per glob: `error` (default), `warn`, or `off`. Setting `warn` or `off` for a path requires a `reason` and may set `expires` (ISO date); after expiry the severity reverts to `error`. Example: `error` for `system/` and new code, `warn` for `app/legacy/**` until a date.
+- This is also the supported way to leave the system for one component or folder: an explicit, reasoned, expiring exemption rather than a silent override.
+
+**`raw()` with receipts**
+
+- A reason is required; a missing reason is an error. An optional third argument is an expiry date; past it, the use is an error. Every use is listed in `tessera report` with file, line, reason, and expiry.
+
+**Repair suggestions and autofix**
+
+- Every violation names the closest valid alternative: unknown tokens (typo distance), raw colors (nearest token by perceptual distance), raw lengths (nearest scale step).
+- `tessera check --fix` applies only unambiguous fixes (an exact value match to one token, or a typo with one candidate) and never silently changes a visual result: if a suggested replacement resolves to a different value, it is suggested but not applied. Every autofix has a test.
+
+**Reporting**
+
+- `tessera report` prints a summary and emits JSON: tokenized-versus-raw declaration ratio per directory, `raw()` uses, severity exemptions with expiry, remaining baseline debt, contract coverage (including `optional` components), generated a11y test status, and usage of deprecated items. Adoption is measured from what styles actually contain, not from import counts, which are easy to inflate.
+
+### 8.6 Interchange (DTCG)
+
+- `tessera tokens import <file>` and `tessera tokens export` read and write strict DTCG 2025.10 (Format and Color modules). Note it is a Final Community Group Report, not a W3C Standard. Unsupported extensions are preserved under `$extensions` and reported.
+- Adapters are included for the Tokens Studio format (which is also what Penpot exports, rather than strict DTCG) because neither source is guaranteed to emit strict DTCG.
+- Documented Figma mapping: collections become groups, modes become themes, aliases are preserved (never flattened), units are explicit. Fixtures cover known export quirks.
+- No Figma plugin in v0.x. Before documenting an API route, verify what plan Figma currently requires for its Variables REST API (it was Enterprise-only in earlier reports).
+- Open: how the DTCG Resolver module relates to the "themes only override values" rule (8.3). Read the module text before Milestone 2 finalizes theming and log the decision.
+
+---
+
+## 9. Behaviors (`@tessera/behavior`)
+
+Headless interaction logic, framework-agnostic, attached to a part via the contract's `behavior:` field.
+
+A behavior provides: keyboard handling, focus management, ARIA attributes, and normalized events. Each behavior declares which `parts`, `states`, and `events` it requires, and the compiler verifies the contract satisfies them.
+
+**v0.1 behaviors:** `press` (click/Enter/Space, `aria-pressed` optional), `toggle`, `disclosure`.
+**Next (Milestone 18):** `dialog` (focus trap, scroll lock) and `combobox`, the two behaviors teams most often hit the limits of other headless libraries on.
+**Later:** `menu` (roving tabindex), `tabs`, `listbox`, `tooltip`, date and date-range inputs.
+
+Rules:
+
+- A behavior must work with no styles applied.
+- Behaviors expose state as `data-state="..."` attributes so the style layer can target them without JS.
+- Each behavior ships with its own conformance test (keyboard + ARIA) that is auto-run against every component that uses it.
+- The behavior layer has a named maintainer and a short policy in `packages/behavior/README.md` (semver, how a11y bugs are triaged). Teams treat a single-owner headless library as supply-chain risk, so say who owns it.
+- Open: build the behavior state machines in-house or wrap an existing library such as Zag.js. Decide with a time-boxed spike before Milestone 7 and log it; the evidence does not favor either.
+
+---
+
+## 10. Contracts (`@tessera/contract`)
+
+The contract is parsed into a typed, serializable object. Everything below is **derived**, never hand-written:
+
+1. **TypeScript types** for props, slots, and events (editor autocomplete for `.tess` usage).
+2. **Template/usage validation** (unknown variant values, undeclared slots, missing required props).
+3. **Accessibility tests** generated per component and run with axe-core for every variant and state combination in each theme: role present, keyboard behavior matches `behavior`, focus visible, disabled state semantics. These cover only the machine-checkable subset, so the docs list, per component, what automation does not cover (screen reader announcement quality, label and content quality, focus order in context, reduced-motion behavior).
+4. **Docs pages** (props table, variants gallery, states, anatomy diagram of parts).
+5. **Playground controls** (a control per variant/state).
+6. **Change detection** for versioning (section 12).
+
+Validation errors the contract layer must produce clearly: unknown ARIA role, behavior/parts mismatch, variant with duplicate values, name/filename mismatch, part declared but not present as a class in the template, and missing `root` part.
+
+### 10.1 Agent-readable exports (`@tessera/agent`)
+
+AI coding tools are the most commonly reported source of off-system UI: invented components or props, hard-coded values, ignored tokens. The contract and token manifest are already the machine-readable truth. Expose them, and keep the compiler as the verification loop. Rules files alone are guidance, not enforcement.
+
+- `.tessera/manifest.json`: generated JSON of all components (contract, props, variants, slots, events, usage examples), tokens (per theme, with tier and description), and routes.
+- `tessera mcp`: a **read-only** MCP server over the manifest. It lists and searches components, returns a component's contract and examples, lists tokens by semantic role, resolves a raw value to the nearest token, and validates a snippet by running the compiler checks and returning the same errors with suggestions. It never writes files.
+- `tessera agent-files`: generates `AGENTS.md` and `llms.txt` summarizing the rules and pointing at the manifest. Cheap, with unproven value; not a headline feature.
+- A `custom-elements.json`-compatible export for editors and existing component tooling.
+- Status: this is a bet. No framework does compile-time enforcement for agents, and no study shows it changes adoption. Milestone 13 includes a small experiment (the same prompts with and without the MCP server on the kitchen-sink app, counting off-system output) and records the result in the Decisions log.
+
+---
+
+## 11. Compiler (`@tessera/compiler`)
+
+A Vite plugin (`tessera()`), plus a programmatic API used by the CLI.
+
+Pipeline per `.tess` file:
+
+1. **Parse** the blocks (`contract`, `script`, `template`, `style`, plus `page` for pages) with accurate source locations (for error messages and sourcemaps).
+2. **Validate contract** (section 10).
+3. **Validate template** against the contract (parts, slots, variant usage, directive syntax) and resolve component tags through the auto-import registry (6.6).
+4. **Validate styles** against tokens (section 8.4).
+5. **Generate JS:** a component factory using `@tessera/core`, with behaviors wired in.
+6. **Extract CSS:** emitted into `@layer tessera.components`, with every class rewritten to a deterministic scoped name in both CSS and template (e.g. `.root` in `Button.tess` becomes `.t-Button__root`).
+7. **Emit sourcemaps** for JS and CSS.
+
+Cascade layer order (fixed): `tessera.reset, tessera.tokens, tessera.components, tessera.overrides`. App-level CSS goes in `tessera.overrides` so consumers can override predictably. Consumers override only a component's public parts (the class names listed in its contract); selectors that target private classes are unsupported and may change without notice.
+
+Error format (every error, no exceptions):
+
+```
+ERROR  T2104  system/components/Button.tess:24:13
+  Unknown token "$color.action.primry.bg"
+  Did you mean "$color.action.primary.bg"?
+  Run `tessera explain T2104` for details.
+```
+
+Every error and warning has a stable code, and every code has a page in the framework docs (14.2) explaining the cause, an example, and the fixes. The error registry is the single source for both the compiler messages and the generated error reference. `tessera explain <code>` prints the same explanation in the terminal, so it works offline and before any site is hosted.
+
+Dev experience: HMR for `.tess` files and for token files (token changes update CSS variables without a page reload).
+
+### 11.1 Editor support (`@tessera/editor`)
+
+Great errors are only useful where developers see them, and a new file format is only "supported" once editors understand it. Day-one minimum:
+
+- Syntax highlighting for all five blocks (a TextMate grammar other editors can reuse) and a VS Code extension.
+- Autocomplete and inline errors for contracts via the published JSON Schema.
+- The compiler's diagnostics (unknown token, variant, part, or component, with suggestions) shown inline through a language service, using the same message text as the CLI.
+- A Prettier plugin for `.tess` files.
+- Full template type-checking (a Volar-style plugin) is sized as a time-boxed spike in Milestone 5. Build a full language server only if the spike shows it is tractable.
+
+---
+
+## 12. Versioning and change management
+
+- `tessera diff <git-ref>` compares the current contracts and token manifest against another ref and classifies changes: **breaking** (removed variant value, removed part, removed token, changed role), **additive** (new variant value, new token), **cosmetic** (value changes that do not alter contrast results or cross a scale boundary). A value change that flips a contrast pass/fail result in any theme, or moves a token outside its scale step, is classified **breaking**.
+- Contracts may declare `deprecated: "Use X instead"` and `since: "1.2.0"`. Using a deprecated component or variant emits a compiler warning.
+- Generate a changelog section from the diff.
+- Codemods for renamed variant values, tokens, and components (`renamedFrom:` field) are a core deliverable of Milestone 16, not a stretch: migration effort is a top adoption cost, and teams accept codemod-style upgrades.
+- `tessera report` lists remaining usage of every deprecated item, so maintainers can see who still depends on it before removal. Deprecations stay valid for at least one minor release (configurable).
+
+---
+
+## 13. CLI (`@tessera/cli`)
+
+| Command                                                  | Purpose                                                                                                                                                              |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tessera init`                                           | Scaffold a project: Vite config, `system/` skeleton, one Button, base tokens, light + dark themes, and an `app/` with `main.ts` and `pages/index.tess`               |
+| `tessera tokens build`                                   | Resolve tokens, emit CSS, `.d.ts`, manifest                                                                                                                          |
+| `tessera tokens import <file>` / `tessera tokens export` | Strict DTCG 2025.10 in and out, with Tokens Studio/Penpot adapters (8.6)                                                                                             |
+| `tessera check`                                          | Run all validations without bundling (CI-friendly, non-zero exit on error). Respects the baseline and per-path severity (8.5); `--fix` applies unambiguous autofixes |
+| `tessera baseline [--prune]`                             | Record or prune per-file violation counts so existing code can adopt Tessera with errors on (8.5)                                                                    |
+| `tessera report`                                         | Tokenized/raw ratio, `raw()` uses, exemptions, baseline debt, contract and a11y coverage, deprecated usage (8.5); JSON output for CI                                 |
+| `tessera explain <code>`                                 | Print the cause, example, and fixes for an error or warning code, from the error registry                                                                            |
+| `tessera docs`                                           | Build/serve the generated docs + playground; `--static` exports a hostable site                                                                                      |
+| `tessera diff <ref>`                                     | Contract/token change report (section 12)                                                                                                                            |
+| `tessera new component <Name>`                           | Scaffold a `.tess` file with a valid starter contract                                                                                                                |
+| `tessera new page <path>`                                | Scaffold a page, e.g. `blog/[slug]` creates `app/pages/blog/[slug].tess`                                                                                             |
+| `tessera eject <Name> <NewName>`                         | Copy a system component into `app/components/` as your own, recording `forkedFrom` (6.6)                                                                             |
+| `tessera mcp` / `tessera agent-files`                    | Read-only MCP server over the manifest; generate `AGENTS.md` and `llms.txt` (10.1)                                                                                   |
+
+---
+
+## 14. Documentation
+
+Tessera has two separate documentation systems. Do not confuse them:
+
+- **14.1 Design system docs app (`@tessera/docs`)** is generated from a project's own contracts and tokens, for the design system that people _build with_ Tessera.
+- **14.2 Framework documentation site (`website/`)** documents Tessera itself: how to install it, how it works, how to use it, and the full reference.
+
+### 14.1 Design system docs app (`@tessera/docs`)
+
+Fully generated from contracts and the token manifest. No hand-written stories.
+
+- **Component page:** description, anatomy (parts highlighted), props/variants/states/slots/events tables, live preview with controls, a11y test results, a "used tokens" list.
+- **Token pages:** every token with resolved value per theme, swatches/specimens, contrast pairs.
+- **Theme switcher** and **density switcher** always visible.
+- **Overview:** coverage report (which components have a11y tests passing, which use deprecated tokens, `raw()` usage and exemptions with expiry, tokenized-versus-raw declaration ratio by directory, contract coverage), also exported as JSON (the same data as `tessera report`).
+- **Prose and real examples.** A component may have a sibling `Button.docs.md` with guidance prose and live examples written with real components (fenced `tess live` blocks). Generated sections never need hand-maintenance; prose supplements them for edge cases a contract cannot express and for the "how should I actually use this" guidance designers want to write.
+- **Dynamic, not static.** The docs are a live app that reads the compiler's contract and token manifests at runtime. In dev, editing a contract, token, or component updates the docs via HMR with no rebuild step. A static export (`tessera docs --static`) ships in this milestone from the same manifest so docs can be hosted without a server. Build the docs app in plain TypeScript at first, then migrate it to Tessera itself once the framework can support it (dogfooding).
+
+### 14.2 Framework documentation site (`website/`)
+
+A framework is only adoptable if a newcomer can install it, understand it, and look things up. The documentation site is a first-class deliverable that ships with v0.1, in the style of the Vue and Svelte docs: a short path to first success, a guided tutorial, task-oriented guides, a complete reference, and an explanation of how it works.
+
+**Approach**
+
+- A static site in `website/` at the repo root, built with **VitePress** (decided: Markdown-first, built-in search and static output, familiar tooling), with Markdown content in `website/content/`. VitePress is only the site generator. Tessera is not used to build the docs pages, so the framework needs no static prerendering or Markdown package for them.
+- The site theme consumes the CSS custom properties built by `@tessera/tokens`, so the site still demonstrates theming, dark mode, and contrast checking. Tokens compile to plain CSS, so this works with any site generator. If live Tessera examples (or the later playground) are embedded, they run in isolated mounts (for example iframes) so the site's Vue-based theme and Tessera's runtime do not interfere.
+- Anything that can be generated must not also be maintained by hand (see "Generated, not written" below).
+- **Hosting: local only for now.** Run `pnpm --filter website dev` while writing, or `pnpm --filter website build` then `preview` to check the built site. No domain, deployment, CDN, or analytics is set up for v0.1.
+
+**Information architecture**
+
+1. **Introduction.** What Tessera is and why it is design-system-first; who it is for and who it is not for; an honest comparison with Vue, Svelte, and React plus shadcn/ui, Storybook, and token tools; status and roadmap; non-goals (section 3).
+2. **Quick start.** Prerequisites, installing from the local workspace or locally packed packages (switching to `pnpm create tessera` once packages are published), a tour of the generated project, running the dev server, editing the first page, adding a component, changing a token. Includes "add Tessera to an existing codebase" using the baseline (8.5).
+3. **Tutorial.** 8 to 10 short steps built from static, tested snippets, each ending with a check (an interactive in-browser version comes with the playground, which is deferred): a first component, state and templates, props and variants through a contract, styling with tokens (including causing and fixing an error), theming and dark mode, pages and routing, layouts, accessibility tests.
+4. **Guide: essentials.** The anatomy of a `.tess` file, template syntax, reactivity and the unwrapping rules, props/events/slots, styling and scoped classes, tokens and themes, contracts, behaviors, auto-imports, pages and routing, layouts, testing.
+5. **Guide: design systems.** Token architecture (tiers), theming, multi-brand and density, enforcement (errors, baseline, exceptions, severity), accessibility (what generated tests cover and do not), designing contracts, extending and ejecting, versioning, deprecation and codemods, the docs app for your own system (14.1), agent exports and the MCP server (10.1), interchange with Figma and Penpot (8.6).
+6. **How it works.** The compile pipeline, the signals runtime, the renderer adapter, CSS layers and scoping, auto-import resolution, the route manifest, and the reasoning behind the design (why contracts, why enforcement).
+7. **Reference.** API (core, router, behavior, agent), CLI commands, `tessera.config.ts`, the contract schema, the token format and DTCG support, a template syntax cheat sheet, error and warning codes, and a glossary.
+8. **Cookbook.** Theme switcher, multi-brand app, adopting in a legacy codebase with a baseline, a form field component, a dialog, importing Figma tokens, configuring CI, working with AI agents.
+9. **Migration guides.** Coming from Vue, from Svelte, and from React with shadcn/ui: concept mapping tables, what you gain, what you give up.
+10. **Examples.** The kitchen-sink app and a few small apps, each with source and a live demo.
+11. **Releases.** Changelog, upgrade guides, deprecations, and the roadmap.
+12. **Community.** Contributing, code of conduct, reporting bugs, governance, and an accessibility statement.
+
+**Site features**
+
+- Local search, light and dark themes, copy buttons, install tabs (pnpm, npm, yarn, bun), "Edit this page", previous/next, on-page table of contents, and stable deep links.
+- **Playground (later).** An in-browser editor for `.tess` files and tokens that shows the rendered result and the real compiler messages, and is shareable by URL. It is deferred until after v0.1; the compiler core stays browser-safe (section 4) so it can be added without a rewrite.
+- **Versioned docs (later).** A version switcher, with the latest release shown by default and previous minors available, once there is hosting. Until then the site documents the current checkout.
+- **Accessible by construction.** The site meets WCAG 2.2 AA, checked in CI with axe, and uses Tessera tokens so it passes its own contrast checks.
+- **Machine-readable.** `llms.txt` and per-page Markdown output, consistent with 10.1. Treat this as a cheap extra.
+- Pages are static HTML and readable without JavaScript.
+- Not in v0.1: translations, a community forum, analytics, and public hosting.
+
+**Generated, not written** (single source of truth)
+
+- API reference from TSDoc comments in the packages.
+- CLI reference from the command definitions.
+- Config reference from the `tessera.config.ts` types.
+- Contract reference from the contract JSON Schema.
+- Token format reference from the tokens package.
+- Error and warning reference from the error registry (a page per code: cause, example, fix).
+- Release notes from `tessera diff` (section 12), with hand-written highlights on top.
+
+**Docs are tested**
+
+- Every fenced code block is either imported from a real file (under `examples/` or `website/snippets/`, preferred) or compiled and type-checked in CI against a fixture project. A block that fails fails the docs build. Blocks that deliberately show an error are tagged `error` and must produce the named error code.
+- The Quick start commands run verbatim in CI on a clean container, against locally packed packages (`pnpm pack`, or a local registry such as Verdaccio) until packages are published, and must end with the dev server serving the index page.
+- Links are checked in CI.
+
+**Writing rules**
+
+- Task-oriented, short pages, one idea per page, and output shown next to code.
+- Every concept page ends with "next steps"; every guide states the version that introduced the feature.
+- No marketing language. Limitations and non-goals are documented openly.
+
+---
+
+## 15. Milestones
+
+Each milestone has a clear definition of done. Build in order. Do not skip ahead.
+
+**Release gates** (these keep scope honest):
+
+- **v0.1 "usable framework": Milestones 0 to 12.** A developer can scaffold a project, build pages with token-enforced components, see errors in their editor, adopt Tessera in an existing codebase through a baseline, and leave the system for one component with a counted, expiring exception. They can also learn all of it from a documentation site with a quick start, a tutorial, guides, and a reference.
+- **v0.2 "system tooling": Milestones 13 to 16.** Agent-readable exports, DTCG interchange, generated docs, versioning with codemods.
+- **v0.3 "expansion": Milestones 17 and 18.** More behaviors and components.
+
+Research found developers judge a new framework first on editor feedback, upgrade cost, and whether they can leave the system for one component, so those items sit inside the first gate.
+
+### Milestone 0 — Repo foundation
+
+- pnpm workspace, TypeScript strict, Vitest, lint/format, CI script running tests and typecheck.
+- Empty packages with the layout in section 5.
+- A `website/` skeleton (VitePress) that builds in CI, so docs can be written alongside every milestone (14.2).
+- **Done when:** `pnpm test` and `pnpm typecheck` pass on the empty skeleton.
+
+### Milestone 1 — Core signals + minimal renderer
+
+- `state`, `derived`, `effect`, batching, cleanup.
+- `RendererAdapter` interface plus a DOM implementation.
+- Hand-written (not compiled) test components proving fine-grained updates and keyed lists.
+- Log a decision: build the signals runtime in-house (default, keeps core at zero dependencies) or adopt an existing one. The evidence does not favor either.
+- **Done when:** unit tests cover reactivity edge cases (diamond dependencies, nested effects, disposal) and a DOM test shows only the dependent text node updates.
+
+### Milestone 2 — Tokens
+
+- DTCG 2025.10 parse (Format and Color modules) + alias resolution + cycle detection.
+- Read the DTCG Resolver module text and log how it relates to the "themes only override values" rule before finalizing theming.
+- CSS custom property output in `@layer`, `.d.ts` and manifest generation.
+- Theming via scoped overrides with the "no new names" rule.
+- `setTheme` / `setDensity` runtime API.
+- **Done when:** a sample token set builds to CSS; a theme that adds a new token name fails; switching `data-theme` in a browser test changes computed styles with no JS re-render.
+
+### Milestone 3 — Contract
+
+- JSON(C) contract parsing, a published JSON Schema for editor autocomplete, validation, typed object, error messages.
+- Fields from 6.2 including `contrast` pairings and `forkedFrom`.
+- Derived TypeScript types for props/slots/events.
+- **Done when:** invalid contracts produce the exact error format in section 11, valid contracts round-trip to types, and a `contrast` pairing that names an undeclared part fails.
+
+### Milestone 4 — Compiler (template + script, no styles yet)
+
+- SFC parser with source locations.
+- Template directive support from 6.3 (all rows).
+- Signals rules from 6.2: top-level-only template unwrapping (error when detectable, dev warning otherwise), `props()` returning read-only signals, and the `derived()` purity warning from 7.1.
+- Codegen to `@tessera/core`; Vite plugin; HMR.
+- The compiler core (parse, validate, generate) is environment-agnostic: file access is injected, with no direct Node filesystem APIs, so it runs in a browser (the editor language service reuses it now, and a docs playground can later).
+- **Done when:** a `.tess` Counter component (state, derived, `if`, `each`, `@click`) compiles and runs in the kitchen-sink example, template-vs-contract errors (unknown part, unknown slot, bad variant value) are reported with locations, and a signal nested in an object produces the documented unwrapping error. A browser test compiles the Counter component with no Node APIs.
+
+### Milestone 5 — Editor support (spike first)
+
+- TextMate grammar for all five blocks, a VS Code extension, contract JSON Schema autocomplete.
+- Language service spike: the compiler's diagnostics shown inline with the same message text as the CLI.
+- Prettier plugin for `.tess`.
+- Time-box the Volar-style template type-checking spike and log whether to build a full language server.
+- **Done when:** opening the kitchen-sink app in VS Code shows highlighting for every block and inline diagnostics for a seeded unknown variant and unknown token, and the spike's decision is logged.
+
+### Milestone 6 — Style enforcement and accountability
+
+- `$token` resolution in `<style>`, class-based selectors, scoped class rewriting, `@layer` output.
+- All enforcement rules in 8.4 including `raw()` with a required reason and optional expiry; contrast check including declared pairings.
+- Section 8.5 behavior at library level: baseline file, per-path severity with reasons and expiry, nearest-value suggestions, and the autofix engine (the CLI exposes them in Milestone 11).
+- Configurable governed-property map in `tessera.config.ts`.
+- **Done when:** each row of the 8.4 table has a passing test; an off-scale value fails with a suggestion; a legacy fixture passes with a generated baseline and fails on exactly one new violation; an expired `raw()` and an expired exemption both fail.
+
+### Milestone 7 — Behaviors + first real component
+
+- Time-boxed spike: build the `press` state machine in-house or wrap an existing library such as Zag.js; log the decision.
+- `press` behavior with conformance tests; wire `behavior:` through the compiler; `packages/behavior/README.md` names a maintainer and policy.
+- Build the real `Button` (section 6.1) in `system/components/`.
+- Auto-generated a11y tests (axe-core, every variant and state, light and dark) run against Button, and the docs list what automation does not cover.
+- **Done when:** Button works by mouse and keyboard, passes generated a11y tests in light and dark themes, and an app template uses `<Button tone="danger">` with static variant checking (an explicit import is acceptable here until Milestone 8).
+
+### Milestone 8 — Auto-imports
+
+- Component registry built from `system/components/**` and `app/components/**`, keyed by contract `name`; duplicate names are errors naming both files.
+- Compile-time resolution of component tags; emit imports only for components actually used; unknown-tag error with a suggestion.
+- Auto-imported script APIs inside `.tess` files only, with the named error for plain `.ts` files; `autoImports: false` config flag; generated `.tessera/components.d.ts`.
+- HMR when component files are added, removed, or renamed.
+- **Done when:** an app template uses `<Button>` with no import lines, a production build bundles only the components actually used, a duplicate name, a misspelled tag, and an auto-imported name used in a `.ts` file each fail with the error format from section 11, and `autoImports: false` makes missing imports errors.
+
+### Milestone 9 — Pages and routing
+
+- `@tessera/router`: route manifest from `app/pages/` (virtual module with HMR on add/remove), `index` as the folder default, `[param]` routes, `404.tess`, and route-conflict errors.
+- `createApp()`, `<Link>`, `navigate()`, `useRoute()`; History API; lazy-loaded pages; scroll, title, live-region announcement, and focus handling.
+- `<page>` block support; a `layout` field fails with a clear "not supported yet" error until Milestone 10.
+- Generated `.tessera/routes.d.ts` for typed `<Link to>`; an unknown literal path is a compile error.
+- **Done when:** the kitchen-sink app has `index`, `about`, `blog/index`, `blog/[slug]`, and `404` pages; navigation works by click, back/forward, and direct URL load; each page is its own lazy chunk; the compiler reports a route conflict when two files map to the same path; and `<Link to="/abuot">` fails to compile.
+
+### Milestone 10 — Layouts
+
+- `app/layouts/` with a default layout (`default.tess`) applied to every page automatically; a page opts into another via `<page>` `layout`, or opts out with `"layout": false`.
+- A layout uses a default `<slot />` where the page renders, plus the same auto-imports and token enforcement as everything else.
+- Route announcement, focus handling, and scroll behavior from Milestone 9 keep working across layout boundaries.
+- Nested layouts are out of scope for this milestone.
+- **Done when:** the kitchen-sink app has a default layout and an alternate layout, one page opts out, navigating between pages that share a layout does not re-create the layout, and an unknown layout name fails to compile with a suggestion.
+
+### Milestone 11 — CLI
+
+- `init` (including `app/pages/index.tess` and a default layout), `tokens build`, `check` (registry, route, and style validation; baseline-aware; `--fix`), `baseline`, `report`, `new component`, `new page`, `eject`.
+- `pnpm create tessera` (the `create-tessera` package) wraps `tessera init` so newcomers need no global install. Until packages are published it is run from the local workspace.
+- **Done when:** `tessera init` produces a project that runs and shows the index page at `/`; `tessera check` exits non-zero on seeded violations in CI; a legacy fixture adopts Tessera through `tessera baseline` with zero initial errors and fails on one new violation; `tessera report` emits the metrics in 8.5; and `tessera eject` produces a working component with `forkedFrom` recorded.
+
+### Milestone 12 — Framework documentation site
+
+- `website/` (VitePress) with the information architecture and features in 14.2: Introduction, Quick start, Tutorial, Guide, How it works, Reference, Cookbook, Migration guides, Examples, Releases, Contributing.
+- Tutorial built from static, tested code snippets. The in-browser playground is deferred (14.2).
+- Generated references: API (from TSDoc), CLI, config, contract schema, token format, and the error and warning reference (one page per code).
+- Docs tests in CI: code samples compiled or imported from real files, Quick start commands executed verbatim in a clean container against locally packed packages (nothing is published yet), links checked, axe run against the site.
+- Search, dark/light themes driven by Tessera tokens, and `llms.txt`. The site is hosted locally only (`pnpm --filter website dev`, or `build` then `preview`); versioned docs, "Edit this page", and a public domain wait for hosting.
+- **Done when:** the Quick start, run verbatim in a clean container against locally packed packages, ends with the dev server serving the index page; every compiler error code in the registry has a reference page and `tessera explain` prints it; a deliberately broken code sample fails the docs build; the site passes axe with zero serious violations; and, as a manual check, two people unfamiliar with the project can follow only the Quick start and Tutorial to a themed, routed page with a token-enforced component in under 10 minutes.
+
+**Gate: v0.1 ships here.**
+
+### Milestone 13 — Agent-readable exports
+
+- `@tessera/agent`: `.tessera/manifest.json`, `tessera mcp` (read-only), `tessera agent-files`, `custom-elements.json`-compatible export (10.1).
+- Experiment: the same UI prompts with and without the MCP server on the kitchen-sink app; count off-system output; log the result.
+- **Done when:** an MCP client can list components, fetch a contract, resolve a raw value to the nearest token, and validate a snippet with the same errors as the compiler, and the experiment result is logged.
+
+### Milestone 14 — DTCG interchange
+
+- `tessera tokens import` / `export` for strict DTCG 2025.10, plus Tokens Studio/Penpot adapters and fixtures for known export quirks (8.6).
+- Document the Figma mapping; verify current Figma plan requirements for the Variables REST API before documenting that route.
+- **Done when:** a token set round-trips through export and import without losing aliases, units, or modes, and the adapters pass their fixtures.
+
+### Milestone 15 — Design system docs app + playground
+
+- Generated component and token pages with controls, theme/density switchers, and the coverage report (including JSON export).
+- Optional `ComponentName.docs.md` prose and live examples beside generated sections.
+- Static export (`tessera docs --static`).
+- **Done when:** adding a new component with a valid contract makes it appear in the running docs with controls, with no extra files and no dev-server restart; a `.docs.md` file renders beside the generated sections; and the static export serves from a plain file server.
+
+### Milestone 16 — Versioning and codemods
+
+- `tessera diff` with the contrast-aware breaking classification (section 12), deprecation warnings, changelog generation.
+- Codemods for renamed variant values, tokens, and components; deprecated-usage reporting in `tessera report`.
+- **Done when:** removing a variant value in a branch is reported as breaking by `diff`; a token value change that flips contrast is also reported as breaking; and a `renamedFrom` change produces a codemod that updates the kitchen-sink app.
+
+**Gate: v0.2 ships here.**
+
+### Milestone 17 — More behaviors and components
+
+- `toggle`, `disclosure`; components: Checkbox/Switch, Accordion, TextField.
+- **Done when:** each has a contract, passes generated a11y tests, and appears in the docs.
+
+### Milestone 18 — Dialog and combobox
+
+- `dialog` (focus trap, scroll lock) and `combobox` behaviors with conformance tests; components: Dialog, Select/Combobox.
+- **Done when:** each passes keyboard and screen-reader conformance tests and appears in the docs.
+
+**Gate: v0.3 ships here.**
+
+### Later (explicitly out of scope until the above ships)
+
+Nested routes, route guards and data loaders, global store, SSR/hydration, `menu`/`tabs`/`listbox`/`tooltip` behaviors and date inputs, a Figma plugin, an in-browser docs playground and interactive tutorial, versioned docs, public hosting and npm publishing, Code Connect file generation (experimental, since Figma's own variant matching has regressed before), a visual-regression snapshot matrix hook, codemods beyond renames, transitions, multi-root templates, alternative renderers.
+
+---
+
+## 16. Working agreements for Claude Code
+
+- **Tests first** for core, tokens, contract, and compiler. Write failing tests, then implement.
+- **No hidden decisions.** Anything this spec leaves open goes in the **Decisions log** below before it's built, with a one-line rationale.
+- **Smallest thing that satisfies the acceptance criteria.** No speculative features from the "Later" list.
+- **Error messages are part of the product.** Every new validation ships with a test asserting the exact message.
+- **Keep the renderer boundary clean.** Nothing outside `@tessera/core` touches the DOM directly except generated code and behaviors via the adapter.
+- **Dogfood.** Every milestone must be exercised in `examples/kitchen-sink`.
+- **Test the bets.** Items marked as bets in section 17 ship with a small measurement and a Decisions-log entry, not just an implementation.
+- **Docs are part of done.** Every milestone adds or updates Markdown pages in `website/content/` for what it ships, with code samples that compile in CI (14.2). A feature without a docs page is not finished.
+- **Commit per milestone** with a message summarizing what passed.
+- If a requirement here seems wrong or contradictory, stop and ask rather than quietly deviating.
+
+### Decisions log
+
+_(Claude Code appends entries here: date, decision, rationale.)_
+
+- **2026-10-22, Milestone 1: signals runtime built in-house.** Keeps `@tessera/core` at zero runtime dependencies (section 4); the push-pull clean/check/dirty algorithm is about 250 lines and fully covered by tests. No spike against an existing library was run, so revisit if maintenance cost grows.
+- **2026-10-22, Milestone 0 completed after Milestone 1.** Milestone 1 was built first on a partial foundation; the rest landed afterward. Final state: pnpm workspace, strict TypeScript, Vitest (jsdom), ESLint (typescript-eslint) plus Prettier, VitePress skeleton in `website/` (content in `website/content/`, builds in `pnpm ci`), empty packages per section 5. Dev dependencies: `typescript`, `vitest`, `jsdom`, `eslint`, `@eslint/js`, `typescript-eslint`, `eslint-config-prettier`, `prettier`, `vitepress`. `pnpm run ci` runs lint, format check, typecheck, tests and the docs build. SPEC.md and CLAUDE.md are excluded from Prettier. pnpm was not installed, so it was run via `npx pnpm@10`.
+- **2026-10-22, Milestone 1: effects flush in a microtask, with `flush()` for sync control.** There is no separate `batch()`: every write is already batched until the microtask. Effects run once synchronously on creation. A flush that exceeds 1000 passes throws, to catch effects that feed each other.
+- **2026-10-22, Milestone 1: renderer API is `createRenderer(adapter)`.** It returns `el`, `text`, `each`, `mount`; `RendererAdapter` has `move` and `nextSibling` beyond the section 7.3 list, so keyed reconciliation can skip nodes already in place. Reconciliation walks backwards and moves any node whose next sibling is wrong; it is correct but not minimal (moving the last item to the front moves n-1 nodes). Swap in an LIS pass only if a benchmark asks for it. `each` passes each item to `render` as a signal so same-key updates change text in place.
+- **2026-10-22, Milestone 1: text bindings skip `setText` when the string is unchanged.** Needed so a same-key list update with equal content touches no DOM.
+- Not a git repository, so no commit was made for Milestone 1.
+- **2026-10-22, Milestone 2: DTCG Resolver module vs "themes only override values" (8.3, 8.6).** Read the 2025.10 Resolver text. A modifier context may supply tokens no other source defines (its own Example 17 does), so the Resolver does not forbid new names; our rule is stricter by design. Decision: Tessera theme files are not Resolver documents. They are token files with `$extends` and override-only content, enforced by the builder (T1011). The Milestone 14 importer will map each Resolver modifier context to a theme and reject, with T1011, any context that adds a name; resolver `sets` become the base. Revisit if a real Figma or Tokens Studio export needs additive contexts.
+- **2026-10-22, Milestone 2: theme file format.** The file name is the theme value (`dark.tokens.json` gives `data-theme="dark"`). Reserved top-level keys: `$extends` (required, must equal the base name, default `base`), `$attribute` (default `theme`; `density`, `brand`, and so on), `$auto` (a media feature such as `prefers-color-scheme: dark`; also emits the overrides under `[data-theme="auto"]` inside that media query, which is the opt-in auto mode). The spec did not define these. `prefers-reduced-motion` works the same way through `$auto`.
+- **2026-10-22, Milestone 2: CSS shape.** Base values go in `:where(:root)` (zero specificity) and themes in `[data-<attr>="<name>"]`, so a theme beats the base regardless of order and also works on a subtree. Aliases are emitted as `var(--t-…)`, so a theme override of a primitive reaches every alias. The layer order line is emitted at the top of the token CSS.
+- **2026-10-22, Milestone 2: diagnostics have no line:column.** Token files are read with `JSON.parse`, which has no positions, so errors show file and dotted token path instead. Revisit with `jsonc-parser` in Milestone 3 if the contract work adds it anyway. Codes T1001 to T1015 live in `packages/tokens/src/errors.ts` and need pages in the error registry (Milestone 12).
+- **2026-10-22, Milestone 2: stricter than DTCG on names, narrower on features.** Names must match `[A-Za-z0-9_-]` so they become valid custom properties. Unsupported and rejected with an error, not ignored: group `$extends`, JSON Pointer `$ref`, gradient and typography types, object-form `strokeStyle`. Supported types: color (all 14 color spaces), dimension, duration, number, fontFamily, fontWeight, cubicBezier, strokeStyle (string), shadow, border, transition.
+- **2026-10-22, Milestone 2: token tiers are inferred.** A literal is primitive, an alias to a primitive is semantic, anything deeper is component. `$extensions.tessera.tier` overrides it. The "components may only reference semantic tokens" lint is not built here; it belongs with style enforcement in Milestone 6.
+- **2026-10-22, Milestone 2: runtime API takes an attribute target.** `setTheme(name, target?)`, `setDensity`, `getTheme`, `getDensity` default to `document.documentElement` but accept anything with attribute methods, which keeps the package off the DOM types. `null` removes the attribute.
+- **2026-10-22, Milestone 2: browser tests run in the installed Edge.** Vitest browser mode with Playwright using `channel: 'msedge'`, so no browser download. Dev dependencies added: `@vitest/browser` (pinned to match vitest 3.2.7), `playwright`, `@types/node`. CI machines need Edge or Chrome installed, or a `playwright install chromium` step; decide when CI is set up. Browser tests are named `*.browser.test.ts`.
+- **2026-10-22, Milestone 3: own JSONC parser, no `jsonc-parser` dependency.** `packages/contract/src/jsonc.ts` (about 150 lines) parses JSON with `//` and block comments and trailing commas, and keeps the offset of every node so errors carry line and column. It avoids a runtime dependency (CLAUDE.md asks first), stays browser-safe, and costs one small file to maintain. Revisit if editor features (formatting, edits) ever need `jsonc-parser`.
+- **2026-10-22, Milestone 3: contract error codes are T3001 to T3013** (T1xxx tokens, T3xxx contracts; T2xxx is kept for style enforcement in Milestone 6, matching the spec's `T2104` example). Contract diagnostics have `file:line:col` in the section 11 format. `parseContract` takes an `origin` so the compiler can pass where the `<contract>` block starts inside the `.tess` file. `nearest()` is duplicated from `@tessera/tokens`; move both to a shared package when the compiler's error registry is built (Milestone 4 or 12).
+- **2026-10-22, Milestone 3: behavior requirements are provisional.** The contract package holds a default table (`press` needs part `root` and event `press`; `toggle` needs `root` and event `toggle`; `disclosure` needs `root`, `trigger`, `content` and event `toggle`). I invented these to satisfy "behavior/parts mismatch" now. `@tessera/behavior` (Milestone 7) becomes the source and passes its table to `parseContract`.
+- **2026-10-22, Milestone 3: "valid ARIA role or native element role" means the WAI-ARIA 1.2 concrete roles** plus `generic`, `none` and `presentation`. The spec's "native element role" is ambiguous; this accepts everything an element can expose. Abstract roles are rejected.
+- **2026-10-22, Milestone 3: stricter-than-spec details.** Unknown contract fields are errors (typos should not pass silently). Part names are lowercase (`^[a-z][a-zA-Z0-9-]*$`), variant names camelCase, variant values `[A-Za-z0-9_-]`. `renamedFrom` is a component name only; renaming variant values for codemods (Milestone 16) will need a design decision then. A contract with any error yields no `contract` object, so later stages never see half-valid data.
+- **2026-10-22, Milestone 3: template checks are a function, not part of `parseContract`.** `checkTemplateParts(parsed, { classes, rootClasses })` reports T3011 (declared part not used as a class, positioned at the part in `parts`) and T3013 (root element lacks `root`). The compiler calls it in Milestone 4 once it has parsed the template.
+- **2026-10-22, Milestone 3: derived types are `Props`, `Slots`, `Events`, `Part`.** Variants become optional props typed as unions. Slot content and event payloads are `unknown` for now because their real types depend on the renderer and on payload declarations the contract does not have yet. A test type-checks the generated text with the TypeScript compiler API, including that a misspelled variant value is rejected. `typescript` is used only by tests.
+- **2026-10-22, Milestone 3: `contract.schema.json` is generated from `contractSchema` in code** and a test fails if they drift (`UPDATE_SCHEMA=1 pnpm test` refreshes it). Prettier ignores it. The schema's `$id` URL is a placeholder (nothing is hosted); editors will reference the file path until docs hosting exists.
+- **2026-10-22, Milestone 4: dependencies (approved by the author).** `acorn` is a runtime dependency of `@tessera/compiler`, used only to parse template expressions and handlers; it is small, has no dependencies and runs in a browser. `vite` is a peer dependency of the compiler and a dev dependency at the root (the plugin imports it; the browser-safe core does not). `@tessera/core` is a peer dependency, since generated code imports it. Dev-only additions: none beyond `vite`.
+- **2026-10-22, Milestone 4: hand-written template parser and script scanner instead of `parse5`/`htmlparser2`/a TypeScript parser.** The template dialect needs case-sensitive component tags, `:attr`/`@event`/`bind:` names, `{expr}` text and `<slot />`, and every node must carry a source offset; an HTML5 parser would lowercase and reshape it. The `<script>` scanner (`script.ts`) is a tokenizer plus heuristics, not a TypeScript parser: it finds top-level bindings, imports, `emit('name')` calls and `derived()` bodies, and it classifies an initializer by its first tokens (`state(`, `derived(`, `props(`, an arrow function, a literal). It can misjudge unusual code (for example multi-declarator statements with generics); the failure mode is a binding treated as `unknown`, which is unwrapped at runtime, so output stays correct. Type stripping is left to the host: the compiler emits TypeScript and the Vite plugin runs Vite's esbuild over it.
+- **2026-10-22, Milestone 4: template unwrapping rule as built.** At compile time, a top-level binding made by `state()`/`derived()`/`constant()`, a destructured `props()` member, or an `each` variable is read as `name.value`. A binding of unknown origin (an import, `const x = useThing()`) is read through `$u(name)`, which unwraps at runtime if it is a signal. Plain values, functions and classes are used as written. A member of an object literal that holds `state()`/`derived()` calls, or any member of the object `props()` returns, is error T4012 when read in the template. Anything the compiler cannot see is caught by a once-only console warning when a signal is rendered as text. In production builds this warning is still present; strip it later if it matters. Assignments in handlers (`count++`, `count = 1`) write `.value`; assigning to a function, class or import is T4011.
+- **2026-10-22, Milestone 4: component protocol.** A compiled file default-exports `defineComponent(name, variantDefaults, setup, hmrId?)`, a function `(input?) => Node` where `input` is `{ props, events, slots }` (props as signals, events as handlers, slots as render functions). The setup receives a context with `props()`, `emit()`, `slot()` and `root()`. `root()` puts `data-<variant>` attributes on the root element and applies every attribute the parent passed that the component did not claim (`class` is appended to the root's static class). Consequences, all strict by design: `@name` on a component must be a declared event (native DOM events are not forwarded); an unknown attribute on a component is passed through to the root rather than rejected; slot content for a named slot is given with a `slot="name"` attribute on the child element, and children with no `slot` attribute go to the default slot. The spec did not define the caller side of named slots.
+- **2026-10-22, Milestone 4: directive rules the spec left open.** `if`/`else-if`/`else` chains need consecutive sibling elements (whitespace between them is allowed). `if` and `each` on one element is an error (T4011), because it is unclear which runs first. The root element cannot use `if` or `each` (T4004). `each` takes `item in items` only (no index), and its `key` expression sees the item as a plain value while the body sees it as a signal. `bind:value` is limited to `<input>`, `<textarea>`, `<select>` and requires a `state()` binding. `:value`, `:checked`, `:selected`, `:indeterminate` set properties; other `:attr` bindings set attributes (true gives an empty attribute, false/null/undefined removes it). Whitespace: text with a line break at its start or end is trimmed, other runs collapse to one space. A literal brace in text is written `{"{"}`.
+- **2026-10-22, Milestone 4: classes are not scoped yet, and there are no source maps.** Class names pass through unchanged and `<style>` is read but ignored; scoping to `.t-Component__part` arrives with style enforcement in Milestone 6. Source maps (pipeline step 7) are deferred: the compiler keeps every script line on the same relative line (hoisted imports are blanked in place, not removed), so stack traces point near the right place, but nothing maps generated template code. Add maps in Milestone 6 when CSS maps are needed too.
+- **2026-10-22, Milestone 4: explicit imports only until auto-imports (Milestone 8).** The compiler core takes a `components` resolver. The Vite plugin builds one from the importing file's `import X from './X.tess'` lines, reading each target file's contract (and watching it). An unknown tag is T4007 with a suggestion. File kind is inferred from the path: `/pages/` is a page, `/layouts/` is a layout, anything else is a component; the `contracts: 'optional'` option relaxes the contract requirement.
+- **2026-10-22, Milestone 4: hot updates.** In dev the generated module passes its file path to `defineComponent`, and ends with `import.meta.hot.accept()`. Re-evaluating a module with the same id swaps the setup function on the existing definition (so importers keep the same function) and re-renders every live instance in place. Verified by hand in a Vite dev server: editing `Counter.tess` updated the page with no reload (a marker on `window` survived). Limits: the edited component's state resets, and an instance that is the direct root of an `each` item or `if` branch can leave that parent holding a stale node until the next full reload. Fix with parent notification if it bites.
+- **2026-10-22, Milestone 4: the Node entry is built.** `@tessera/compiler/vite` points at `dist/vite.js`, built by `vite build` (library mode) with `@tessera/contract` bundled in, because Node cannot load the workspace TypeScript sources natively from a `vite.config.ts` or `vitest.config.ts`. `pnpm test` runs the build first. The browser-safe core (`@tessera/compiler`) is still consumed from source, and a unit test checks that the compiler, contract and core sources contain no Node imports.
+- **2026-10-22, Milestone 4: suggestion distance.** `nearest()` now allows `ceil(0.4 * length)` edits (minimum 1) in both the tokens and contract packages. The old floor of 2 edits suggested `"sm"` for `"xl"`. Compiler codes are T4001 to T4013 plus the warning W4101; `COMPILER_CODES` in `packages/compiler/src/diagnostics.ts` is the list.
+- **2026-10-22, Milestone 5: decision on template type-checking (the time-boxed spike).** Do **not** build a full language server or a Volar-style plugin for v0.1. Method: compile a `.tess` file, give the generated TypeScript to the TypeScript compiler API with the real `@tessera/core` types, and read the errors (`packages/editor/test/typecheck-spike.test.ts` keeps the experiment and its numbers). Findings. Works: errors in template expressions, handlers, `each` items (TypeScript's own "Did you mean" included), the script block, and props typed from the defaults passed to `props()` are all caught; the unmodified Counter output is type-clean (once handlers stopped using untyped rest parameters, which the spike exposed and which is fixed in `codegen.ts`). Cost: about 430 ms for a cold check and about 240 ms for each further full check with no program reuse; a language-service host that reuses the program would be far faster, but is more machinery. Missing, and why it blocks an editor feature: (1) errors point into generated code, so mapping them back needs expression-level source maps, which Milestone 6 adds for CSS and should add for the template; the spike only found positions by searching the source text, which breaks when a name repeats; (2) props passed to other components are untyped (call sites build `Record<string, ReadonlySignal>`), so `<Button tone={12}>` type-checks; contract-derived `.d.ts` files (Milestone 8's `components.d.ts`) are the fix; (3) type-checking whole files on each keystroke needs a persistent TypeScript service. Plan: after Milestones 6 and 8, add an opt-in `tessera check --types` for CI built on this approach, and revisit inline editor types then. Until then the editor shows the compiler's diagnostics, not TypeScript's.
+- **2026-10-22, Milestone 5: the Prettier plugin formats the template by re-indenting only.** The spike on Prettier's HTML parser showed it lowercases `<Button>` to `<button>` (destructive) and reflows text (which can change rendered whitespace), and it treats `{expr}` as text. So `.tess` templates go through `reindentTemplate`: it keeps every character and line break, changes each line's leading indentation to match element nesting, strips trailing whitespace and collapses blank-line runs. Contracts are formatted with the `jsonc` parser (no trailing commas), scripts with `typescript`, styles with `css`. A block that does not parse is left exactly as written. Tests check idempotence and that the compiled render output is identical before and after formatting. Limits: no line wrapping and no attribute re-flow; lines inside a multi-line `{expression}` lose their relative indentation. The plugin is built to `packages/editor/dist/prettier-plugin.js` and the repository's own `.prettierrc.json` uses it, so `pnpm format` and `format:check` now build first (`pnpm run ci` order is unchanged). Fixtures and the seeded file are excluded from Prettier.
+- **2026-10-22, Milestone 5: a first slice of style enforcement was pulled forward from Milestone 6.** The Milestone 5 acceptance test needs an inline diagnostic for an unknown token, but style checking is Milestone 6. I built only the lookup: every `$token.path` in `<style>` must exist (error `T2104`, worded as in section 11 of this spec, with a "Did you mean" suggestion; comments are ignored). It runs only when `compile()` is given `tokens`, so the Vite plugin does not enforce it yet. The editor passes the tokens it finds by walking up from the file to a `system/tokens` folder (the `tessera.config.ts` setting arrives with the CLI in Milestone 11). Raw values, governed properties, `raw()`, contrast, scoping, baselines and severity are all still Milestone 6.
+- **2026-10-22, Milestone 5: what was and was not verified.** VS Code is not installed on this machine, so the extension has not been opened in VS Code. What is tested: the TextMate grammar is tokenised with `vscode-textmate` and `vscode-oniguruma` (stub grammars stand in for the embedded languages, which VS Code supplies), asserting scopes for every block, tag kind, directive and `$token`; the built `extension.cjs` is executed against a stand-in `vscode` API and publishes the expected diagnostics for `examples/kitchen-sink/app/seeded/Broken.tess` (unknown variant `primry`, unknown tokens `$space.9` and `$color.surface.defalt`), updates them on edit, clears them on close, and offers contract completions. Still to check by hand: highlighting in the real editor, and the embedded-language mapping in `package.json`. Instructions are in `packages/editor/vscode/README.md`. New dev dependencies: `vscode-textmate`, `vscode-oniguruma`, `@types/vscode`.
+- **2026-10-22, Milestone 5: smaller decisions.** Contract JSON Schema autocomplete inside `.tess` is done by our own completion provider (`completeContract`, which also knows ARIA roles, behaviors and declared parts), because VS Code cannot apply a JSON schema to an embedded block of another language. The extension manifest lives in `packages/editor/vscode/` (own `package.json`, bundled by Vite to `dist/extension.cjs`), apart from the `@tessera/editor` library. `compile()` now returns diagnostics in file order. `ElementNode` records `openEnd`, `closeStart` and `selfClosing`. Handlers that name a plain function are passed as that function; other simple paths are wrapped with `as any` so TypeScript does not reject the forwarded event. The Node-only component lookup moved from the Vite plugin to `@tessera/compiler/node` (`resolveImportedComponents`) so the editor reuses it; `@tessera/tokens` gained a `./node` export.
+- **2026-10-22, Milestone 6: no new dependencies; hand-written CSS parser.** `packages/compiler/src/style/css.ts` parses `<style>` (rules, nesting, at-rules, declarations, comments, strings, `url()`) and records offsets. Rewrites are text edits on the original CSS (class prefixes, `$token` to `var()`, `raw()` unwrapped), so the author's formatting and line numbers survive. `postcss` and a selector parser were not added; revisit if CSS syntax beyond nesting (for example `@container` params with classes) needs real selector parsing. Color math (`color-math.ts`: parsing of hex, rgb, hsl, hwb, lab, lch, oklab, oklch and `color()`, the 148 CSS names, OKLab distance, WCAG contrast) lives in `@tessera/tokens`, since it reads what the token build emits.
+- **2026-10-22, Milestone 6: scoping.** Every class becomes `t-<Name>__<class>`, in CSS and in template `class` attributes, whether or not the file has a style block. `<Name>` is the contract name, or the file name for pages and layouts. A `class` written on a component tag (`<Button class="extra">`) is scoped with the consumer's prefix, because it refers to the consumer's own `<style>`. `:class` bindings cannot be scoped at compile time and give warning W4102. The spec says "the compiler maps declared states" to `[data-state]`; that is not built: authors write `:hover`, `:disabled` or `[data-state]` selectors themselves. What is checked instead: `[data-<variant>="value"]` selectors against the contract (T2114).
+- **2026-10-22, Milestone 6: the governed-property map and rules the spec left open.** Defaults (`DEFAULT_GOVERNED` in `config.ts`): spacing (padding, margin, gap, with sides, inline and block) takes dimension tokens from `space`; border radii from `radius`; `font-size` from `font.size`; `opacity` number tokens from `opacity`; `transition-duration` and `animation-duration` from `motion.duration`; `transition-timing-function` from `motion.easing`; `box-shadow` shadow tokens; color properties take color tokens from `color`. Not governed by default: font family and weight, line height, layout properties, `border` shorthand lengths. A raw color is an error in any property; a named color (`red`) only where a color belongs (governed color properties plus border, outline, text-decoration, column-rule, text-shadow, filter, background-image). Zero, percentages, keywords, `var()`, `url()` and anything inside `raw()` are never flagged. Lengths inside `calc()` and other functions are checked. `@font-face` bodies are skipped. A token of the wrong type or group for a governed property is T2103. Nearest values are compared in px (rem is 16px) and ms, using the default theme.
+- **2026-10-22, Milestone 6: token tiers and the primitive warning.** Section 8.1 calls `space.4` a primitive, but section 6.1's own Button example uses `$space.2` and warns-on-primitive would fire on every spacing value. Resolution: a group can set the tier of all tokens below it with `$extensions.tessera.tier`, and the sample tokens mark `space`, `radius`, `opacity`, `motion`, `font` and `shadow` as `semantic` (the system's public scales). Colors stay primitive/semantic by alias. Referencing a primitive is T2105, a warning by default (`primitives: 'error' | 'off'` in config). Suggestions for raw colors prefer non-primitive tokens.
+- **2026-10-22, Milestone 6: autofix means unambiguous and equal in the default theme.** A fix is attached to a diagnostic only when: a raw length, duration, number or color exactly equals one token's value in the base theme (colors within 0.0015 OKLab, which is one 8-bit step); or an unknown token has one candidate strictly closer than all others and within two edits. Because a token can differ in other themes (that is their point), "never silently changes the visual result" is read as the default theme. Several tokens with the same value give a suggestion and no fix.
+- **2026-10-22, Milestone 6: contrast.** Checked per rule that sets a `color` and a `background` token (the base rule, and each state or variant rule falling back to the base for what it does not set), and for each contract `contrast` pairing, across the base values and every theme; a theme that changes neither color adds no line. The ratio shown is floored to one decimal, so 4.49 never reads as 4.5. A translucent foreground is composited over the background; a translucent background skips the pair. A descendant is not paired with its ancestor, because the compiler cannot know what is behind it; the contract pairing is how to ask for that. A declared pairing with no token on a side is warning T2109 rather than an error. Level `AA` is 4.5:1 and `AAA` 7:1, or `minimum` sets a number. Large-text thresholds (3:1) are not modelled.
+- **2026-10-22, Milestone 6: baseline, severity and expiry semantics.** Baselineable (violation) codes: T2101 to T2105, T2107, T2108, T2114. Never baselined or downgraded: contract errors, compiler errors, T2106 syntax, T2110 (expired `raw()`), and warnings. The baseline file is `{ version: 1, files: { "<posix path relative to the project root>": { "<code>": count } } }`. For each rule the first N violations in a file are absorbed and later ones reported, so a file can only get better; the baseline tracks counts, not identities, so fixing one violation and adding another passes. `pruneBaseline` takes the minimum of the recorded and current counts and drops zeros. Severity settings are `{ files, rules, level, reason, expires }`; `*` means all violation codes; the last matching setting wins; an expired setting reverts to `error` and says so in the hint; `warn` or `off` without a reason, or a malformed date, is T2112 when the config loads. Severity is applied before the baseline, so an exempt path does not use up its baseline. The expiry is compared as ISO dates: on the date itself it is still valid.
+- **2026-10-22, Milestone 6: style violations no longer stop code generation.** `compile()` still reports `ok: false` for any error, but returns `code` and `css` unless an error stops generation; style violations (the baselineable codes) do not. This lets a host ship a file that a baseline or exemption covers. An expired `raw()`, bad style syntax and every contract or template error still leave `code` empty.
+- **2026-10-22, Milestone 6: the Vite plugin.** It serves token CSS as `virtual:tessera/tokens.css` (tokens found by walking up to `system/tokens`; changing a `*.tokens.json` reloads that CSS module without a page reload), and each component's CSS as `Component.tess?tess&type=style&lang.css`, which Vite's CSS pipeline then handles. It applies severity then the baseline (`tessera.baseline.json` in the project root, read on each compile) before failing the build, and it warns for warnings. Options: `config`, `tokens`, `baseline`, `today`. Loading `tessera.config.ts` and the `baseline`, `check --fix` and `report` commands arrive with the CLI (Milestone 11). Verified in the dev server: the styled Counter renders with real token values, switching to the dark theme and compact density changes its colors and padding, and a seeded `padding-left: 13px` shows a T2102 overlay with the suggestion at the right line and column. Token changes refresh the CSS but do not re-run enforcement on already compiled components until they are edited.
+- **2026-10-22, Milestone 6: still deferred.** Source maps (pipeline step 7) are not emitted. The plugin returns `map: null` and passes generated TypeScript through esbuild, so a useful map needs the compiler to emit one and merge it with esbuild's; do it when `tessera check --types` needs positions (see the Milestone 5 spike). Code `T2113` is unused. `StyleStats` (declaration counts, tokenized versus hand-written, every `raw()` with reason and expiry) is returned by `compile()` for `tessera report`.
+- **2026-10-22, Milestone 7: build or adopt for `press`: built in-house (the time-boxed spike).** Zag.js has no button or press machine. Its catalogue (checked on its site) is checkbox, combobox, dialog, menu, select, slider, switch, tabs, toggle, toggle group, tooltip and similar, delivered as per-component packages with framework adapters. `press` is a few dozen lines on a native `<button>`, and a wrapper would add a dependency and an adapter layer for no gain. Decision: in-house for `press`, and for `toggle` and `disclosure` (Milestone 17). Zag stays the candidate to wrap for the hard behaviors (dialog focus trap and scroll lock, combobox, menu, tabs), which get their own spike in Milestone 18. The evidence behind this is thin: one catalogue read, no integration attempt. Revisit if `press` grows (long press, press-and-hold, drag) or if a Zag package proves easy to drive from the renderer adapter.
+- **2026-10-22, Milestone 7: how `press` works.** `@press` in a template is the behavior's event, not a DOM event. The compiler attaches `attachPress(adapter, el, { onPress, native, role })` through a new `use` option on `el()`, and errors (T4015) if the contract does not declare `"behavior": "press"`, or names a behavior that is not built. `native` is decided at compile time from the tag (`button`, `summary`, `a[href]`, `input[type=button|submit|reset]`). Native elements only get click handling (the browser already maps Enter and Space to clicks). Others get `tabindex="0"`, the contract role (neither overwrites an existing value), Enter on keydown (ignoring repeat), Space on keyup after preventing scroll. Disabled is read from the element (`disabled` or `aria-disabled="true"`) through a new `getAttribute` on the renderer adapter. State is exposed as `data-state="pressed"` while a pointer or key is held (the attribute is removed, not set to `idle`). The press detail is `{ source: 'pointer' | 'keyboard' | 'virtual', event }`; `virtual` is a click with no recent pointer or key input. `toggle` and `disclosure` stay reserved names in `BEHAVIOR_REQUIREMENTS` with `implemented: false`; the compiler now takes behavior requirements from `@tessera/behavior` (the contract package keeps its own provisional copy for standalone use).
+- **2026-10-22, Milestone 7: conformance and the new `@tessera/a11y` package.** `@tessera/behavior/conformance` holds 10 press cases (click, Enter, Space, other keys, `data-state` for key and pointer, Tab reachability, disabled, re-enable) with no test framework in them; they run against the behavior on a native button and a non-native div (`packages/behavior/test`), driven by Vitest browser mode's `userEvent`. The spec's layout has no package for generated accessibility tests, so `packages/a11y` (private, dev-only) was added. `defineA11ySuites` takes a folder's compiled components and their source text and, per component, per theme (default and dark), registers: an axe-core run for every combination of variant values times every declared state the test can create, using a real mouse and keyboard (`hover` via real pointer, `focus-visible` via Tab, `pressed` by setting `data-state`, `disabled` via the prop), after CSS transitions settle; role matches the contract; disabled is visible to assistive technology; for `press`: a visible focus outline and the whole conformance suite against the component. `system/components/a11y.browser.test.ts` globs the folder, so adding a component adds its tests. For Button this is 284 tests, about 23 seconds. A sabotage check (a white hover background on ghost and outline) made the hover-in-dark tests fail, so they do detect real contrast problems. What automation does not cover is the exported `NOT_COVERED` list, repeated in `website/content/guide/behaviors.md`. `axe-core` (4.14) is a dependency of `@tessera/a11y`; `system/` became a workspace package so tests there can import it.
+- **2026-10-22, Milestone 7: the contrast check now models the cascade.** Building a Button with tone, size, emphasis and state variants exposed that the Milestone 6 check treated each state or variant rule as independent, which gave false positives (a hover rule paired with the base text color, even when a variant overrides it) and false negatives (combinations nobody wrote a rule for). It now collects, per part, every attribute and pseudo selector in the stylesheet, builds each combination (one value per attribute, at most one pseudo-class), merges the rules that apply by specificity (count of attribute and pseudo selectors, then source order), and checks each distinct pair once in every theme, reporting the first combination that shows it. `disabled`, `readonly` and `inert` selectors are skipped, as WCAG exempts inactive controls. A `color` or `background` set to something that is not a token (`transparent`, `currentColor`, `raw()`) now resets that side to unknown instead of leaving the earlier token in place. Limits: it does not model ancestors, `:not()`, media queries or rule order across layers.
+- **2026-10-22, Milestone 7: the real Button and its tokens.** `system/components/Button.tess` follows section 6.1 (contract with tone, size and emphasis variants, `press` behavior, icon and default slots, `press` event whose detail is the press detail). To make every variant, state and theme pass WCAG AA, the tokens grew: `color.neutral.200/600/800`, `color.red.400/800`, `color.surface.hover`, `color.action.primary.text`, `color.action.danger.text`, `color.focus.ring`; danger is now `red.700` (white on `red.500` was 3.8:1); the dark theme moves `surface.raised` to `neutral.800` and adds dark values for the new text, hover and ring tokens. Prettier's CSS formatting uses single quotes in attribute selectors (`[data-tone='danger']`), and the CSS is correct either way. The contract has no `contrast` pairing: text color is set on the root, so the root-level check covers it.
+- **2026-10-22, Milestone 7: kitchen-sink and static checking.** `examples/kitchen-sink/app/components/ConfirmBar.tess` imports the system Button explicitly (until auto-imports in Milestone 8) and uses `<Button tone="danger" @press="confirm">`. Compiler tests read the real Button contract and show that `tone="dangr"` is T4008 with `Did you mean "danger"?` at the exact column, and an undeclared slot, event or variant value is rejected; a browser test shows the variant attribute and token color applied, a mouse click, and Tab, Enter and Space. The maintainer named in `packages/behavior/README.md` is the repository owner; change it when there is a team.
+- **2026-10-22, Milestone 8: no new dependencies; the registry is pure.** `ComponentRegistry` (`packages/compiler/src/registry.ts`) is built from files handed to it, so it runs in a browser; `loadComponentRegistry` in `node.ts` reads `system/components` (found by walking up from the project root, like the tokens) and then `app/components`, each sorted, recursively. Order matters: the first definition of a name is the one tags resolve to, so a duplicate does not also break every user of the name. A file whose contract does not parse is left out of the registry; its own compile reports why. Because the contract name must equal the file name, a duplicate always means two files with the same file name in different folders.
+- **2026-10-22, Milestone 8: how tags resolve.** `compile()` takes `registry`, `path` (absolute, so the import can be relative) and `autoImports`. An explicit import still wins; otherwise the registry supplies the contract and an import relative to the file (`../../system/components/Button.tess`). An import is emitted only for tags the file uses and does not already bind. With `autoImports: false` a tag with no import is T4007 whose hint is the exact line to add. The old hint for an unknown tag survives when the registry has no such component. T5001 (duplicate names) is reported at the contract `name` of each file involved, naming the others; T5002 (auto-import in a plain `.ts` file); T5003 (script API not imported with auto-imports off). `autoImports` is a field of `TesseraConfig`; with it off the script APIs are not added to the module's imports and not available in templates.
+- **2026-10-22, Milestone 8: the plain `.ts` check is a heuristic.** `checkPlainScriptAutoImports` reports a call to `state`, `derived`, `effect`, `onCleanup`, `onMount`, `navigate` or `useRoute` in a `.ts` file under the project root (not `node_modules`, not `.d.ts`) when the file never imports it, declares it, or lists it as a parameter or destructured name. Without a TypeScript parser it cannot see a shadowed name or a name introduced another way, so it errs toward staying quiet; `navigate` and `useRoute` name `@tessera/router`, which arrives in Milestone 9. Only calls are flagged, since `state` as a plain word is common.
+- **2026-10-22, Milestone 8: `.tessera/components.d.ts`.** Generated by the plugin at build start and whenever the registry's names or contracts change; written only if the text changed. It is a script (not a module), because wildcard module declarations are only allowed in scripts. It holds a `TesseraComponents` namespace with each component's `Props`, `Slots`, `Events` and `Part` types, a `Tags` map of every tag, and one `declare module '*/Name.tess'` per component typing the default export by file name. TypeScript prefers that over a loose `declare module '*.tess'` (checked), so existing loose declarations can stay. `routes.d.ts` comes with routing in Milestone 9. Projects must include `.tessera` in their `tsconfig.json`.
+- **2026-10-22, Milestone 8: hot updates when component files change.** The plugin watches the component folders (including `app/components` before it exists). On add, unlink or change of a `.tess` file there it rebuilds the registry; if the set of names, files and contracts is unchanged it does nothing, otherwise it rewrites the types, invalidates every loaded `.tess` module's cached compile and asks Vite to reload each, so users see the new component or the new error without a restart. Verified with a real Vite dev server in a temporary project: adding `Beta.tess` fixed `<Beta />` in `Host.tess`, removing it brought the error back, a rename followed, and a second `Alpha.tess` showed T5001. A body-only edit of a component does not recompile its users (they do not depend on it), which matches Vite's own behavior; a contract edit does.
+- **2026-10-22, Milestone 8: bundling.** A production build bundles only components the app imports, because the compiler emits real imports for what is used and nothing looks components up at runtime. A test builds a fixture app with a used and an unused component and checks the unused component's text is absent from the output and that no registry code is present.
+- **2026-10-22, Milestone 8: the editor uses the registry.** `EditorProject.registry(file)` takes the project root to be the folder above the nearest `app/components` (so opening the repository root works for the kitchen-sink app) plus the system components, and the extension drops its caches when any `.tess` file is created, deleted or changed. `ConfirmBar.tess` in the kitchen-sink no longer imports `Button`, and shows the same inline diagnostics as before.
+- **2026-10-22, Milestone 9: router package layout.** `@tessera/router` has zero runtime dependencies and three entry points: `@tessera/router` (runtime: `createRouter`, `navigate`, `useRoute`, `shouldHandleClick`, `routesFromModules`, and the pure manifest helpers), `@tessera/router/manifest` (the pure file-to-route rules, which the compiler also imports, so the compiler and the browser share one definition), and `@tessera/router/app` (`createApp()`, the only module that imports `virtual:tessera/routes`, so unit tests of the runtime never need the virtual module). `@tessera/core` is a peer dependency. The compiler gained a workspace dependency on `@tessera/router` (the manifest only), bundled into `dist/vite.js`. Not a new third-party dependency.
+- **2026-10-22, Milestone 9: `view()` added to the renderer.** `Renderer.view(select, onRender?)` shows whatever function `select` returns and rebuilds only when the function's identity changes. The router needs it for the current page, which is not a condition, a list or a slot. `onRender` hands back the new root node so the router can focus it.
+- **2026-10-22, Milestone 9: route state is a module singleton.** `useRoute()` returns one object with getters over a module-level signal, so any component can read it without a provider, and a test can `unmount()` and start another router. Only one router is active at a time; `navigate()` talks to the active one and rejects with "navigate() was called before the app was created. Call createApp().mount() first." when there is none.
+- **2026-10-22, Milestone 9: route file rules.** `index.tess` is the folder default; `[name]` is a parameter; a top-level `404.tess` is not-found. Two files with the same shape conflict (T6001), including `[id]` against `[slug]`, and neither is routed. T6002 covers names that cannot be routes: catch-all `[...x]` (not supported yet), characters outside letters, digits, `-` and `_`, repeated parameters, and a `404.tess` below the top. Matching is case sensitive, ignores a trailing slash, decodes parameters, and prefers static segments over parameters position by position (`/blog/new` over `/blog/:slug`). Query values are the first of each key.
+- **2026-10-22, Milestone 9: what a client navigation does.** Title from `<page>`; a polite `role="status"` live region (created lazily, visually hidden, text cleared then set after 50 ms so the same message announces again) says `Navigated to <title>`, or the path if the page has no title; focus goes to the page root (`tabindex="-1"` added, `preventScroll`) unless the URL has a hash target; scroll goes to the top, to the hash element, or on back/forward to the position saved for that history entry (each entry carries a `{ key }` in `history.state`, and `history.scrollRestoration` is set to `manual`). The first page of a visit does none of focus, scroll or announce. A newer navigation wins over a slower earlier one; a failed page load rejects and leaves page and URL alone. An address on another origin is handed to the browser.
+- **2026-10-22, Milestone 9: `<Link>` design.** Lives in `packages/router/components/Link.tess` with a real contract (role `link`, part `root`, default slot, states hover and focus-visible) and is found by the registry because the plugin adds the router package's `components` folder when the project depends on `@tessera/router`. It renders `<a href>`, sets `aria-current="page"` when `to` (ignoring query and hash) is the current path, and leaves modified clicks, non-primary buttons, `download` and other `target`s to the browser. Its style uses only tokens and its hover is a thicker underline: `$color.surface.hover` under `$color.action.primary.text` failed the contrast gate (4.1:1 and 4.0:1), so the gate did its job. The a11y suites are generated for it like any component (the Vitest browser project includes `packages/*/components`).
+- **2026-10-22, Milestone 9: `<page>` block and page modules.** The block is JSONC with `title` (string) and `layout`. Naming `layout` is T6003, "not supported yet", until Milestone 10; a `layout` file kind also reports T6003. An unknown field is T6005 with a suggestion. A page module exports `default` (the component) and `page` (the metadata, `{}` if there is no block). Pages use the scoped class prefix `t-page-<path>__` (for example `t-page-blog-index__`) so `index.tess` files in different folders cannot clash; components keep `t-<Name>__`.
+- **2026-10-22, Milestone 9: auto-imported router APIs and route checking.** `navigate` and `useRoute` are imported from `@tessera/router` when used in a `.tess` script; with auto-imports off T5003 names the right package. `compile()` takes `routes` (patterns). With it, a literal `to` on `<Link>` that starts with `/` and matches no route is T6004 `Unknown route "/abuot".` with a suggestion among the static routes, or the route list if none is close. Dynamic `:to` and targets not starting with `/` are not checked. The plugin passes `routes` only when `app/pages` exists.
+- **2026-10-22, Milestone 9: plugin routes module, types and hot updates.** `virtual:tessera/routes` exports `routes` (pattern plus `() => import("/app/pages/...")`, in matching order) and `notFound`. A conflict or bad file name fails a build at `buildStart` and shows in the dev overlay on load (formatted like any diagnostic, pointing at the first file). `.tessera/routes.d.ts` augments `RouteTypes` in `@tessera/router` (patterns and their parameters), written only when it changes. On adding or removing a page the plugin rebuilds the manifest and, if it changed, rewrites the types, invalidates the virtual module and every loaded `.tess` module (link checks depend on the list) and asks the browser to reload. Editing a page needs nothing. Verified in the real dev server: adding `temp.tess` served `/temp` and updated the types, removing it brought the 404 page back. `RoutePattern` is exported as the union of real patterns; `navigate()` still takes any string.
+- **2026-10-22, Milestone 9: tests.** The kitchen-sink's Vitest browser tests moved to their own project rooted at `examples/kitchen-sink` (pages and components resolve against its `app/` folder). They cover click, back/forward, direct load, 404, focus, title, announcer and `aria-current` in a real browser. A Node test builds the kitchen-sink for production and checks each of the five pages is its own dynamic-entry chunk loaded only by dynamic import, with its text absent from the entry; another builds throwaway apps to check conflicts, bad names, `/abuot`, the generated types and the routes module.
+- **2026-10-22, Milestone 10: layout files and the `layout` field.** A layout is a `.tess` file directly in `app/layouts/` (subfolders are not layouts; nested layouts are out of scope), named by its file name, with no contract and no `<page>` block (T4013). Its template must contain a default `<slot />` where the page renders (T6006 otherwise; a nested slot counts, a named one alone does not). It gets the same auto-imports and style enforcement as any file, and the scoped class prefix `t-layout-<name>__`. `<page>` `layout` is a layout name or `false`; `T6003` now means "Unknown layout" (the number was "not supported yet" in Milestone 9) with a nearest-name suggestion, or the list of layouts, or "There are no layouts yet. Add app/layouts/<name>.tess.". A `layout` that is neither a string nor `false` is T6005. The compiler takes `layouts` (names) and the plugin passes it whenever `app/pages` exists.
+- **2026-10-22, Milestone 10: which layout a page gets.** The page module exports `page.layout`. The router resolves it at runtime from the `layouts` export of `virtual:tessera/routes` (each a lazy import, so a layout is its own chunk): a name uses that layout; `false` uses none; nothing uses `default` if the app has `app/layouts/default.tess`, else none. The not-found page and the built-in not-found page get the default layout too. A named layout that does not exist at runtime (a compile-time error normally) rejects the navigation with "Unknown layout ... Layouts: ...". The layout is loaded before the page is committed, so a failed layout load leaves the current page alone like a failed page load.
+- **2026-10-22, Milestone 10: layouts are not re-created.** The router keeps one stable builder per layout component, so `view()` (which rebuilds only when the builder's identity changes) keeps the layout's nodes and state while the page inside its slot is swapped by a second `view()`. Changing to a page with a different layout, or none, rebuilds. Focus, title, announcement and scroll behave as in Milestone 9 because the page root is reported by whichever view owns it. This found a bug in `view()`: `onRender` ran inside its effect and any signal it read became a dependency, rebuilding the view. It now runs untracked, with a core test.
+- **2026-10-22, Milestone 10: kitchen-sink.** `default` (nav and the theme switches, moved out of the pages) and `focus` (a back link and a raised panel) layouts; `blog/[slug]` uses `focus`, `about` opts out with `"layout": false`. Browser tests check the nav element is the same node after navigating between default-layout pages, that layouts swap and drop correctly, and that focus, title and the announcement still work; jsdom tests cover the same in the router; compiler tests cover the field, the errors and layout files; a build test covers the unknown-name failure.
+- **2026-10-22, Milestone 11: shared project layer.** `Project` (`@tessera/compiler/node`) holds a project root's tokens, component registry, routes and layouts, config and baseline, and `compileFile()` compiles one file with all of it, then applies severity and the baseline. The Vite plugin was refactored to use it, so `tessera check` and a build run the same code and cannot drift; a test checks they agree. `configResolved` is now async because the plugin loads `tessera.config.ts` when `config` is not passed (options passed to `tessera()` win over the file, whole fields, no merging). The config loader compiles a `.ts` file with esbuild to a temporary `.mjs` in `.tessera/` and imports it, so the config can import packages; a `.mjs` or `.js` file is imported directly. Besides the style fields it accepts `contracts`, `tokens`, `baseline` (paths relative to the project) and `today`.
+- **2026-10-22, Milestone 11: CLI shape.** `packages/cli` is built with Vite to `dist/index.js` (workspace packages bundled in until publishing; `vite` and `acorn` external, `acorn` is a dependency of the CLI because the compiler needs it) and `bin/tessera.js` imports it. The root `build` script builds it, so `pnpm test` has it. `main(argv, io)` returns the exit code and takes an `Io` (cwd, out, err) so tests run commands in-process without a terminal. No argument-parsing dependency: a 20-line parser handles `--flag`, `--flag value` and `--flag=value`. The project root is `--root`, else the nearest folder above the current one with `app/pages`, `app/components`, `system/components` or a `tessera.config.*`. `tessera explain` and `diff` belong to later milestones and are not built; the diagnostics still print "Run `tessera explain CODE`" as the spec's format requires.
+- **2026-10-22, Milestone 11: what check covers.** The tokens build (a failing build is an error), every `.tess` file under `system/components` (found above the root, like the plugin), `app/components`, `app/layouts` and `app/pages`, route conflicts and bad page names, and T5002 in every `.ts` file under `app/` that is not a declaration file. Exit code is 1 when there is any error and 0 otherwise; warnings never fail. `--fix` applies each diagnostic's `fix` (only ever one for an exact token match or a single typo candidate; the compiler never produces one that changes the default render), re-runs up to 5 passes, then reports what is left. `--json` prints counts, messages and per-file diagnostics (fixes omitted).
+- **2026-10-22, Milestone 11: baseline semantics.** `tessera baseline` measures with severity applied and the baseline ignored, so an exempted path records nothing, and writes sorted JSON (`version`, then per-file per-rule counts) to `tessera.baseline.json`. Re-running it replaces the file with today's counts, which can raise them; the "can only go down" rule is enforced by `check` (violations beyond the recorded count fail) and by `--prune`, which takes the minimum of the recorded and current counts. Which violation counts as new in a file is not tracked: the later ones in the file are reported, as in Milestone 6.
+- **2026-10-22, Milestone 11: report.** Declarations are totalled from the compile's `StyleStats`, grouped by the file's directory relative to the project root (so the system folder above the root shows as `../../system/components`). The router's built-in `<Link>` is not part of a project's files. "Tokenized" is the share of all declarations that use a token, including ones that carry no design value (`display`), as in the compiler's stats; "by hand" is declarations writing a design value by hand or through `raw()`. Generated a11y status means a `*.test.ts` file in the component's own folder imports `@tessera/a11y`; the report does not run it, and says so. Deprecated usage counts `<Name` tags in other files for components whose contract has `deprecated`; deprecated tokens are not reported yet (the token format has no deprecation field in use). Expired `raw()` and exemptions are flagged `expired` against today's date.
+- **2026-10-22, Milestone 11: new, eject.** `new component` writes `app/components/<Name>.tess` (a contract with a default slot, a root part and two tokenized declarations), refusing a bad name, an existing file, or a name any registered component has. `new page` strips a leading `/` and `.tess`, checks the new file against the existing routes with the same manifest rules as the build (a conflict or invalid name is refused with that diagnostic's message, naming both files) and titles the page from its path (`blog/[slug]` is "Slug", `blog/index` "Blog", the root index "Home"). `eject` edits the contract text in place (new `name`, a `forkedFrom` of `{ component, version }` inserted after it, or replacing an existing one) so comments survive. The version is the nearest `package.json` version above the component, else its contract `since`, else `0.0.0`. Ejecting a component that is already in `app/components` is refused. A note lists relative imports in the copy, which point at the original's folder.
+- **2026-10-22, Milestone 11: init and create-tessera.** `init` writes the files listed in section 13 (Vite config, `tessera.config.ts`, tsconfig, `index.html`, `.gitignore`, `system/` tokens and Button copied from this repository's `system/` at build time with `?raw` imports so they cannot drift, `app/main.ts`, a default layout, the index page with a working Button). It does not install. Because nothing is published, `dependencies` are `link:` paths from the project to the checkout the CLI runs from (found by walking up from the CLI file to `pnpm-workspace.yaml` and `packages/core`); `--link <folder>` overrides; with no checkout the versions are `^0.1.0` placeholders and `init` says so. `create-tessera` is a one-line wrapper (`tessera init`) with its own bin. A test runs `init`, `pnpm install --offline`, a real Vite dev server and Edge, and checks the index page shows at `/`, the layout is around it, the Button responds to a click, an unknown path shows the not-found page, and a production build works.
+- **2026-10-22, Milestone 11: tests.** The "legacy fixture" is built in a temp folder per test (components and pages full of hand-written values) so each test starts clean: it has errors, `baseline` brings it to zero, one new violation (in an existing file or a new one) fails, `--prune` lowers and never raises, and contract errors are never absorbed. `tessera check` on the kitchen-sink app reports zero errors.
+- **2026-10-22, Milestone 12: the error registry.** `packages/compiler/src/explanations.ts` holds, for every code in the three registries (tokens T1001 to T1015, compiler T2101 to T6006 and warnings, contracts T3001 to T3013), a cause, a fix and a runnable example (a `.tess` file, token files, a route list, a `.ts` file, a config, or a set of component files). `runExample` runs it the way a project would. A test checks that the registries and the explanations list the same codes and that every example produces its code, so a reference page cannot show an example that does not fail. T2113 is unused (the spec number for source maps) and so is not a code. `tessera explain <code>` prints title, cause, example, fix and (where useful) the fixed form; a lowercase code works and a wrong code suggests the nearest. The registry shape is reused by the docs generator so the terminal and the site cannot differ.
+- **2026-10-22, Milestone 12: generated references.** `website/scripts/generate.ts` (run with `vite-node`, a dev dependency already in the store through Vitest; `pnpm --filter website generate`, which `dev` and `build` run first) writes the error reference (66 pages and an index, each showing the real diagnostic the example produces), the CLI reference (from `COMMANDS_DOC` in the CLI, the same data `tessera help` prints), the config reference (TSDoc of `TesseraConfig`, `SeverityRule` and `Accept`, read with the TypeScript compiler API), the contract reference (from the JSON Schema), the token format reference (from `SUPPORTED_TYPES`, with a shape table that the script refuses to build without, plus this repository's token manifest) and an API reference per package (TSDoc of each package's exports; an export with no comment says so rather than being hidden). Generated files are git-ignored and prettier-ignored. The generator imports `@tessera/cli` from its built `dist`, so `pnpm build` runs first (`pnpm test` and `pnpm run ci` already do).
+- **2026-10-22, Milestone 12: the docs are tested.** `website/scripts/checker.ts` reads every Markdown file. A fenced block needs a language from a short list (text, bash, ts, json, css, xml); an `xml` block must be tagged `xml tess` and is compiled against the kitchen-sink project (its tokens, components, routes and layouts) by the same `Project` the build uses; it must compile cleanly, or, tagged `error=CODE`, produce that code. Tags: `kind=page|layout`, `file=path`. A page's samples may use components an earlier sample on that page defined (`Project` takes `extraComponents`, in-memory files). `ts` blocks must parse (syntax only: the checker does not type-check them, so a type error in a `ts` sample is not caught), `json` blocks must be valid JSON with comments, and a fragment is written as `text`. Links are checked for existing pages and heading anchors; external links are not checked (no network in CI). Samples written for `bash` and `text` are not run, except the Quick start's. `pnpm --filter website build` runs `check` before `vitepress build`, so a broken sample or link fails the docs build; tests cover a deliberately broken sample, a wrong `error=` tag, a bad language, bad ts and json, broken links and anchors.
+- **2026-10-22, Milestone 12: Quick start.** The commands in `quick-start.md` tagged `bash quickstart` and `quickstart-serve` are extracted and run verbatim by `website/test/quickstart.test.ts` in a clean temporary folder with `TESSERA` pointing at the checkout, then Edge loads the served index page and checks its heading. Two deviations from the spec's wording, both because nothing is published: it runs in a clean temporary folder, not a container, and against the checkout through `link:` dependencies (as `tessera init` writes them), not locally packed packages (`pnpm pack`). Packing needs every package to ship built output and rewritten manifests, which is the publishing work; until then this is the closest honest test. The test supplies a `pnpm` shim when none is on the path and sets `npm_config_offline`.
+- **2026-10-22, Milestone 12: the site.** The IA in 14.2 is all present: Introduction, Quick start, Tutorial (nine steps, each ending in a check), Guide (essentials plus design systems), How it works, Reference, Cookbook, Migration (Vue, Svelte, React and shadcn/ui), Examples (real source files included with VitePress snippets), Releases (with a roadmap that says what is not built) and Community. Pages for features that do not exist (the docs app, agent exports and MCP, Figma and Penpot interchange, dialog, combobox, `tessera diff`, codemods) are not written; they are on the roadmap, and the design-systems guide says which parts are planned. "Edit this page", versioned docs, a playground and live demos wait for hosting and the playground, as the spec says. The manual check (two people following the Quick start and Tutorial in under 10 minutes) has not been done and is not claimed. Search, copy buttons, previous/next, a table of contents and clean URLs are VitePress defaults; install tabs are not used because there is nothing to install from a registry yet.
+- **2026-10-22, Milestone 12: theme, accessibility and machine-readable output.** The theme extends VitePress's default and maps its color variables onto Tessera semantic tokens (CSS generated from `system/tokens` by `tessera`'s own token builder), with the VitePress `.dark` class mirrored to `data-theme="dark"` (an inline head script does it before first paint). `website/scripts/axe.ts` serves the built site, loads every page in the light and the dark color scheme in Edge, runs axe-core (WCAG 2 A and AA, 2.1 AA, 2.2 AA and best practices) and fails the build on any serious or critical violation: 139 pages, 278 scans, none. It first found real contrast failures in the GitHub code themes' colors, so the site uses the high-contrast pair of those themes and puts code on the default surface. Moderate and minor findings are not failures. This is automation only; the accessibility statement says the site has not been audited by a specialist. Per-page Markdown copies and `llms.txt` (an index with a one-line summary per page, linked by site-relative paths) are written in VitePress's `buildEnd`.
+- **2026-10-22, Milestone 4: dev-server port.** The kitchen-sink app runs on port 5290 (`pnpm --filter kitchen-sink dev`), because 5173 was taken on this machine; `.claude/launch.json` points at it.
+
+---
+
+## 17. Decisions and open questions
+
+Items 1 to 7 are the author's decisions. Items 8 and 9 record a hardening pass made at the author's request ("update the spec as you think is best"), so the author should review them.
+
+1. **Name:** Tessera is final. npm scope `@tessera/*`.
+2. **Contract format:** JSON (with `//` comments allowed), not YAML. Rationale: matches the DTCG token files, gets editor autocomplete from a JSON Schema, avoids YAML quirks and an extra dependency.
+3. **Styling:** normal CSS classes, scoped automatically to deterministic names like `.t-Button__root`. No part-selector syntax.
+4. **Single-root templates:** accepted for v0.1 (see 6.2 for what this means). Revisit after the first components exist.
+5. **Token governed-property defaults:** use the defaults in `tessera.config.ts`, and review the map after the first components are built.
+6. **Docs:** dynamic generation. A live app driven by the compiler's manifests, not a static site.
+7. **Auto-imports and pages:** components auto-import across the whole app, and `app/pages/` is file-based routing with `index` as the default page. Layouts follow pages in Milestone 10 (6.5 to 6.8).
+
+8. **Hardening pass (2026-10-22), based on user-feedback research.** Main finding: keep strict compile-time enforcement, but make it accountable. Changes: baselines, per-path severity, reasoned and expiring `raw()` uses, repair suggestions and autofix (8.4, 8.5); agent-readable exports (10.1); top-level-only template unwrapping, `props()` as read-only signals, `derived()` purity (6.2, 7.1); auto-import off switch and `.ts` error (6.6); editor support (11.1); contrast pairings and axe-core tests (8.4, 10); contrast-aware breaking changes and promoted codemods (12); static docs export and prose beside generated docs (14); DTCG interchange (8.6); `contracts.app` option and `tessera eject` (6.2, 6.6); layouts promoted to Milestone 10; dialog and combobox promoted to Milestone 18; release gates (15).
+9. **Evidence strength.** Strong: the enforcement-needs-baselines finding (mandate and adoption data, ESLint's bulk suppressions), explicit `.value` and the nested-unwrapping rule (Vue and Svelte maintainer rationale and docs), auto-import design (Nuxt docs). Moderate: agent-readable exports, DTCG interchange, deprecation and codemod practice. Weak or inferred: editor-tooling sizing, `contracts.app: optional`, `eject`, layer-override guidance, and the claim that agent readiness drives adoption.
+10. **Framework documentation site (added at the author's request, 2026-10-22).** Tessera ships a documentation site covering install, how it works, how to use it, and the reference (14.2), as Milestone 12 inside the v0.1 gate. It is separate from the generated design system docs app (14.1). Its code samples are tested in CI, its reference pages are generated, every error code has a page, and the compiler core is browser-safe so a playground is possible.
+11. **Documentation site generator: VitePress (author's decision, 2026-10-22).** The author considered building the site with Tessera itself and chose VitePress instead. No static prerendering, Markdown package, or extra components are added to v0.1 for the site. Tokens still drive its theme (14.2).
+12. **Playground deferred, local hosting only (author's decision, 2026-10-22).** The docs site is built and previewed locally; there is no domain, deployment, or published npm package yet. The tutorial uses static, tested snippets, and the in-browser playground comes later. The compiler core stays browser-safe so adding it later is cheap. Error messages point to `tessera explain <code>` instead of a URL.
+
+### Still open
+
+- Agent readiness is a bet (10.1). The Milestone 13 experiment decides whether it earns more investment.
+- Build or adopt: the signals runtime (Milestone 1) and the behavior state machines (Milestone 7). Each is a time-boxed spike with a logged decision.
+- How the DTCG Resolver module relates to value-only themes (8.6). Read the module text during Milestone 2.
+- Whether current Figma plans still gate the Variables REST API (8.6). Verify before documenting the route.
+- Whether `defineContract()` in `<script>` (better TypeScript inference) should be offered as an alternative to the `<contract>` block after v0.1.
+- Whether a diagnostic for unlayered consumer CSS that overrides Tessera's layers is worth building (the evidence is a single vendor caveat).
+- Whether a docs app that Tessera itself must maintain avoids the upgrade-treadmill complaints users have about Storybook.
+- Documentation site (later): the domain and hosting, versioned docs, publishing packages to npm, and the in-browser playground.
+- Whether the site's analytics policy is "none" or privacy-respecting page counts.

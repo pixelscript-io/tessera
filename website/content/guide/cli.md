@@ -1,0 +1,132 @@
+# The command line
+
+Introduced in v0.1 (Milestone 11).
+
+`tessera` scaffolds a project, checks it without bundling, and manages the accountability tools: the baseline, exemptions and the report. Packages are not published yet, so run it from a checkout of the repository (`node packages/cli/bin/tessera.js`, or through the `tessera` binary that a scaffolded project links to).
+
+Every command runs in the nearest folder above the current one that looks like a project (it has `app/`, `system/components/` or a `tessera.config.ts`). Pass `--root <folder>` to name one.
+
+## Start a project
+
+```text
+tessera init my-app
+cd my-app
+pnpm install
+pnpm dev
+```
+
+`init` writes a project that runs: a Vite config, `system/` with the base tokens and the light, dark and compact themes, one `Button`, and an `app/` with `main.ts`, a default layout and `pages/index.tess`. The dev server shows the index page at `/`. It refuses a folder that already has a `package.json`, `app/`, `system/` or `vite.config.ts`, and changes nothing.
+
+`pnpm create tessera my-app` does the same thing through the `create-tessera` package, so newcomers need no global install.
+
+Until packages are published, the new project's dependencies are `link:` paths to the checkout the CLI came from (`--link <folder>` names another). If the CLI is not running from a checkout, the versions are placeholders and `init` says so.
+
+## `tessera check`
+
+Runs every validation without bundling, and exits non-zero on any error, so it is the command for CI.
+
+```text
+ERROR  T2102  app/components/Card.tess:6:12
+  13px is not on the spacing scale.
+  Did you mean "$space.3" (12px)?
+  Run `tessera explain T2102` for details.
+
+1 error, 0 warnings in 14 files.
+```
+
+It does what a build does, with the same code: the tokens build, each `.tess` file (contract, template, style rules, contrast, links, layouts), route conflicts, and auto-imports used in a plain `.ts` file. Per-path severity and the baseline are applied.
+
+- `--fix` applies the fixes that are unambiguous (an exact value match to one token, or a typo with one candidate) and never changes how the default theme renders. A fix can reveal the next problem, so it runs again until nothing more applies. A value with no exact token is suggested, not changed.
+- `--json` prints the result for tools.
+
+## Adopting Tessera in an existing app: `tessera baseline`
+
+```text
+tessera baseline
+```
+
+records today's violations per file and per rule in `tessera.baseline.json`. Commit it. From then on `check` and builds fail only on violations beyond the recorded counts, so a legacy app starts with zero errors and fails on one new violation.
+
+- Counts can only go down. Fixing a violation leaves room in the file's count, and `check` tells you the baseline can be lowered.
+- `tessera baseline --prune` lowers the counts to what files have now. It never raises one.
+- Contract errors are never baselined: a component without a valid contract is an error whatever the baseline says.
+- A path exempted by `severity` in `tessera.config.ts` has nothing to record.
+
+## `tessera report`
+
+```text
+Styles (what declarations contain, not what is imported)
+  72 declarations: 46 use a token (64%), 3 write a value by hand
+  app/components    20/30 tokenized (67%), 0 by hand
+raw() escapes: 1
+  app/components/Card.tess:6  13px  "legacy modal spacing"  expires 2027-03-01
+...
+```
+
+It measures what styles contain, not how many files import something: the tokenized versus hand-written declaration ratio in total and per directory, every `raw()` with its file, line, reason and expiry (expired ones are flagged), every severity exemption with its expiry, remaining baseline debt, contract coverage (components without a contract are named), where generated accessibility suites exist, and who still uses a deprecated component. `--json` prints the same data for CI.
+
+The accessibility line says suites are _present_ in a component's folder, not that they pass: run your tests for that.
+
+## `tessera tokens build`
+
+Resolves the design tokens and writes `tokens.css`, `tokens.d.ts` and `manifest.json` to `.tessera/tokens` (or `--out <folder>`). It exits 1 with the diagnostics if the tokens do not build.
+
+## `tessera explain`
+
+Every error and warning has a code, and every code has a page in the [error reference](/reference/errors/). `tessera explain` prints the same explanation in the terminal, so it works offline:
+
+```bash
+tessera explain T2102
+```
+
+```text
+T2102  Raw value off the token scale
+
+Cause
+  A governed property (spacing, radius, font size, opacity, motion, shadow) has a value that is not on the token scale.
+
+Fix
+  Use the nearest scale step the hint names, or `raw(value, "reason", "expiry")` for a one-off.
+...
+```
+
+It prints the cause, an example that produces the code and the fix. The examples are run by the test suite, so each one really produces its code. A code that does not exist gets the nearest real one as a suggestion. The full command list is in the [CLI reference](/reference/cli).
+
+## Scaffolding
+
+```text
+tessera new component UserCard
+tessera new page blog/[slug]
+tessera eject Button FancyButton
+```
+
+- `new component` writes `app/components/UserCard.tess` with a valid starter contract. Component names are global, so a name another component has is refused.
+- `new page` writes `app/pages/blog/[slug].tess`. It refuses a path that would conflict with an existing route (naming both files) or that cannot be a route.
+- `eject` copies a system component into `app/components/` under a new name and records where it came from in the contract:
+
+```text
+"name": "FancyButton",
+"forkedFrom": { "component": "Button", "version": "0.1.0" },
+```
+
+You own the copy, and the record keeps the drift visible. The copy is scoped under its own name, so it and the original do not share styles. Ejecting one of your own components is refused: copy the file by hand.
+
+## `tessera.config.ts`
+
+```ts
+export default {
+  tokens: 'system/tokens',
+  contracts: 'optional',
+  severity: [
+    {
+      files: 'app/legacy/**',
+      rules: '*',
+      level: 'warn',
+      reason: 'old screens',
+      expires: '2027-01-01',
+    },
+  ],
+}
+```
+
+The Vite plugin and the CLI both read it, so a build and `tessera check` agree. Options passed to `tessera()` in `vite.config.ts` win over the file. Besides the style fields (`governed`, `contrast`, `primitives`, `autoImports`, `severity`), it takes `contracts`, `tokens` and `baseline` (a path, relative to the project).

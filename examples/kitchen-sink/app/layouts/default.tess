@@ -1,0 +1,14 @@
+<template>
+  <div class="root">
+    <SiteNav />
+    <slot />
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+}
+</style>

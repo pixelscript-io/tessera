@@ -1,0 +1,36 @@
+<contract>
+{
+  "name": "ConfirmBar",
+  "role": "group",
+  "description": "A destructive action with a way out.",
+  "parts": ["root"],
+  "events": {
+    "confirm": "the user chose to go ahead",
+    "cancel": "the user backed out"
+  }
+}
+</contract>
+
+<script>
+function confirm() {
+  emit('confirm')
+}
+
+function cancel() {
+  emit('cancel')
+}
+</script>
+
+<template>
+  <div class="root">
+    <Button tone="danger" @press="confirm">Delete</Button>
+    <Button tone="neutral" emphasis="outline" @press="cancel">Cancel</Button>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  gap: $space.2;
+}
+</style>

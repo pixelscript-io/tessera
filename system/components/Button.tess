@@ -1,0 +1,124 @@
+<contract>
+{
+  "name": "Button",
+  "role": "button",
+  "description": "Triggers an action. Press it with a mouse, a finger, Enter or Space.",
+  "since": "0.1.0",
+  "parts": ["root", "icon", "label"],
+  "variants": {
+    "tone": ["primary", "neutral", "danger"], // first value is the default
+    "size": ["sm", "md", "lg"],
+    "emphasis": ["solid", "outline", "ghost"]
+  },
+  "states": ["hover", "focus-visible", "pressed", "disabled"],
+  "behavior": "press",
+  "slots": {
+    "default": "label content",
+    "icon": "optional leading icon"
+  },
+  "events": {
+    "press": "fired on click, Enter, or Space, with { source: 'pointer' | 'keyboard' | 'virtual' }"
+  }
+}
+</contract>
+
+<script>
+const { disabled } = props({ disabled: false })
+</script>
+
+<template>
+  <button class="root" type="button" :disabled="disabled" @press="emit('press', $event)">
+    <span class="icon"><slot name="icon" /></span>
+    <span class="label"><slot /></span>
+  </button>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space.2;
+  padding: $space.2 $space.4;
+  border: 1px solid transparent;
+  border-radius: $radius.md;
+  background: $color.action.primary.bg;
+  color: $color.action.primary.fg;
+  cursor: pointer;
+  transition-duration: $motion.duration.fast;
+
+  &:hover {
+    background: $color.action.primary.bg-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+
+  &[data-size='sm'] {
+    padding: $space.1 $space.2;
+  }
+
+  &[data-size='lg'] {
+    padding: $space.3 $space.6;
+  }
+
+  &[data-tone='neutral'] {
+    background: $color.surface.raised;
+    color: $color.text.default;
+  }
+
+  &[data-tone='neutral']:hover {
+    background: $color.surface.hover;
+  }
+
+  &[data-tone='danger'] {
+    background: $color.action.danger.bg;
+    color: $color.action.danger.fg;
+  }
+
+  &[data-tone='danger']:hover {
+    background: $color.action.danger.bg-hover;
+  }
+
+  &[data-emphasis='outline'],
+  &[data-emphasis='ghost'] {
+    background: transparent;
+    color: $color.action.primary.text;
+  }
+
+  &[data-emphasis='outline'] {
+    border-color: currentColor;
+  }
+
+  &[data-emphasis='outline'][data-tone='neutral'],
+  &[data-emphasis='ghost'][data-tone='neutral'] {
+    color: $color.text.default;
+  }
+
+  &[data-emphasis='outline'][data-tone='danger'],
+  &[data-emphasis='ghost'][data-tone='danger'] {
+    color: $color.action.danger.text;
+  }
+
+  &[data-emphasis='outline']:hover,
+  &[data-emphasis='ghost']:hover {
+    background: $color.surface.raised;
+  }
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.icon:empty {
+  display: none;
+}
+</style>

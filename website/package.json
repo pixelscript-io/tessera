@@ -1,0 +1,26 @@
+{
+  "name": "website",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm generate && vitepress dev content",
+    "generate": "vite-node scripts/generate.ts",
+    "check": "vite-node scripts/check.ts",
+    "build": "pnpm generate && pnpm check && vitepress build content && pnpm a11y",
+    "preview": "vitepress preview content",
+    "a11y": "vite-node scripts/axe.ts"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.0",
+    "vite-node": "^3.2.4",
+    "typescript": "^5.7.0",
+    "@tessera/compiler": "workspace:*",
+    "@tessera/cli": "workspace:*",
+    "@tessera/contract": "workspace:*",
+    "@tessera/tokens": "workspace:*",
+    "@tessera/router": "workspace:*",
+    "axe-core": "^4.14.0",
+    "playwright": "^1.64.1"
+  }
+}

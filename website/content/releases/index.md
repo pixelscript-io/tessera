@@ -1,0 +1,27 @@
+# Releases
+
+Nothing is published yet. This page records what each milestone of v0.1 delivered, newest first. A generated changelog from `tessera diff` (planned) will sit above the hand-written highlights once there is a version to compare.
+
+## v0.1 (in progress)
+
+- **Milestone 12: documentation site.** This site: error reference with one page per code and `tessera explain`, generated references (API, CLI, config, contract, tokens), docs checked in CI (samples compiled, links resolved), tokens-driven theme, accessibility checks.
+- **Milestone 11: CLI.** `tessera init`, `check` (with `--fix`), `baseline`, `report`, `tokens build`, `new`, `eject`, and `create-tessera`. `tessera.config.ts` is read by the plugin and the CLI.
+- **Milestone 10: layouts.** `app/layouts/default.tess`, per-page `layout` and `false`, layouts that are kept between pages.
+- **Milestone 9: pages and routing.** File-based routes, `<Link>`, `navigate()`, `useRoute()`, lazy pages, title, announcement, focus and scroll.
+- **Milestone 8: auto-imports.** Components and script APIs resolved at compile time, `.tessera/components.d.ts`, hot updates.
+- **Milestone 7: behaviors and accessibility tests.** The `press` behavior, a conformance suite, generated axe-core suites.
+- **Milestone 6: styles and enforcement.** Tokens in styles, contrast in every theme, `raw()` with receipts, severity, the baseline and autofix.
+- **Milestone 5: editor support.** TextMate grammar, language service, VS Code extension, Prettier plugin.
+- **Milestone 4: the compiler.** `.tess` to a module, the Vite plugin, hot updates.
+- **Milestone 3: contracts.** Parsing, validation, JSON Schema and derived types.
+- **Milestone 2: tokens.** DTCG in, CSS out, themes and density.
+- **Milestone 1: the runtime.** Signals, the renderer and the adapter interface.
+- **Milestone 0: the repository.** Workspace, tests, lint, format and CI.
+
+## Deprecations and upgrades
+
+There are none yet. When there are, they are listed here with the version that deprecated each item, what replaces it, and an upgrade guide.
+
+## Next steps
+
+[The roadmap](/releases/roadmap).

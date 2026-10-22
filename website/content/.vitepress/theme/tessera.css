@@ -1,0 +1,52 @@
+/*
+ * The site is themed by Tessera's own design tokens (tokens.css is generated from system/tokens by
+ * website/scripts/generate.ts). VitePress colors are mapped onto semantic tokens, so the site shows theming,
+ * dark mode and the contrast rules, and a token change changes the site.
+ */
+:root,
+.dark {
+  --vp-c-bg: var(--t-color-surface-default);
+  --vp-c-bg-alt: var(--t-color-surface-raised);
+  --vp-c-bg-elv: var(--t-color-surface-default);
+  --vp-c-bg-soft: var(--t-color-surface-raised);
+  --vp-c-text-1: var(--t-color-text-default);
+  --vp-c-text-2: var(--t-color-text-muted);
+  --vp-c-text-3: var(--t-color-text-muted);
+  --vp-c-divider: color-mix(in srgb, var(--t-color-text-default) 25%, transparent);
+  --vp-c-border: color-mix(in srgb, var(--t-color-text-default) 40%, transparent);
+  --vp-c-gutter: color-mix(in srgb, var(--t-color-text-default) 15%, transparent);
+  --vp-c-brand-1: var(--t-color-action-primary-text);
+  --vp-c-brand-2: var(--t-color-action-primary-text);
+  --vp-c-brand-3: var(--t-color-action-primary-bg);
+  --vp-c-brand-soft: color-mix(in srgb, var(--t-color-action-primary-bg) 14%, transparent);
+  --vp-button-brand-bg: var(--t-color-action-primary-bg);
+  --vp-button-brand-hover-bg: var(--t-color-action-primary-bg-hover);
+  --vp-button-brand-active-bg: var(--t-color-action-primary-bg-hover);
+  --vp-button-brand-text: var(--t-color-action-primary-fg);
+  --vp-button-brand-hover-text: var(--t-color-action-primary-fg);
+  --vp-button-brand-active-text: var(--t-color-action-primary-fg);
+  --vp-button-alt-bg: var(--t-color-surface-raised);
+  --vp-button-alt-text: var(--t-color-text-default);
+  --vp-button-alt-hover-bg: var(--t-color-surface-hover);
+  --vp-button-alt-hover-text: var(--t-color-text-default);
+  --vp-code-block-bg: var(--t-color-surface-default);
+  --vp-code-bg: var(--t-color-surface-raised);
+  --vp-code-color: var(--t-color-text-default);
+  --vp-c-focus: var(--t-color-focus-ring);
+}
+
+/* A visible focus indicator that comes from the focus token. */
+:focus-visible {
+  outline: 2px solid var(--t-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Code blocks sit on the default surface, where the syntax colors have the most contrast, and get an edge. */
+.vp-doc div[class*='language-'] {
+  border: 1px solid var(--vp-c-divider);
+}
+
+/* Scrollable code blocks must be reachable by keyboard. */
+.vp-doc div[class*='language-'] pre {
+  outline-offset: -2px;
+}

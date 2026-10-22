@@ -1,0 +1,12 @@
+<page>
+{ "title": "Home" }
+</page>
+
+<template>
+  <main>
+    <h1>Tessera kitchen sink</h1>
+    <Counter>
+      <h2>Counter</h2>
+    </Counter>
+  </main>
+</template>

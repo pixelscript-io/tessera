@@ -1,0 +1,26 @@
+<contract>
+{
+  "name": "Button",
+  "role": "button",
+  "parts": ["root", "label"],
+  "variants": {
+    "tone": ["primary", "neutral", "danger"],
+    "size": ["sm", "md"]
+  },
+  "states": ["disabled"],
+  "behavior": "press",
+  "slots": { "default": "label content", "icon": "optional leading icon" },
+  "events": { "press": "fired on click" }
+}
+</contract>
+
+<script>
+const { disabled } = props({ disabled: false })
+</script>
+
+<template>
+  <button class="root" :disabled="disabled" @click="emit('press')">
+    <slot name="icon" />
+    <span class="label"><slot /></span>
+  </button>
+</template>

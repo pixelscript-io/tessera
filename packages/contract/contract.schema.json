@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tessera.dev/schemas/contract.schema.json",
+  "title": "Tessera component contract",
+  "type": "object",
+  "required": [
+    "name",
+    "role",
+    "parts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]*$",
+      "description": "PascalCase component name. Must match the file name."
+    },
+    "role": {
+      "enum": [
+        "alert",
+        "alertdialog",
+        "application",
+        "article",
+        "banner",
+        "blockquote",
+        "button",
+        "caption",
+        "cell",
+        "checkbox",
+        "code",
+        "columnheader",
+        "combobox",
+        "complementary",
+        "contentinfo",
+        "definition",
+        "deletion",
+        "dialog",
+        "directory",
+        "document",
+        "emphasis",
+        "feed",
+        "figure",
+        "form",
+        "generic",
+        "grid",
+        "gridcell",
+        "group",
+        "heading",
+        "img",
+        "insertion",
+        "link",
+        "list",
+        "listbox",
+        "listitem",
+        "log",
+        "main",
+        "marquee",
+        "math",
+        "menu",
+        "menubar",
+        "menuitem",
+        "menuitemcheckbox",
+        "menuitemradio",
+        "meter",
+        "navigation",
+        "none",
+        "note",
+        "option",
+        "paragraph",
+        "presentation",
+        "progressbar",
+        "radio",
+        "radiogroup",
+        "region",
+        "row",
+        "rowgroup",
+        "rowheader",
+        "scrollbar",
+        "search",
+        "searchbox",
+        "separator",
+        "slider",
+        "spinbutton",
+        "status",
+        "strong",
+        "subscript",
+        "superscript",
+        "switch",
+        "tab",
+        "table",
+        "tablist",
+        "tabpanel",
+        "term",
+        "textbox",
+        "time",
+        "timer",
+        "toolbar",
+        "tooltip",
+        "tree",
+        "treegrid",
+        "treeitem"
+      ],
+      "description": "The ARIA role of the component root."
+    },
+    "description": {
+      "type": "string",
+      "description": "What the component is for."
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-zA-Z0-9-]*$"
+      },
+      "contains": {
+        "const": "root"
+      },
+      "description": "The public anatomy: documented class names. Must include \"root\"."
+    },
+    "variants": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      },
+      "description": "Variant name to allowed values. The first value is the default."
+    },
+    "states": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "description": "States the component can be in, for example \"hover\" or \"disabled\"."
+    },
+    "behavior": {
+      "type": "string",
+      "description": "Headless interaction behavior to attach, for example \"press\"."
+    },
+    "slots": {
+      "type": "object",
+      "description": "Slot name to description.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "description": "Description shown in the docs."
+      }
+    },
+    "events": {
+      "type": "object",
+      "description": "Event name to description.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "description": "Description shown in the docs."
+      }
+    },
+    "contrast": {
+      "type": "array",
+      "description": "Foreground and background parts whose colors are checked for contrast.",
+      "items": {
+        "type": "object",
+        "required": [
+          "foreground",
+          "background"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "foreground": {
+            "type": "string",
+            "pattern": "^[a-z][a-zA-Z0-9-]*$"
+          },
+          "background": {
+            "type": "string",
+            "pattern": "^[a-z][a-zA-Z0-9-]*$"
+          }
+        }
+      }
+    },
+    "since": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$",
+      "description": "Version that introduced the component."
+    },
+    "deprecated": {
+      "type": "string",
+      "description": "Why the component is deprecated and what to use instead."
+    },
+    "renamedFrom": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]*$",
+      "description": "Previous component name, used by codemods."
+    },
+    "forkedFrom": {
+      "type": "object",
+      "required": [
+        "component",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z0-9]*$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"
+        }
+      },
+      "description": "Set by `tessera eject`: the system component this was copied from."
+    }
+  }
+}

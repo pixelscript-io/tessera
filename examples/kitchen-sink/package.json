@@ -1,0 +1,19 @@
+{
+  "name": "kitchen-sink",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@tessera/core": "workspace:*",
+    "@tessera/tokens": "workspace:*",
+    "@tessera/router": "workspace:*",
+    "@tessera/behavior": "workspace:*"
+  },
+  "devDependencies": {
+    "@tessera/compiler": "workspace:*",
+    "vite": "^7.3.0"
+  },
+  "scripts": {
+    "dev": "vite --port 5290 --strictPort"
+  }
+}

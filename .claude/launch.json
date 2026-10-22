@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kitchen-sink",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "pnpm@10", "--filter", "kitchen-sink", "dev"],
+      "port": 5290
+    }
+  ]
+}

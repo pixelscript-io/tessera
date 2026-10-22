@@ -1,0 +1,23 @@
+<page>
+{ "title": "Post", "layout": "focus" }
+</page>
+
+<script>
+import { posts } from '../../data/posts'
+
+const route = useRoute()
+const post = derived(() => posts.find((p) => p.slug === route.params.slug))
+</script>
+
+<template>
+  <main>
+    <article if="post">
+      <h1>{post?.title}</h1>
+      <p>{post?.body}</p>
+    </article>
+    <article else>
+      <h1>No such post</h1>
+      <p>There is no post called "{route.params.slug}".</p>
+    </article>
+  </main>
+</template>

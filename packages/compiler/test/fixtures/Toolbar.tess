@@ -1,0 +1,29 @@
+<contract>
+{
+  "name": "Toolbar",
+  "role": "toolbar",
+  "parts": ["root"],
+  "events": { "saved": "fired with the number of saves" }
+}
+</contract>
+
+<script>
+import Button from './Button.tess'
+
+const saves = state(0)
+
+function save() {
+  saves.value++
+  emit('saved', saves.value)
+}
+</script>
+
+<template>
+  <div class="root">
+    <Button tone="danger" size="md" class="extra" aria-label="Save now" @press="save">
+      <span slot="icon">!</span>
+      Save {saves}
+    </Button>
+    <Button :disabled="saves > 1">Second</Button>
+  </div>
+</template>

@@ -1,0 +1,12 @@
+<page>
+{ "title": "About", "layout": false }
+</page>
+
+<template>
+  <main>
+    <h1>About</h1>
+    <p>This app exercises every part of the framework.</p>
+    <Link to="/">Home</Link>
+    <Link to="/blog/hello-world">Read the first post</Link>
+  </main>
+</template>

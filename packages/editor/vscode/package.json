@@ -1,0 +1,48 @@
+{
+  "name": "tessera-vscode",
+  "displayName": "Tessera",
+  "description": "Syntax highlighting, diagnostics and contract completion for Tessera .tess files.",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "tessera",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onLanguage:tess"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tess",
+        "aliases": [
+          "Tessera",
+          "tess"
+        ],
+        "extensions": [
+          ".tess"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tess",
+        "scopeName": "source.tess",
+        "path": "./syntaxes/tess.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.contract": "jsonc",
+          "meta.embedded.block.page": "jsonc",
+          "meta.embedded.block.script": "typescript",
+          "meta.embedded.block.style": "css",
+          "meta.embedded.expression.tess": "typescript"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+<contract>
+{
+  "name": "Counter",
+  "role": "group",
+  "description": "A counter with a to-do list, used to exercise the compiler.",
+  "parts": ["root", "button", "list"],
+  "variants": {
+    "tone": ["neutral", "primary"] // first value is the default
+  },
+  "slots": { "default": "heading" },
+  "events": { "change": "fired with the new count when the button is clicked" }
+}
+</contract>
+
+<script>
+const count = state(0)
+const label = derived(() => `Clicked ${count.value} times`)
+const todos = state([
+  { id: 1, text: 'Write signals' },
+  { id: 2, text: 'Render them' },
+])
+
+function inc() {
+  count.value++
+  emit('change', count.value)
+}
+
+function add() {
+  todos.value = [
+    ...todos.value,
+    { id: todos.value.length + 1, text: `Item ${todos.value.length + 1}` },
+  ]
+}
+</script>
+
+<template>
+  <div class="root">
+    <slot />
+    <button class="button" @click="inc">{label}</button>
+    <button @click="add">Add item</button>
+    <p if="count > 2">That is a lot of clicks.</p>
+    <p else-if="count > 0">Keep going.</p>
+    <p else>Click the button.</p>
+    <ul class="list">
+      <li each="todo in todos" key="todo.id">{todo.text}</li>
+    </ul>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.2;
+  padding: $space.4;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+  color: $color.text.default;
+
+  &[data-tone='primary'] {
+    background: $color.surface.default;
+  }
+}
+
+.button {
+  padding: $space.2 $space.4;
+  border-radius: $radius.sm;
+  background: $color.action.primary.bg;
+  color: $color.action.primary.fg;
+  transition-duration: $motion.duration.fast;
+
+  &:hover {
+    background: $color.action.primary.bg-hover;
+  }
+}
+
+.list {
+  display: grid;
+  gap: $space.1;
+  margin: 0;
+  padding-left: $space.6;
+}
+</style>

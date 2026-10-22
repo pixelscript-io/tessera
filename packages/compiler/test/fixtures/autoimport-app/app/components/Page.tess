@@ -1,0 +1,11 @@
+<contract>
+{ "name": "Page", "role": "group", "parts": ["root"] }
+</contract>
+
+<script>
+const count = state(0)
+</script>
+
+<template>
+  <main class="root"><Used /><p>{count}</p></main>
+</template>

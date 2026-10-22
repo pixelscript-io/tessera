@@ -1,0 +1,22 @@
+{
+  "name": "@tessera/router",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifest": "./src/manifest.ts",
+    "./app": "./src/app.ts"
+  },
+  "peerDependencies": {
+    "@tessera/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@tessera/core": "workspace:*",
+    "@tessera/a11y": "workspace:*",
+    "@tessera/behavior": "workspace:*",
+    "@tessera/tokens": "workspace:*"
+  }
+}

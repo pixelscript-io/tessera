@@ -1,0 +1,8 @@
+{
+  "$extends": "base",
+  "$attribute": "density",
+  "space": {
+    "2": { "$value": { "value": 6, "unit": "px" } },
+    "4": { "$value": { "value": 12, "unit": "px" } }
+  }
+}

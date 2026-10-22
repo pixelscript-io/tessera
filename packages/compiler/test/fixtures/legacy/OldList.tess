@@ -1,0 +1,10 @@
+<template>
+  <ul class="list"><li>One</li></ul>
+</template>
+
+<style>
+.list {
+  gap: 11px;
+  color: #123456;
+}
+</style>
