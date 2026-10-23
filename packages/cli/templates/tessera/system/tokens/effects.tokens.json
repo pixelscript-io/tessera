@@ -1,0 +1,103 @@
+{
+  "$description": "Shadows, opacity and motion.",
+  "shadow": {
+    "$type": "shadow",
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "sm": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0, 0, 0],
+          "alpha": 0.08
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 1,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 2,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      }
+    },
+    "md": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0, 0, 0],
+          "alpha": 0.12
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 4,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 12,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      }
+    }
+  },
+  "opacity": {
+    "15": {
+      "$value": 0.15
+    },
+    "$type": "number",
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "disabled": {
+      "$value": 0.4
+    }
+  },
+  "motion": {
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "duration": {
+      "$type": "duration",
+      "fast": {
+        "$value": {
+          "value": 120,
+          "unit": "ms"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 200,
+          "unit": "ms"
+        }
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": [0.2, 0, 0, 1]
+      }
+    }
+  }
+}

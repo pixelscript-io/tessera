@@ -1,0 +1,119 @@
+{
+  "$description": "The palette. Components do not use these directly: they use the semantic colors in semantic.tokens.json.",
+  "color": {
+    "$type": "color",
+    "$extensions": {
+      "tessera": {
+        "tier": "primitive"
+      }
+    },
+    "white": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1]
+      }
+    },
+    "stone": {
+      "50": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.96862745, 0.97254902, 0.96078431]
+        }
+      },
+      "100": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.94117647, 0.94901961, 0.92941176]
+        }
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.90588235, 0.91764706, 0.88235294]
+        }
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.82745098, 0.83921569, 0.8]
+        }
+      },
+      "400": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.65098039, 0.66666667, 0.62745098]
+        }
+      },
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.48627451, 0.49803922, 0.4627451]
+        }
+      },
+      "600": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.33333333, 0.34509804, 0.30980392]
+        }
+      },
+      "700": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.23137255, 0.24313725, 0.21568627]
+        }
+      },
+      "800": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.16470588, 0.17254902, 0.15686275]
+        }
+      },
+      "900": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.08627451, 0.09019608, 0.08235294]
+        }
+      },
+      "950": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.03921569, 0.03921569, 0.03921569]
+        }
+      }
+    },
+    "red": {
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.98823529, 0.64705882, 0.64705882]
+        }
+      },
+      "700": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7254902, 0.10980392, 0.10980392]
+        }
+      },
+      "800": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.6, 0.10588235, 0.10588235]
+        }
+      }
+    },
+    "green": {
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.5254902, 0.9372549, 0.6745098]
+        }
+      },
+      "700": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.05882353, 0.41960784, 0.23529412]
+        }
+      }
+    }
+  }
+}

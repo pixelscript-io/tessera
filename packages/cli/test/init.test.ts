@@ -19,7 +19,87 @@ afterAll(() => {
   for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
+/** The tokens the docs app styles itself from, when a project has them (the docs fall back when it does not). */
+export const DOCS_TOKENS = [
+  'color.surface.default',
+  'color.surface.raised',
+  'color.surface.hover',
+  'color.text.default',
+  'color.text.muted',
+  'color.border.default',
+  'color.action.primary.bg',
+  'color.action.primary.fg',
+  'color.focus.ring',
+  'color.status.success',
+  'color.status.danger',
+  'font.family.sans',
+  'font.family.mono',
+  'radius.sm',
+]
+
 const files = (dir: string, paths: string[]) => paths.map((p) => [p, existsSync(join(dir, p))])
+
+describe('tessera init --preset tessera', () => {
+  it('writes a design system of its own, three components and a styled page', async () => {
+    const dir = scratch()
+    const { code, out } = await run(dir, 'init', 'my-app', '--preset', 'tessera')
+    expect(code).toBe(0)
+    expect(out).toContain('Started a Tessera project (tessera preset) in my-app.')
+    const root = join(dir, 'my-app')
+    for (const [file, there] of files(root, [
+      'system/tokens/colors.tokens.json',
+      'system/tokens/scale.tokens.json',
+      'system/tokens/effects.tokens.json',
+      'system/tokens/semantic.tokens.json',
+      'system/tokens/themes/dark.tokens.json',
+      'system/components/Button.tess',
+      'system/components/Card.tess',
+      'system/components/Badge.tess',
+      'app/main.ts',
+      'app/layouts/default.tess',
+      'app/pages/index.tess',
+    ])) {
+      expect(there, String(file)).toBe(true)
+    }
+    // Nothing from Tailwind.
+    expect(existsSync(join(root, 'system/tokens/TAILWIND-LICENSE'))).toBe(false)
+  })
+
+  it('passes tessera check, with no contrast failure in either theme', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--preset', 'tessera')
+    const { code, out } = await run(dir, 'check')
+    expect(out).toContain('0 errors, 0 warnings in 5 files.')
+    expect(code).toBe(0)
+  })
+
+  it('has the tokens the docs follow, the same names the Tailwind preset uses', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--preset', 'tessera')
+    await run(dir, 'tokens', 'build')
+    const manifest = JSON.parse(read(dir, '.tessera/tokens/manifest.json')) as {
+      tokens: Array<{ path: string }>
+      themes: Array<{ name: string }>
+    }
+    const paths = new Set(manifest.tokens.map((t) => t.path))
+    for (const path of DOCS_TOKENS) expect(paths.has(path), path).toBe(true)
+    expect(manifest.themes.map((t) => t.name)).toEqual(['dark'])
+  })
+
+  it("uses the design system's own Button, so there is one copy to maintain", () => {
+    const repoButton = readFileSync(
+      fileURLToPath(new URL('../../../system/components/Button.tess', import.meta.url)),
+      'utf8',
+    )
+    expect(presetFiles('tessera')['system/components/Button.tess']).toBe(repoButton)
+  })
+
+  it('is the preset a project gets when nothing says otherwise', async () => {
+    const dir = scratch()
+    const { out } = await run(dir, 'init')
+    expect(out).toContain('(tessera preset)')
+  })
+})
 
 describe('tessera init --preset tailwind', () => {
   it('writes a full design system, three components and a styled page', async () => {
@@ -158,11 +238,11 @@ describe('tessera init: where and how it runs', () => {
       },
     }
     expect(await main(['init'], io)).toBe(0)
-    expect(asked).toBe('Which starting point?: tailwind, none')
+    expect(asked).toBe('Which starting point?: tessera, tailwind, none')
     expect(existsSync(join(dir, 'system/components'))).toBe(false)
   })
 
-  it('does not ask when --preset is given, and uses tailwind with no terminal and no flag, saying so', async () => {
+  it('does not ask when --preset is given, and uses tessera with no terminal and no flag, saying so', async () => {
     const dir = scratch()
     let asked = false
     let output = ''
@@ -181,7 +261,7 @@ describe('tessera init: where and how it runs', () => {
     const other = scratch()
     const quiet: Io = { cwd: other, out: (t) => void (output += t + '\n'), err: () => {} }
     await main(['init'], quiet)
-    expect(output).toContain('No --preset given and no terminal to ask in, so using "tailwind".')
+    expect(output).toContain('No --preset given and no terminal to ask in, so using "tessera".')
     expect(existsSync(join(other, 'system/components/Card.tess'))).toBe(true)
   })
 
@@ -189,7 +269,7 @@ describe('tessera init: where and how it runs', () => {
     const { code, err } = await run(scratch(), 'init', '--preset', 'bootstrap')
     expect(code).toBe(1)
     expect(err).toContain('There is no preset "bootstrap".')
-    expect(err).toContain('Presets: tailwind, none.')
+    expect(err).toContain('Presets: tessera, tailwind, none.')
   })
 
   it('works beside an existing package.json: adds scripts and the dependency, keeps everything else', async () => {

@@ -2,9 +2,42 @@
 
 Introduced in v0.1 (Milestone 12b).
 
-`tessera init` starts a project from one of two presets. You choose when you run it: in a terminal it asks, and `--preset tailwind` or `--preset none` answers it. The choice is made in `init`, not when you run `npm install`, because install scripts cannot prompt reliably (pnpm skips them by default, as do `--ignore-scripts` and most CI). With no terminal and no flag, `init` uses `tailwind` and says so.
+`tessera init` starts a project from one of three presets. You choose when you run it: in a terminal it asks, and `--preset tessera`, `--preset tailwind` or `--preset none` answers it. The choice is made in `init`, not when you run `npm install`, because install scripts cannot prompt reliably (pnpm skips them by default, as do `--ignore-scripts` and most CI). With no terminal and no flag, `init` uses `tessera` and says so.
 
 Either way the project is yours: `init` writes ordinary files, never overwrites one, and does not leave Tessera or Tailwind configuration you cannot see.
+
+## `tessera`
+
+A small design system of Tessera's own, in `system/`: warm neutrals and near-black text, sharp corners, medium-weight type, light and dark themes. It is the default, and the look the generated docs were designed with.
+
+```text
+system/tokens/
+  colors.tokens.json     the palette: stone (warm neutrals), red, green, white (primitives)
+  scale.tokens.json      spacing, radii, font families, sizes and weights
+  effects.tokens.json    shadows, opacity, durations and easing
+  semantic.tokens.json   surface, text, border, action, status and focus colors (light)
+  themes/dark.tokens.json   the dark overrides
+  README.md
+system/components/
+  Button.tess  Card.tess  Badge.tess
+app/
+  layouts/default.tess   a header with a Light, Dark and Auto switch
+  pages/index.tess       a styled index page
+```
+
+It is organized like the `tailwind` preset (primitives, a semantic layer that components use, a dark theme that overrides the semantic layer), with far fewer tokens, so it is easy to read all of.
+
+### The docs use the same files
+
+`npx tessera docs` styles its own pages (the page and panel colors, text, borders, buttons, the font and the corner radius) from your semantic tokens, so the app and its documentation share one set of token files: change `color.surface.default` and both change. The docs read these names, and use their own built-in look for any that are missing:
+
+```text
+color.surface.default  color.surface.hover  color.text.default  color.text.muted  color.border.default
+color.action.primary.bg  color.action.primary.fg  color.status.success  color.status.danger
+font.family.sans  font.family.mono  radius.sm
+```
+
+The `tailwind` preset has most of these, so its docs follow it too. With `none` (no tokens) the docs use the built-in look. If the tokens have a theme that follows the system (`$auto`), the docs start on it and the theme switcher in the docs moves the whole page.
 
 ## `tailwind`
 
@@ -66,7 +99,7 @@ Until a token folder exists, the checks that need tokens are off, and `npx tesse
 
 ## Changing your mind
 
-Both presets are only starting points. To move from `none` to a full system, run `npx tessera init --preset tailwind` in the same folder: it writes the files that are missing and leaves the rest, so your pages and components stay. Delete what you do not want, or edit the tokens: they are yours.
+The presets are only starting points. To move from `none` to a full system, run `npx tessera init --preset tessera` (or `tailwind`) in the same folder: it writes the files that are missing and leaves the rest, so your pages and components stay. Delete what you do not want, or edit the tokens: they are yours.
 
 ## Next steps
 

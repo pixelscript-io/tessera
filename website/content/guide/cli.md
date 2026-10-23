@@ -17,7 +17,7 @@ npx tessera init
 npm run dev
 ```
 
-`init` writes the app (`main.ts`, a default layout, an index page) and, per the preset, the design system. In a terminal it asks which preset; `--preset tailwind` or `--preset none` answers the question, and with neither it uses `tailwind`. See [Starter presets](/guide/presets).
+`init` writes the app (`main.ts`, a default layout, an index page) and, per the preset, the design system. In a terminal it asks which preset; `--preset tessera`, `--preset tailwind` or `--preset none` answers the question, and with neither it uses `tessera`. See [Starter presets](/guide/presets).
 
 It works in an empty folder or beside an existing `package.json`: it adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency, never overwrites a file, and lists what it left alone. Run it twice and the second run changes nothing.
 

@@ -1,0 +1,82 @@
+{
+  "$extends": "base",
+  "$auto": "prefers-color-scheme: dark",
+  "color": {
+    "surface": {
+      "default": {
+        "$value": "{color.stone.950}"
+      },
+      "raised": {
+        "$value": "{color.stone.900}"
+      },
+      "hover": {
+        "$value": "{color.stone.800}"
+      },
+      "inverse": {
+        "$value": "{color.stone.100}"
+      }
+    },
+    "text": {
+      "default": {
+        "$value": "{color.stone.100}"
+      },
+      "muted": {
+        "$value": "{color.stone.400}"
+      },
+      "inverse": {
+        "$value": "{color.stone.950}"
+      }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.stone.800}"
+      },
+      "strong": {
+        "$value": "{color.stone.600}"
+      }
+    },
+    "action": {
+      "primary": {
+        "bg": {
+          "$value": "{color.stone.100}"
+        },
+        "bg-hover": {
+          "$value": "{color.stone.200}"
+        },
+        "fg": {
+          "$value": "{color.stone.950}"
+        },
+        "text": {
+          "$value": "{color.stone.100}"
+        }
+      },
+      "danger": {
+        "bg": {
+          "$value": "{color.red.700}"
+        },
+        "bg-hover": {
+          "$value": "{color.red.800}"
+        },
+        "fg": {
+          "$value": "{color.white}"
+        },
+        "text": {
+          "$value": "{color.red.300}"
+        }
+      }
+    },
+    "status": {
+      "success": {
+        "$value": "{color.green.300}"
+      },
+      "danger": {
+        "$value": "{color.red.300}"
+      }
+    },
+    "focus": {
+      "ring": {
+        "$value": "{color.stone.100}"
+      }
+    }
+  }
+}

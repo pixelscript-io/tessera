@@ -7,4 +7,4 @@ npm install
 npm run dev
 ```
 
-This runs `tessera init my-app` from `@pixelscriptio/tessera`. Pass `-- --preset tailwind` or `-- --preset none` to skip the question.
+This runs `tessera init my-app` from `@pixelscriptio/tessera`. Pass `-- --preset tessera`, `-- --preset tailwind` or `-- --preset none` to skip the question.

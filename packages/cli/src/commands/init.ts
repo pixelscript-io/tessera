@@ -7,7 +7,7 @@ import { CliError } from '../io'
 import { VERSION } from '../version'
 import BUTTON from '../../../../system/components/Button.tess?raw'
 
-export const PRESETS = ['tailwind', 'none'] as const
+export const PRESETS = ['tessera', 'tailwind', 'none'] as const
 export type Preset = (typeof PRESETS)[number]
 
 // Every file of every preset, as text, keyed by its path in the template folder. Bundled at build time, so the
@@ -25,8 +25,8 @@ export function presetFiles(preset: Preset): Record<string, string> {
   for (const [key, content] of Object.entries(TEMPLATES)) {
     if (key.startsWith(prefix)) files[key.slice(prefix.length)] = content
   }
-  // The tailwind preset's Button is the design system's own, so there is one copy to maintain.
-  if (preset === 'tailwind') files['system/components/Button.tess'] = BUTTON
+  // The presets' Button is the design system's own, so there is one copy to maintain.
+  if (preset !== 'none') files['system/components/Button.tess'] = BUTTON
   return files
 }
 
@@ -92,11 +92,11 @@ export interface InitResult {
 }
 
 /**
- * `tessera init [folder] [--preset tailwind|none]`: start a project, in an empty folder or beside an existing
+ * `tessera init [folder] [--preset tessera|tailwind|none]`: start a project, in an empty folder or beside an existing
  * `package.json`. It never overwrites a file; what already exists is left alone and reported.
  *
  * The preset is chosen here (not at install time, which cannot prompt): in a terminal it asks, `--preset`
- * answers it, and with neither it uses `tailwind`.
+ * answers it, and with neither it uses `tessera`.
  */
 export async function init(args: Args, io: Io): Promise<number> {
   const target = resolve(io.cwd, args.positional[0] ?? '.')
@@ -110,6 +110,11 @@ export async function init(args: Args, io: Io): Promise<number> {
   } else if (io.choose) {
     preset = (await io.choose('Which starting point?', [
       {
+        value: 'tessera',
+        label:
+          'tessera: a small design system of our own (warm neutrals, sharp corners), with a styled page; the docs use it too',
+      },
+      {
         value: 'tailwind',
         label:
           "tailwind: a full design system built from Tailwind's default theme, with a styled page",
@@ -120,9 +125,9 @@ export async function init(args: Args, io: Io): Promise<number> {
       },
     ])) as Preset
   } else {
-    preset = 'tailwind'
+    preset = 'tessera'
     io.out(
-      'No --preset given and no terminal to ask in, so using "tailwind". Pass --preset none for no tokens.',
+      'No --preset given and no terminal to ask in, so using "tessera". Pass --preset tailwind or --preset none for another.',
     )
   }
 

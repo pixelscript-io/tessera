@@ -335,7 +335,7 @@ async function axeViolations(page: Page): Promise<string[]> {
     .map((v) => `${v.id} (${v.impact}, ${v.nodes.length})`)
 }
 
-describe.each(['tailwind', 'none'] as const)(
+describe.each(['tessera', 'tailwind', 'none'] as const)(
   'a new project from the packed package: the %s preset',
   (preset) => {
     it('installs, serves the index page with no config files of its own, builds, and previews', async () => {
@@ -374,19 +374,19 @@ describe.each(['tailwind', 'none'] as const)(
 
         expect(await page.title()).toBe('Welcome to Tessera')
         expect(await page.textContent('h1')).toBe(
-          preset === 'tailwind'
-            ? 'Build interfaces from a system you can trust'
-            : 'Welcome to Tessera',
+          preset !== 'none' ? 'Build interfaces from a system you can trust' : 'Welcome to Tessera',
         )
 
-        if (preset === 'tailwind') {
-          // Styled by its tokens: the page has no margin and a white surface in light, and the button works.
+        if (preset !== 'none') {
+          // Styled by its tokens: the page has no margin and the preset's surface in light, and the button works.
           const light = await page.evaluate(() => {
             const cs = getComputedStyle(document.body)
             return { margin: cs.margin, background: cs.backgroundColor }
           })
           expect(light.margin).toBe('0px')
-          expect(light.background).toBe('rgb(255, 255, 255)')
+          expect(light.background).toBe(
+            preset === 'tessera' ? 'rgb(240, 242, 237)' : 'rgb(255, 255, 255)',
+          )
           const button = page.getByRole('button', { name: /Clicked/ })
           expect(await button.textContent()).toContain('Clicked 0 times')
           await button.click()
@@ -401,7 +401,7 @@ describe.each(['tailwind', 'none'] as const)(
           ).toBe('dark')
           expect(
             await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
-          ).not.toBe('rgb(255, 255, 255)')
+          ).not.toBe(light.background)
           expect(await axeViolations(page)).toEqual([])
         } else {
           // No tokens: no token CSS is loaded and nothing is styled, but it renders and is accessible.

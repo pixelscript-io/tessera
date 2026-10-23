@@ -1,0 +1,87 @@
+{
+  "$description": "What components use: surface, text, border, action, status and focus colors (light).",
+  "color": {
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "$type": "color",
+    "surface": {
+      "default": {
+        "$value": "{color.stone.100}"
+      },
+      "raised": {
+        "$value": "{color.stone.50}"
+      },
+      "hover": {
+        "$value": "{color.stone.200}"
+      },
+      "inverse": {
+        "$value": "{color.stone.950}"
+      }
+    },
+    "text": {
+      "default": {
+        "$value": "{color.stone.950}"
+      },
+      "muted": {
+        "$value": "{color.stone.600}"
+      },
+      "inverse": {
+        "$value": "{color.stone.100}"
+      }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.stone.300}"
+      },
+      "strong": {
+        "$value": "{color.stone.500}"
+      }
+    },
+    "action": {
+      "primary": {
+        "bg": {
+          "$value": "{color.stone.950}"
+        },
+        "bg-hover": {
+          "$value": "{color.stone.800}"
+        },
+        "fg": {
+          "$value": "{color.white}"
+        },
+        "text": {
+          "$value": "{color.stone.950}"
+        }
+      },
+      "danger": {
+        "bg": {
+          "$value": "{color.red.700}"
+        },
+        "bg-hover": {
+          "$value": "{color.red.800}"
+        },
+        "fg": {
+          "$value": "{color.white}"
+        },
+        "text": {
+          "$value": "{color.red.700}"
+        }
+      }
+    },
+    "status": {
+      "success": {
+        "$value": "{color.green.700}"
+      },
+      "danger": {
+        "$value": "{color.red.700}"
+      }
+    },
+    "focus": {
+      "ring": {
+        "$value": "{color.stone.950}"
+      }
+    }
+  }
+}

@@ -52,6 +52,10 @@ npx tessera docs --static
 
 writes `docs-dist` (change it with `--out <folder>`): an `index.html`, one JavaScript module with the components it previews in chunks beside it, a stylesheet, all with relative URLs, and routing by `#` so no server rewrite rule is needed. Any file server can host it. It is the same app with the data compiled in, so the coverage report is a snapshot of the day you exported.
 
+## Styling
+
+The docs are styled by your project's own semantic tokens (surface, text, border, action, font, radius) when it has them, so the app and the docs share the same token files; see [Starter presets](/guide/presets). A project without those tokens gets a built-in look.
+
 ## Editing
 
 The docs are read-only, with one exception for tokens. The **Export** page offers the tokens as files for a design tool (DTCG or Tokens Studio), as a zip or one by one. `tessera docs --edit` adds **Bring in tokens**: a token export from the design tool, previewed and checked by the compiler before it is saved. See [Tokens in the design system docs](/guide/system-manager).

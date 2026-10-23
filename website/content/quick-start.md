@@ -46,10 +46,11 @@ If you would rather not install first, `npm create @pixelscriptio/tessera my-app
 
 | Preset     | What you get                                                                                                                                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tessera`  | A small design system of its own: warm neutrals, sharp corners, light and dark themes, three components and a styled index page. The docs (`npx tessera docs`) are styled by the same token files.               |
 | `tailwind` | A complete design system in `system/`, built from Tailwind's default theme: every color, the spacing scale, radii, type, shadows and more, with light and dark themes and three components. A styled index page. |
 | `none`     | No tokens, themes or components, so nothing is checked against a design system yet. An index page and example files with the examples commented out.                                                             |
 
-Skip the question with `npx tessera init --preset tailwind` or `--preset none`. With no terminal and no flag, `init` uses `tailwind` and says so. See [Starter presets](/guide/presets).
+Skip the question with `npx tessera init --preset tessera`, `--preset tailwind` or `--preset none`. With no terminal and no flag, `init` uses `tessera` and says so. See [Starter presets](/guide/presets).
 
 ## What you have
 
@@ -58,7 +59,7 @@ my-app/
   package.json            scripts: dev, build, preview, check
   tessera.config.ts       style rules and exemptions (empty to start)
   tsconfig.json
-  system/                 the design system (tailwind preset)
+  system/                 the design system (tessera or tailwind preset)
     tokens/               colors, scale, effects, layout, semantic colors, themes/dark
     components/           Button, Card, Badge
   app/
@@ -98,7 +99,7 @@ This writes `app/components/Note.tess` with a valid contract. Use `<Note>` in an
 
 ## Change a token
 
-With the `tailwind` preset, open `system/tokens/semantic.tokens.json` and change `color.action.primary.bg` to another color, say `{color.emerald.600}`. The buttons change everywhere, and `npx tessera check` still passes unless the new color has too little contrast with white text, in which case it says which pair fails.
+With the `tessera` or `tailwind` preset, open `system/tokens/semantic.tokens.json` and change `color.action.primary.bg` to another color, say `{color.red.700}` (tessera) or `{color.emerald.600}` (tailwind). The buttons change everywhere, and `npx tessera check` still passes unless the new color has too little contrast with white text, in which case it says which pair fails.
 
 Then try the opposite on purpose: in a component's `<style>`, write `padding: 13px`.
 

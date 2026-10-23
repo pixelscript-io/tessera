@@ -847,5 +847,12 @@ function changesPage(): HTMLElement {
   return holder
 }
 
+// A theme that follows the system ($auto in the tokens) is how the docs start, so they follow it like the app does.
+for (const t of data.manifest.tokens.themes) {
+  const attribute = `data-${t.attribute}`
+  if (t.auto && !document.documentElement.hasAttribute(attribute))
+    document.documentElement.setAttribute(attribute, 'auto')
+}
+
 window.addEventListener('hashchange', render)
 render()
