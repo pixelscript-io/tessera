@@ -1,0 +1,3 @@
+tailwindcss@4.3.3 (MIT), file theme.css, unmodified.
+The `tailwind` init preset is generated from it by `scripts/generate-tailwind.ts`.
+To update: replace theme.css and LICENSE with the new release, update the version here, run the generator.

@@ -28,6 +28,20 @@ const TOKENS_ID = 'virtual:tessera/tokens.css'
 const RESOLVED_TOKENS_ID = '\0virtual:tessera/tokens.css'
 const ROUTES_ID = 'virtual:tessera/routes'
 const RESOLVED_ROUTES_ID = '\0virtual:tessera/routes'
+/**
+ * The one global rule Tessera adds: the page itself has no margin, and takes the surface and text colors when the
+ * design system has them. In the `reset` layer, so any other rule overrides it.
+ */
+const PAGE_RESET = `
+@layer tessera.reset {
+  body {
+    margin: 0;
+    background: var(--t-color-surface-default, transparent);
+    color: var(--t-color-text-default, inherit);
+  }
+}
+`
+
 const STYLE_QUERY = 'tess&type=style&lang.css'
 
 /** Every `*.tokens.json` under a folder, so Vite rebuilds the token CSS when one changes. */
@@ -90,6 +104,13 @@ export function tessera(options: TesseraOptions = {}): Plugin {
   return {
     name: 'tessera',
     enforce: 'pre',
+
+    config() {
+      // The published package is served as it is, not pre-bundled: its router entry imports the virtual routes
+      // module, which only this plugin can resolve, and pre-bundling would give each entry its own copy of the
+      // runtime instead of one shared one.
+      return { optimizeDeps: { exclude: ['@pixelscriptio/tessera'] } }
+    },
 
     async configResolved(config) {
       root = config.root
@@ -197,7 +218,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
           this.error('No design tokens found. Put *.tokens.json files in a "system/tokens" folder.')
         if (!loaded.ok) this.error(loaded.diagnostics.map(formatTokenDiagnostic).join('\n\n'))
         for (const file of tokenFiles(loaded.dir)) this.addWatchFile(file)
-        return loaded.css
+        return loaded.css + PAGE_RESET
       }
       if (id === RESOLVED_ROUTES_ID) {
         const current = loadRoutes()

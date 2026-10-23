@@ -1,0 +1,115 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { tessera } from '@tessera/compiler/vite'
+import { build as viteBuild, createServer, preview as vitePreview } from 'vite'
+import type { InlineConfig, Plugin } from 'vite'
+import type { Args } from '../args'
+import { flag } from '../args'
+import type { Io } from '../io'
+import { findProjectRoot } from '../project'
+
+const VITE_CONFIGS = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs', 'vite.config.mts']
+
+const shell = (title: string) => `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title}</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/app/main.ts"></script>
+  </body>
+</html>
+`
+
+/** The page's title before a page sets its own: the project's package name. */
+function projectTitle(root: string): string {
+  try {
+    const name = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { name?: string })
+      .name
+    return name ?? 'Tessera app'
+  } catch {
+    return 'Tessera app'
+  }
+}
+
+/**
+ * The HTML page for a project that has no `index.html` of its own. It exists only to Vite: the dev server answers
+ * page requests with it, and a build treats it as the entry, so a project needs no file for it. Put an
+ * `index.html` in the project root and that is used instead.
+ */
+function htmlShell(root: string): Plugin {
+  const file = resolve(root, 'index.html').replaceAll('\\', '/')
+  const html = shell(projectTitle(root))
+  return {
+    name: 'tessera:html-shell',
+    enforce: 'pre',
+    config: () => ({ build: { rollupOptions: { input: file } } }),
+    resolveId: (id) => (id.replaceAll('\\', '/') === file ? file : undefined),
+    load: (id) => (id.replaceAll('\\', '/') === file ? html : undefined),
+    configureServer(server) {
+      // Before Vite's own middleware, which looks for the file on disk.
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url ?? '/'
+        const wantsPage =
+          (req.method === 'GET' || req.method === 'HEAD') &&
+          !/\.[a-z0-9]+(\?|$)/i.test(url) &&
+          !url.startsWith('/@') &&
+          !url.startsWith('/__')
+        if (!wantsPage || !(req.headers.accept ?? '').includes('text/html')) return next()
+        try {
+          res.setHeader('Content-Type', 'text/html')
+          res.end(await server.transformIndexHtml(url, html))
+        } catch (error) {
+          next(error)
+        }
+      })
+    },
+  }
+}
+
+/**
+ * Vite's config for a project with none of its own: the Tessera plugin and the HTML shell. A project with a
+ * `vite.config.ts` uses it as it is (it registers the plugin itself), and only gets the shell if it has no
+ * `index.html`.
+ */
+export function projectConfig(root: string, args: Args): InlineConfig {
+  const own = VITE_CONFIGS.some((name) => existsSync(join(root, name)))
+  const hasHtml = existsSync(join(root, 'index.html'))
+  const port = flag(args, 'port')
+  return {
+    root,
+    ...(own ? {} : { configFile: false as const }),
+    plugins: [...(own ? [] : [tessera()]), ...(hasHtml ? [] : [htmlShell(root)])],
+    ...(typeof port === 'string'
+      ? { server: { port: Number(port) }, preview: { port: Number(port) } }
+      : {}),
+  }
+}
+
+/** `tessera dev`: the dev server, with hot updates. */
+export async function dev(args: Args, io: Io): Promise<number> {
+  const root = findProjectRoot(io.cwd, args)
+  const server = await createServer(projectConfig(root, args))
+  await server.listen()
+  server.printUrls()
+  // The server keeps the process alive; this resolves only when it is closed.
+  await new Promise<void>((done) => server.httpServer?.on('close', done))
+  return 0
+}
+
+/** `tessera build`: a production build into `dist/`. */
+export async function build(args: Args, io: Io): Promise<number> {
+  await viteBuild(projectConfig(findProjectRoot(io.cwd, args), args))
+  return 0
+}
+
+/** `tessera preview`: serve the production build. */
+export async function preview(args: Args, io: Io): Promise<number> {
+  const server = await vitePreview(projectConfig(findProjectRoot(io.cwd, args), args))
+  server.printUrls()
+  await new Promise<void>((done) => server.httpServer.on('close', done))
+  return 0
+}

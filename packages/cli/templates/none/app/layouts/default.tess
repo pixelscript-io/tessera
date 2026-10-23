@@ -1,0 +1,18 @@
+<!--
+  A layout wraps every page and puts the page where its <slot /> is. This one adds nothing yet.
+
+  Layouts can use components, script and styles like any other file. For example, a header:
+
+  <template>
+    <div class="root">
+      <header>My app</header>
+      <slot />
+    </div>
+  </template>
+-->
+
+<template>
+  <div class="root">
+    <slot />
+  </div>
+</template>

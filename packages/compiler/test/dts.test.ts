@@ -31,7 +31,10 @@ function errors(usage: string, loose = true): string[] {
     skipLibCheck: true,
     types: [],
     baseUrl: root,
-    paths: { '@tessera/core': ['packages/core/src/index.ts'] },
+    paths: {
+      '@tessera/core': ['packages/core/src/index.ts'],
+      '@pixelscriptio/tessera/core': ['packages/core/src/index.ts'],
+    },
   }
   const host = ts.createCompilerHost(options)
   const { getSourceFile, fileExists, readFile } = host

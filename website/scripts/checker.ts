@@ -44,7 +44,7 @@ export function parseBlocks(markdown: string): Block[] {
   return blocks
 }
 
-const ALLOWED = ['text', 'bash', 'ts', 'json', 'css', 'xml']
+const ALLOWED = ['text', 'bash', 'powershell', 'ts', 'json', 'css', 'xml']
 
 export interface CheckOptions {
   /** A project whose tokens, components, routes and layouts the samples compile against. */

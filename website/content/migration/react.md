@@ -14,7 +14,7 @@ shadcn/ui's idea (components you copy into your project and own) maps closely on
 | `variant="destructive"`                       | `tone="danger"`, checked against the contract                                    |
 | shadcn `components/ui/` you own               | `system/components/` plus `tessera eject Button MyButton` (records `forkedFrom`) |
 | CSS variables for themes                      | Tokens as DTCG JSON; themes as data attributes                                   |
-| Radix primitives for behavior                 | `@tessera/behavior` (`press` so far)                                             |
+| Radix primitives for behavior                 | `@pixelscriptio/tessera/behavior` (`press` so far)                               |
 | Storybook                                     | A generated docs app is planned; not built yet                                   |
 | React Router, Next.js routing                 | File-based pages, `<Link>`, layouts                                              |
 

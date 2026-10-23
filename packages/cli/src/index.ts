@@ -6,6 +6,7 @@ import { explain } from './commands/explain'
 import { init } from './commands/init'
 import { newCommand } from './commands/new'
 import { report } from './commands/report'
+import { build, dev, preview } from './commands/serve'
 import { tokens } from './commands/tokens'
 import { helpText } from './commands-doc'
 import { CliError, processIo, type Io } from './io'
@@ -14,6 +15,9 @@ type Command = (args: Args, io: Io) => Promise<number>
 
 const COMMANDS: Record<string, Command> = {
   init,
+  dev,
+  build,
+  preview,
   check,
   baseline,
   report,

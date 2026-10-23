@@ -2,10 +2,10 @@
 
 Introduced in v0.1 (Milestone 1).
 
-`@tessera/core` provides three primitives. A signal is read and written with `.value`.
+`@pixelscriptio/tessera/core` provides three primitives. A signal is read and written with `.value`.
 
 ```ts
-import { state, derived, effect } from '@tessera/core'
+import { state, derived, effect } from '@pixelscriptio/tessera/core'
 
 const count = state(0)
 const label = derived(() => `Clicked ${count.value} times`)

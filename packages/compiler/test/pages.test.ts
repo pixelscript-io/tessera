@@ -225,7 +225,9 @@ describe('router script APIs', () => {
       kind: 'page',
     })
     expect(result.ok).toBe(true)
-    expect(result.code).toContain('import { navigate, useRoute } from "@tessera/router"')
+    expect(result.code).toContain(
+      'import { navigate, useRoute } from "@pixelscriptio/tessera/router"',
+    )
     expect(result.code).not.toContain('navigate as')
   })
 
@@ -236,7 +238,7 @@ describe('router script APIs', () => {
       autoImports: false,
     })
     expect(result.diagnostics.map((d) => `${d.code} ${d.message} | ${d.hint}`)).toContain(
-      'T5003 "navigate" is not defined. Auto-imports are off, so it must be imported. | Add: import { navigate } from "@tessera/router"',
+      'T5003 "navigate" is not defined. Auto-imports are off, so it must be imported. | Add: import { navigate } from "@pixelscriptio/tessera/router"',
     )
   })
 })

@@ -14,7 +14,7 @@
 </contract>
 
 <script>
-import { shouldHandleClick } from '@tessera/router'
+import { shouldHandleClick } from '@pixelscriptio/tessera/router'
 
 const { to } = props({ to: '/' })
 const route = useRoute()

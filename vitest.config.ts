@@ -18,6 +18,8 @@ export default defineConfig({
       {
         test: {
           name: 'unit',
+          // Several tests start real dev servers and browsers; under a full parallel run the default 5s is too tight.
+          testTimeout: 30_000,
           include: [
             'packages/*/{src,test}/**/*.test.ts',
             'examples/*/{src,app}/**/*.test.ts',

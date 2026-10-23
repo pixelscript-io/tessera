@@ -1,80 +1,37 @@
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { Args } from '../args'
 import { flag } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
+import { VERSION } from '../version'
 import BUTTON from '../../../../system/components/Button.tess?raw'
-import BASE_TOKENS from '../../../../system/tokens/base.tokens.json?raw'
-import DARK_TOKENS from '../../../../system/tokens/themes/dark.tokens.json?raw'
-import COMPACT_TOKENS from '../../../../system/tokens/themes/compact.tokens.json?raw'
 
-const PACKAGES = ['core', 'behavior', 'router', 'tokens'] as const
-const DEV_PACKAGES = ['cli', 'compiler'] as const
+export const PRESETS = ['tailwind', 'none'] as const
+export type Preset = (typeof PRESETS)[number]
 
-/** The tessera checkout this CLI runs from, if it is one: packages are not published yet, so projects link to it. */
-export function findCheckout(from = dirname(fileURLToPath(import.meta.url))): string | undefined {
-  for (let dir = from; ; dir = dirname(dir)) {
-    if (
-      existsSync(join(dir, 'pnpm-workspace.yaml')) &&
-      existsSync(join(dir, 'packages', 'core', 'package.json'))
-    ) {
-      return dir
-    }
-    if (dirname(dir) === dir) return undefined
+// Every file of every preset, as text, keyed by its path in the template folder. Bundled at build time, so the
+// published package needs no template folder at run time.
+const TEMPLATES = import.meta.glob('../../templates/**/*', {
+  query: '?raw',
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+
+/** The files a preset writes, by path relative to the project. */
+export function presetFiles(preset: Preset): Record<string, string> {
+  const prefix = `../../templates/${preset}/`
+  const files: Record<string, string> = {}
+  for (const [key, content] of Object.entries(TEMPLATES)) {
+    if (key.startsWith(prefix)) files[key.slice(prefix.length)] = content
   }
+  // The tailwind preset's Button is the design system's own, so there is one copy to maintain.
+  if (preset === 'tailwind') files['system/components/Button.tess'] = BUTTON
+  return files
 }
-
-const PAGE = `<page>
-{ "title": "Welcome" }
-</page>
-
-<script>
-const count = state(0)
-
-function inc() {
-  count.value++
-}
-</script>
-
-<template>
-  <main>
-    <h1>Welcome to Tessera</h1>
-    <p>Edit app/pages/index.tess and save: the page updates without a reload.</p>
-    <Button tone="primary" @press="inc">Clicked {count} times</Button>
-  </main>
-</template>
-`
-
-const LAYOUT = `<template>
-  <div class="root">
-    <p class="brand">My Tessera app</p>
-    <slot />
-  </div>
-</template>
-
-<style>
-.root {
-  padding: $space.4;
-  color: $color.text.default;
-  font-family: system-ui, sans-serif;
-}
-
-.brand {
-  margin: 0;
-}
-</style>
-`
-
-const MAIN = `import 'virtual:tessera/tokens.css'
-import { createApp } from '@tessera/router/app'
-
-createApp().mount('#app')
-`
 
 const TYPES = `declare module '*.tess' {
-  import type { Component } from '@tessera/core'
+  import type { Component } from '@pixelscriptio/tessera/core'
   const component: Component
   export default component
 }
@@ -82,29 +39,9 @@ const TYPES = `declare module '*.tess' {
 declare module 'virtual:tessera/tokens.css'
 `
 
-const CONFIG = `// Style rules, severity exemptions and options for Tessera. See the docs for every field.
+const CONFIG = `// Style rules, severity exemptions and options for Tessera. Every field is optional. See the docs for the list.
 // export default { severity: [{ files: 'app/legacy/**', rules: '*', level: 'warn', reason: 'old screens', expires: '2027-01-01' }] }
 export default {}
-`
-
-const VITE = `import { defineConfig } from 'vite'
-import { tessera } from '@tessera/compiler/vite'
-
-export default defineConfig({ plugins: [tessera()] })
-`
-
-const HTML = (title: string) => `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title}</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/app/main.ts"></script>
-  </body>
-</html>
 `
 
 const TSCONFIG = `{
@@ -116,96 +53,160 @@ const TSCONFIG = `{
     "strict": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "types": ["vite/client"]
+    "noEmit": true
   },
-  "include": ["app", "system", ".tessera"]
+  "include": ["app", "system", ".tessera/*.d.ts"]
 }
 `
 
-const GITIGNORE = `node_modules
-dist
-.tessera
-`
+const GITIGNORE_LINES = ['node_modules', 'dist', '.tessera']
+
+/** Where the package comes from: a `link:` to a checkout (`--link`, for working on Tessera itself) or its version. */
+function dependency(target: string, link: string | undefined): string {
+  return link ? `link:${relative(target, resolve(link)).replaceAll('\\', '/')}` : `^${VERSION}`
+}
+
+export interface InitResult {
+  written: string[]
+  skipped: string[]
+  preset: Preset
+}
 
 /**
- * `tessera init [folder]`: a project that runs: a Vite config, base tokens with light, dark and compact themes,
- * one Button, and an `app/` with `main.ts`, a default layout and the index page. Packages are not published
- * yet, so dependencies link to the checkout this CLI came from (`--link <path>` names another).
+ * `tessera init [folder] [--preset tailwind|none]`: start a project, in an empty folder or beside an existing
+ * `package.json`. It never overwrites a file; what already exists is left alone and reported.
+ *
+ * The preset is chosen here (not at install time, which cannot prompt): in a terminal it asks, `--preset`
+ * answers it, and with neither it uses `tailwind`.
  */
 export async function init(args: Args, io: Io): Promise<number> {
   const target = resolve(io.cwd, args.positional[0] ?? '.')
-  const name =
-    basename(target)
-      .replace(/[^A-Za-z0-9._-]/g, '-')
-      .toLowerCase() || 'tessera-app'
-
-  if (existsSync(target) && readdirSync(target).some((f) => f !== '.git')) {
-    const clash = ['package.json', 'app', 'system', 'vite.config.ts'].filter((f) =>
-      existsSync(join(target, f)),
-    )
-    if (clash.length) {
-      throw new CliError(
-        `${args.positional[0] ?? 'This folder'} already has ${clash.join(', ')}.`,
-        'Run tessera init in an empty folder, or give it a new folder name.',
-      )
+  const given = flag(args, 'preset')
+  let preset: Preset
+  if (typeof given === 'string') {
+    if (!(PRESETS as readonly string[]).includes(given)) {
+      throw new CliError(`There is no preset "${given}".`, `Presets: ${PRESETS.join(', ')}.`)
     }
+    preset = given as Preset
+  } else if (io.choose) {
+    preset = (await io.choose('Which starting point?', [
+      {
+        value: 'tailwind',
+        label:
+          "tailwind: a full design system built from Tailwind's default theme, with a styled page",
+      },
+      {
+        value: 'none',
+        label: 'none: no tokens or themes; example files with the examples commented out',
+      },
+    ])) as Preset
+  } else {
+    preset = 'tailwind'
+    io.out(
+      'No --preset given and no terminal to ask in, so using "tailwind". Pass --preset none for no tokens.',
+    )
   }
 
-  const given = flag(args, 'link')
-  const checkout = typeof given === 'string' ? resolve(io.cwd, given) : findCheckout()
-  const dependency = (pkg: string) =>
-    checkout
-      ? `link:${relative(target, join(checkout, 'packages', pkg)).replaceAll('\\', '/')}`
-      : '^0.1.0'
-
-  const manifest = {
-    name,
-    version: '0.0.0',
-    private: true,
-    type: 'module',
-    scripts: { dev: 'vite', build: 'vite build', check: 'tessera check' },
-    dependencies: Object.fromEntries(PACKAGES.map((p) => [`@tessera/${p}`, dependency(p)])),
-    devDependencies: {
-      ...Object.fromEntries(DEV_PACKAGES.map((p) => [`@tessera/${p}`, dependency(p)])),
-      typescript: '^5.7.0',
-      vite: '^7.3.0',
-    },
-  }
-
-  const files: Record<string, string> = {
-    'package.json': JSON.stringify(manifest, null, 2) + '\n',
-    'vite.config.ts': VITE,
-    'tessera.config.ts': CONFIG,
-    'tsconfig.json': TSCONFIG,
-    'index.html': HTML(name),
-    '.gitignore': GITIGNORE,
-    'system/tokens/base.tokens.json': BASE_TOKENS,
-    'system/tokens/themes/dark.tokens.json': DARK_TOKENS,
-    'system/tokens/themes/compact.tokens.json': COMPACT_TOKENS,
-    'system/components/Button.tess': BUTTON,
-    'app/main.ts': MAIN,
-    'app/tess.d.ts': TYPES,
-    'app/layouts/default.tess': LAYOUT,
-    'app/pages/index.tess': PAGE,
-  }
-  for (const [file, content] of Object.entries(files)) {
+  const linkFlag = flag(args, 'link')
+  const link = typeof linkFlag === 'string' ? linkFlag : undefined
+  const written: string[] = []
+  const skipped: string[] = []
+  const put = (file: string, content: string) => {
     const path = join(target, file)
+    if (existsSync(path)) {
+      skipped.push(file)
+      return
+    }
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(path, content)
+    written.push(file)
   }
 
-  const where = args.positional[0]
-  io.out(`Created a Tessera project in ${where ?? 'the current folder'}.`)
-  if (!checkout) {
-    io.out(
-      'Note: Tessera is not published yet and no local checkout was found, so the dependency versions are placeholders.',
+  // package.json: written in an empty folder; in one that has it, only the missing scripts and the dependency.
+  const manifestPath = join(target, 'package.json')
+  const scripts = {
+    dev: 'tessera dev',
+    build: 'tessera build',
+    preview: 'tessera preview',
+    check: 'tessera check',
+  }
+  let hasDependency
+  if (existsSync(manifestPath)) {
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, any>
+    const added: string[] = []
+    manifest.scripts ??= {}
+    for (const [name, command] of Object.entries(scripts)) {
+      if (manifest.scripts[name] === undefined) {
+        manifest.scripts[name] = command
+        added.push(`script "${name}"`)
+      }
+    }
+    manifest.type ??= 'module'
+    hasDependency = !!(
+      manifest.dependencies?.['@pixelscriptio/tessera'] ??
+      manifest.devDependencies?.['@pixelscriptio/tessera']
+    )
+    if (!hasDependency) {
+      manifest.dependencies = {
+        ...manifest.dependencies,
+        '@pixelscriptio/tessera': dependency(target, link),
+      }
+      added.push('the @pixelscriptio/tessera dependency')
+    }
+    if (added.length) {
+      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
+      written.push(`package.json (added ${added.join(', ')})`)
+    }
+  } else {
+    hasDependency = false
+    const name =
+      basename(target)
+        .replace(/[^A-Za-z0-9._-]/g, '-')
+        .toLowerCase() || 'tessera-app'
+    put(
+      'package.json',
+      JSON.stringify(
+        {
+          name,
+          version: '0.0.0',
+          private: true,
+          type: 'module',
+          scripts,
+          dependencies: { '@pixelscriptio/tessera': dependency(target, link) },
+        },
+        null,
+        2,
+      ) + '\n',
     )
   }
+
+  for (const [file, content] of Object.entries(presetFiles(preset))) put(file, content)
+  put('app/tess.d.ts', TYPES)
+  put('tessera.config.ts', CONFIG)
+  put('tsconfig.json', TSCONFIG)
+
+  // .gitignore: add what is missing, never remove.
+  const ignorePath = join(target, '.gitignore')
+  if (existsSync(ignorePath)) {
+    const have = readFileSync(ignorePath, 'utf8')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+    const missing = GITIGNORE_LINES.filter((l) => !have.includes(l))
+    if (missing.length) {
+      const text = readFileSync(ignorePath, 'utf8')
+      writeFileSync(ignorePath, `${text}${text.endsWith('\n') ? '' : '\n'}${missing.join('\n')}\n`)
+      written.push(`.gitignore (added ${missing.join(', ')})`)
+    }
+  } else put('.gitignore', GITIGNORE_LINES.join('\n') + '\n')
+
+  const where = args.positional[0]
+  io.out(`Started a Tessera project (${preset} preset) in ${where ?? 'the current folder'}.`)
+  if (written.length) io.out(`Wrote: ${written.join(', ')}`)
+  if (skipped.length) io.out(`Left alone (already there): ${skipped.join(', ')}`)
   io.out('')
   io.out('Next:')
   if (where) io.out(`  cd ${where}`)
-  io.out('  pnpm install')
-  io.out('  pnpm dev')
+  if (!hasDependency) io.out('  npm install')
+  io.out('  npm run dev')
   return 0
 }

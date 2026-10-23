@@ -15,7 +15,7 @@ A theme can only override tokens that exist in the base ([T1011](/reference/erro
 Switch at runtime with two functions:
 
 ```ts
-import { setDensity, setTheme } from '@tessera/tokens'
+import { setDensity, setTheme } from '@pixelscriptio/tessera/tokens'
 
 setTheme('dark') // data-theme="dark" on the root element
 setTheme(null) // back to the default

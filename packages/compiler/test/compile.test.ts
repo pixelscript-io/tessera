@@ -459,7 +459,7 @@ describe('generated module', () => {
   it('hoists imports, imports only the APIs the script uses, and names the component', () => {
     const code = compile(toolbar, { file: 'Toolbar.tess', components: resolver }).code
     expect(code.split('\n')[0]).toBe(
-      'import { defineComponent as $defineComponent, getRenderer as $getRenderer, constant as $constant, derived as $derived, unwrap as $u, state } from "@tessera/core"',
+      'import { defineComponent as $defineComponent, getRenderer as $getRenderer, constant as $constant, derived as $derived, unwrap as $u, state } from "@pixelscriptio/tessera/core"',
     )
     expect(code).toContain("import Button from './Button.tess'")
     expect(code).toContain('export default $defineComponent("Toolbar", {}, ($ctx')

@@ -1,6 +1,6 @@
 # The signals runtime
 
-`@tessera/core` has no dependencies and is a few hundred lines. It is a push-pull signal graph.
+`@pixelscriptio/tessera/core` has no dependencies and is a few hundred lines. It is a push-pull signal graph.
 
 - `state(value)` is a source. Writing `.value` marks everything downstream dirty.
 - `derived(fn)` is a lazily computed value. It reruns only when something it read changed, and only tells its own observers if its result is different (compared with `Object.is`). That last point matters: a derived value that returns the same thing does not cause downstream work.

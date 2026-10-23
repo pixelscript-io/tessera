@@ -18,9 +18,9 @@ export function generateComponentsDts(registry: ComponentRegistry): string {
     'declare namespace TesseraComponents {',
     '  /** A compiled component: call it with props (as signals), event handlers and slot content. */',
     '  type Component<P, E, S> = (input?: {',
-    "    props?: { [K in keyof P]?: import('@tessera/core').ReadonlySignal<P[K]> } & Record<string, import('@tessera/core').ReadonlySignal<any>>",
+    "    props?: { [K in keyof P]?: import('@pixelscriptio/tessera/core').ReadonlySignal<P[K]> } & Record<string, import('@pixelscriptio/tessera/core').ReadonlySignal<any>>",
     '    events?: { [K in keyof E]?: (detail?: any) => void }',
-    "    slots?: { [K in keyof S]?: import('@tessera/core').SlotContent }",
+    "    slots?: { [K in keyof S]?: import('@pixelscriptio/tessera/core').SlotContent }",
     '  }) => any',
     '',
   ]

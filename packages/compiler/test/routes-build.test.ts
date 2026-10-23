@@ -97,7 +97,7 @@ describe('typed links', () => {
     const path = `${root}/.tessera/routes.d.ts`
     expect(existsSync(path)).toBe(true)
     const dts = readFileSync(path, 'utf8')
-    expect(dts).toContain("declare module '@tessera/router'")
+    expect(dts).toContain("declare module '@pixelscriptio/tessera/router'")
     expect(dts).toContain('"/": {  }')
     expect(dts).toContain('"/about": {  }')
     expect(dts).toContain('"/blog/:slug": { slug: string }')

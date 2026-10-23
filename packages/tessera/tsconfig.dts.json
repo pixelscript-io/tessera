@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types",
+    "rootDir": "../..",
+    "types": ["node"],
+    "baseUrl": "../..",
+    "paths": {
+      "@tessera/*": ["packages/*/src/index.ts"],
+      "@tessera/behavior/conformance": ["packages/behavior/src/conformance.ts"],
+      "@tessera/compiler/node": ["packages/compiler/src/node.ts"],
+      "@tessera/compiler/project": ["packages/compiler/src/project-entry.ts"],
+      "@tessera/compiler/vite": ["packages/compiler/src/vite.ts"],
+      "@tessera/router/app": ["packages/router/src/app.ts"],
+      "@tessera/router/manifest": ["packages/router/src/manifest.ts"],
+      "@tessera/tokens/node": ["packages/tokens/src/node.ts"]
+    }
+  },
+  "include": [],
+  "files": [
+    "src/core.ts",
+    "src/router.ts",
+    "src/router-app.ts",
+    "src/behavior.ts",
+    "src/tokens.ts",
+    "src/vite.ts",
+    "src/cli.ts",
+    "../cli/src/env.d.ts",
+    "../router/src/virtual.d.ts"
+  ]
+}

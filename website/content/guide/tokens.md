@@ -50,7 +50,7 @@ A theme file in `system/tokens/themes/` overrides values of existing tokens. The
 ## Switching at runtime
 
 ```ts
-import { setTheme, setDensity } from '@tessera/tokens'
+import { setTheme, setDensity } from '@pixelscriptio/tessera/tokens'
 
 setTheme('dark') // sets data-theme="dark" on <html>
 setDensity('compact') // sets data-density="compact"

@@ -4,6 +4,8 @@ Nothing is published yet. This page records what each milestone of v0.1 delivere
 
 ## v0.1 (in progress)
 
+- **Milestone 12b: one package and starter presets.** The framework is one package, `@pixelscriptio/tessera` (plus `@pixelscriptio/create-tessera` for `npm create`). `tessera dev`, `build` and `preview` need no config files. `tessera init` works beside an existing `package.json`, asks for a preset, and never overwrites a file: `tailwind` writes a full design system built from Tailwind's default theme with a styled index page, `none` writes no tokens and commented examples. Tested by installing the packed tarball into a clean folder and running both presets in a browser.
+
 - **Milestone 12: documentation site.** This site: error reference with one page per code and `tessera explain`, generated references (API, CLI, config, contract, tokens), docs checked in CI (samples compiled, links resolved), tokens-driven theme, accessibility checks.
 - **Milestone 11: CLI.** `tessera init`, `check` (with `--fix`), `baseline`, `report`, `tokens build`, `new`, `eject`, and `create-tessera`. `tessera.config.ts` is read by the plugin and the CLI.
 - **Milestone 10: layouts.** `app/layouts/default.tess`, per-page `layout` and `false`, layouts that are kept between pages.

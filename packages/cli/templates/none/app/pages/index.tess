@@ -1,0 +1,39 @@
+<page>
+{ "title": "Welcome to Tessera" }
+</page>
+
+<!--
+  Reactive state and events. state() makes a signal; use it bare in the template:
+
+  <script>
+  const count = state(0)
+
+  function inc() {
+    count.value++
+  }
+  </script>
+
+  and in the template, <button @click="inc">Clicked {count} times</button>
+
+  Styles are plain CSS with nesting. With a token folder (see system/README.md) the values come from tokens:
+
+  <style>
+  .root {
+    padding: $space.4;
+    color: $color.text.default;
+  }
+  </style>
+
+  A component from app/components is used by its name, with no import: <Example>Hello</Example>
+-->
+
+<template>
+  <main class="root">
+    <h1>Welcome to Tessera</h1>
+    <p>
+      This page is app/pages/index.tess. Edit it and save: it updates without a reload. The commented examples
+      in this file show state, styles and components.
+    </p>
+    <p>Run <code>npx tessera check</code> to validate the project.</p>
+  </main>
+</template>

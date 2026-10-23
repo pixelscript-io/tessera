@@ -9,7 +9,7 @@ Tessera projects use [Vitest](https://vitest.dev/). There are three kinds of tes
 Signals and plain TypeScript run in Node or jsdom, with no browser:
 
 ```ts
-import { derived, flush, state } from '@tessera/core'
+import { derived, flush, state } from '@pixelscriptio/tessera/core'
 import { expect, it } from 'vitest'
 
 it('derives from state', () => {
@@ -28,7 +28,7 @@ Effects run in a microtask. `flush()` runs everything pending now, which is what
 Components are compiled by the Vite plugin, so a test that mounts one needs the plugin and a real browser (Vitest's browser mode with Playwright). Mount with the renderer and read the DOM:
 
 ```ts
-import { getRenderer } from '@tessera/core'
+import { getRenderer } from '@pixelscriptio/tessera/core'
 import Counter from './Counter.tess'
 
 const r = getRenderer()

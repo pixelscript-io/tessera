@@ -35,7 +35,7 @@ Outside `.tess` files there is nothing to add the import, so using one in a plai
 
 ```text
 ERROR  T5002  app/utils/nav.ts:2:17
-  Unresolved identifier "useRoute" in app/utils/nav.ts. Auto-imports only apply inside .tess files; import it from "@tessera/router".
+  Unresolved identifier "useRoute" in app/utils/nav.ts. Auto-imports only apply inside .tess files; import it from "@pixelscriptio/tessera/router".
 ```
 
 This check looks for a call to the name in a file that never imports, declares or takes it as a parameter. It is not a type checker, so a shadowed name it cannot see is not reported.

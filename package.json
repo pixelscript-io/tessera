@@ -11,7 +11,7 @@
     "format:check": "pnpm build && prettier --check .",
     "docs:build": "pnpm --filter website build",
     "ci": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm docs:build",
-    "build": "pnpm --filter @tessera/compiler build && pnpm --filter @tessera/editor build && pnpm --filter @tessera/cli build"
+    "build": "pnpm --filter @tessera/compiler build && pnpm --filter @tessera/editor build && pnpm --filter @tessera/cli build && pnpm --filter @pixelscriptio/tessera build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -28,6 +28,13 @@
     "vite": "^7.3.7",
     "vitest": "^3.0.0",
     "vscode-oniguruma": "^2.0.1",
-    "vscode-textmate": "^9.3.2"
+    "vscode-textmate": "^9.3.2",
+    "@pixelscriptio/tessera": "workspace:*",
+    "@tessera/behavior": "workspace:*",
+    "@tessera/cli": "workspace:*",
+    "@tessera/compiler": "workspace:*",
+    "@tessera/core": "workspace:*",
+    "@tessera/router": "workspace:*",
+    "@tessera/tokens": "workspace:*"
   }
 }

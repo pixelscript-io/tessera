@@ -12,7 +12,7 @@ describe('auto-imports used in a plain .ts file', () => {
     expect(formatDiagnostic(d!)).toBe(
       [
         'ERROR  T5002  app/utils/nav.ts:2:17',
-        '  Unresolved identifier "useRoute" in app/utils/nav.ts. Auto-imports only apply inside .tess files; import it from "@tessera/router".',
+        '  Unresolved identifier "useRoute" in app/utils/nav.ts. Auto-imports only apply inside .tess files; import it from "@pixelscriptio/tessera/router".',
         '  Run `tessera explain T5002` for details.',
       ].join('\n'),
     )
@@ -22,13 +22,13 @@ describe('auto-imports used in a plain .ts file', () => {
     const source =
       'state(0)\nderived(() => 1)\neffect(() => {})\nonCleanup(() => {})\nonMount(() => {})\nnavigate("/")\nuseRoute()'
     expect(check(source).map((d) => d.message.match(/"[^"]+"/g)!.join(' '))).toEqual([
-      '"state" "@tessera/core"',
-      '"derived" "@tessera/core"',
-      '"effect" "@tessera/core"',
-      '"onCleanup" "@tessera/core"',
-      '"onMount" "@tessera/core"',
-      '"navigate" "@tessera/router"',
-      '"useRoute" "@tessera/router"',
+      '"state" "@pixelscriptio/tessera/core"',
+      '"derived" "@pixelscriptio/tessera/core"',
+      '"effect" "@pixelscriptio/tessera/core"',
+      '"onCleanup" "@pixelscriptio/tessera/core"',
+      '"onMount" "@pixelscriptio/tessera/core"',
+      '"navigate" "@pixelscriptio/tessera/router"',
+      '"useRoute" "@pixelscriptio/tessera/router"',
     ])
   })
 

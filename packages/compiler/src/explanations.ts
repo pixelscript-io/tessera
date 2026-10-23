@@ -574,7 +574,7 @@ export const EXPLANATIONS: Record<string, Explanation> = {
       source: 'export const here = () => useRoute().path\n',
     },
     fixed:
-      "import { useRoute } from '@tessera/router'\n\nexport const here = () => useRoute().path",
+      "import { useRoute } from '@pixelscriptio/tessera/router'\n\nexport const here = () => useRoute().path",
   },
   T5003: {
     cause:

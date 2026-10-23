@@ -13,7 +13,7 @@ Themes and density are data attributes on the root element, so switching them is
 </contract>
 
 <script>
-import { setDensity, setTheme } from '@tessera/tokens'
+import { setDensity, setTheme } from '@pixelscriptio/tessera/tokens'
 
 const light = () => setTheme(null)
 const dark = () => setTheme('dark')
@@ -45,7 +45,7 @@ const compact = () => setDensity('compact')
 A theme file with `"$auto": "prefers-color-scheme: dark"` also applies under `data-theme="auto"`, which follows the operating system. To remember a user's choice, store it yourself and call `setTheme` at startup, before the first render so there is no flash:
 
 ```ts
-import { setTheme } from '@tessera/tokens'
+import { setTheme } from '@pixelscriptio/tessera/tokens'
 
 const saved = localStorage.getItem('theme')
 setTheme(saved ?? 'auto')

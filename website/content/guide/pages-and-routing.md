@@ -19,7 +19,7 @@ A file in `app/pages/` is a page, and its path is its URL. There is no route tab
 ```ts
 // app/main.ts
 import 'virtual:tessera/tokens.css'
-import { createApp } from '@tessera/router/app'
+import { createApp } from '@pixelscriptio/tessera/router/app'
 
 createApp().mount('#app')
 ```
@@ -92,7 +92,7 @@ navigate('/blog/hello')
 navigate('/login', { replace: true }) // replace the history entry
 ```
 
-Both return a promise. `navigate()` before `createApp().mount()` throws a clear error. `useRoute` and `navigate` need no import in a `.tess` file; in a plain `.ts` file import them from `@tessera/router`.
+Both return a promise. `navigate()` before `createApp().mount()` throws a clear error. `useRoute` and `navigate` need no import in a `.tess` file; in a plain `.ts` file import them from `@pixelscriptio/tessera/router`.
 
 ## What happens on each navigation
 
@@ -109,7 +109,7 @@ If a page is slow to load and the user navigates again, the newest navigation wi
 
 ## Typed routes
 
-The plugin writes `.tessera/routes.d.ts` (add `.tessera` to `.gitignore`), which gives TypeScript the list of routes and their parameters. `RoutePattern` from `@tessera/router` is then the union of the real patterns.
+The plugin writes `.tessera/routes.d.ts` (add `.tessera` to `.gitignore`), which gives TypeScript the list of routes and their parameters. `RoutePattern` from `@pixelscriptio/tessera/router` is then the union of the real patterns.
 
 ## Route errors
 

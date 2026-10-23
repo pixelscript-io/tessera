@@ -322,24 +322,24 @@ function tokenRows(): string[] {
 const PACKAGES: Array<{ pkg: string; title: string; intro: string }> = [
   {
     pkg: 'core',
-    title: '@tessera/core',
+    title: '@pixelscriptio/tessera/core',
     intro:
       'The signals runtime, the renderer and the component runtime. See [Reactivity](/guide/reactivity).',
   },
   {
     pkg: 'router',
-    title: '@tessera/router',
+    title: '@pixelscriptio/tessera/router',
     intro:
       'File-based routing on the History API: `useRoute()`, `navigate()` and the router. See [Pages and routing](/guide/pages-and-routing).',
   },
   {
     pkg: 'behavior',
-    title: '@tessera/behavior',
+    title: '@pixelscriptio/tessera/behavior',
     intro: 'Headless interaction primitives, such as `press`. See [Behaviors](/guide/behaviors).',
   },
   {
     pkg: 'tokens',
-    title: '@tessera/tokens',
+    title: '@pixelscriptio/tessera/tokens',
     intro:
       'Token parsing, resolution, CSS output and the runtime theme API. See [Tokens](/guide/tokens).',
   },

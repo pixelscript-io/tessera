@@ -15,7 +15,7 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 - A global store and data-fetching layer.
 - An in-browser playground, versioned docs and a hosted site. The compiler core is browser-safe so the playground does not need a rewrite.
 - Type-checking of templates (`tessera check --types`) and source maps.
-- Publishing packages to npm, which also changes the Quick start from a checkout to `pnpm create tessera`.
+- Publishing `@pixelscriptio/tessera` and `@pixelscriptio/create-tessera` to npm. The packages are built, packed and tested as tarballs; publishing is the one step left, and it changes the Quick start's install line from a tarball to `npm install @pixelscriptio/tessera`.
 
 ## Not planned for v0.x
 
@@ -23,5 +23,5 @@ Server rendering, hydration and islands; a backend framework; native mobile targ
 
 ## What is deferred, and what that means for the docs
 
-- The Quick start runs against a checkout and a link, not packed packages, because nothing is published.
+- The Quick start installs from a packed tarball, because nothing is published yet. Everything after the install line is what a published install does.
 - The tutorial is static snippets with a check at the end of each step; the interactive version waits for the playground.

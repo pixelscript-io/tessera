@@ -37,7 +37,9 @@ describe('Button', () => {
   const result = compile(source, { file: 'system/components/Button.tess', tokens })
 
   it('wires the press behavior onto its native button', () => {
-    expect(result.code).toContain('import { attachPress as $attachPress } from "@tessera/behavior"')
+    expect(result.code).toContain(
+      'import { attachPress as $attachPress } from "@pixelscriptio/tessera/behavior"',
+    )
     expect(result.code).toContain('native: true, role: "button"')
   })
 

@@ -19,6 +19,7 @@ import { checkContrast } from './style/contrast'
 import { processStyle, type StyleStats } from './style/enforce'
 import { StyleTokens } from './style/tokens'
 import { parseTemplate, type TemplateNode } from './template'
+import { PUBLIC_PACKAGES } from './packages'
 import { AUTO_IMPORTS } from './autoimport-ts'
 import { pageSlug } from './routes'
 import { parseJsonc, JsonSyntaxError } from '@tessera/contract'
@@ -410,17 +411,17 @@ function assemble(
   const behaviorImports = generated.behaviors.has('press') ? ['attachPress as $attachPress'] : []
   const hmr = options.hmrId !== undefined
   const lines = [
-    `import { ${coreImports.join(', ')} } from "@tessera/core"`,
+    `import { ${coreImports.join(', ')} } from "${PUBLIC_PACKAGES.core}"`,
     ...(behaviorImports.length
-      ? [`import { ${behaviorImports.join(', ')} } from "@tessera/behavior"`]
+      ? [`import { ${behaviorImports.join(', ')} } from "${PUBLIC_PACKAGES.behavior}"`]
       : []),
     ...(routerImports.length
-      ? [`import { ${routerImports.join(', ')} } from "@tessera/router"`]
+      ? [`import { ${routerImports.join(', ')} } from "${PUBLIC_PACKAGES.router}"`]
       : []),
     ...hoisted,
     ...componentImports,
     '',
-    `export default $defineComponent(${JSON.stringify(name)}, ${JSON.stringify(variants)}, ($ctx: import("@tessera/core").ComponentContext) => {`,
+    `export default $defineComponent(${JSON.stringify(name)}, ${JSON.stringify(variants)}, ($ctx: import("${PUBLIC_PACKAGES.core}").ComponentContext) => {`,
     '  const $r = $getRenderer()',
     '  const props = $ctx.props',
     '  const emit = $ctx.emit',

@@ -1,0 +1,42 @@
+<!--
+  An example component. To use it, rename this file to Example.tess (a file in app/components is a component,
+  found by the name in its contract), then use <Example> in any template with no import.
+
+  A component declares a contract: its name (which must match the file name), its role, its parts, and what it
+  accepts. The compiler checks every use against it.
+-->
+
+<contract>
+{
+  "name": "Example",
+  "role": "group",
+  "description": "An example component.",
+  "parts": ["root"],
+  "variants": {
+    "tone": ["neutral", "highlight"] // the first value is the default
+  },
+  "slots": { "default": "the content" }
+}
+</contract>
+
+<template>
+  <div class="root"><slot /></div>
+</template>
+
+<!--
+  Styles use design tokens, which this project does not have yet (see system/README.md). Once it does:
+
+  <style>
+  .root {
+    padding: $space.4;
+    border-radius: $radius.md;
+    background: $color.surface.raised;
+    color: $color.text.default;
+
+    &[data-tone='highlight'] {
+      background: $color.action.primary.bg;
+      color: $color.action.primary.fg;
+    }
+  }
+  </style>
+-->

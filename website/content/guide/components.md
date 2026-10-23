@@ -113,7 +113,7 @@ ERROR  T4006  Counter.tess:31:30
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite'
-import { tessera } from '@tessera/compiler/vite'
+import { tessera } from '@pixelscriptio/tessera/vite'
 
 export default defineConfig({ plugins: [tessera()] })
 ```

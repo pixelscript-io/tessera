@@ -1,0 +1,113 @@
+<page>
+{ "title": "Welcome to Tessera" }
+</page>
+
+<script>
+const clicks = state(0)
+
+function bump() {
+  clicks.value++
+}
+</script>
+
+<template>
+  <main class="root">
+    <section class="hero">
+      <Badge tone="brand">Design-system-first</Badge>
+      <h1 class="title">Build interfaces from a system you can trust</h1>
+      <p class="lead">
+        Your tokens, themes and components live in <code>system/</code>. The compiler checks every
+        style and every component use, so the design system holds as the app grows.
+      </p>
+      <div class="actions">
+        <Button tone="primary" size="lg" @press="bump">Clicked {clicks} times</Button>
+        <Button tone="neutral" emphasis="outline" size="lg">Edit app/pages/index.tess</Button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <Card>
+        <span slot="header">Design tokens</span>
+        Colors, spacing, type and shadows from Tailwind's default theme, written as tokens you own
+        and can change.
+      </Card>
+      <Card>
+        <span slot="header">Light and dark</span>
+        Components use meaning (surface, text, action), so the theme switch in the header changes
+        everything at once.
+      </Card>
+      <Card>
+        <span slot="header">Checked at compile time</span>
+        A value off the scale, or a variant that does not exist, is an error with the fix
+        suggested.
+      </Card>
+    </section>
+
+    <p class="note">Edit this page and save: it updates without a reload.</p>
+  </main>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.12;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: $space.16 $space.6 $space.12;
+}
+
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space.5;
+  isolation: isolate;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -4rem -2rem auto -2rem;
+  height: 22rem;
+  z-index: -1;
+  opacity: $opacity.15;
+  background-image: radial-gradient(28% 90% at 30% 0%, $color.brand.start, transparent 70%);
+}
+
+.title {
+  margin: 0;
+  max-width: 18ch;
+  font-size: $font.size.5xl;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.lead {
+  margin: 0;
+  max-width: 40rem;
+  color: $color.text.muted;
+  font-size: $font.size.lg;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space.3;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: $space.6;
+}
+
+.note {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.sm;
+}
+</style>

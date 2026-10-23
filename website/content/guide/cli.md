@@ -1,25 +1,39 @@
 # The command line
 
-Introduced in v0.1 (Milestone 11).
+Introduced in v0.1 (Milestones 11 and 12b).
 
-`tessera` scaffolds a project, checks it without bundling, and manages the accountability tools: the baseline, exemptions and the report. Packages are not published yet, so run it from a checkout of the repository (`node packages/cli/bin/tessera.js`, or through the `tessera` binary that a scaffolded project links to).
+The `tessera` command comes with the `@pixelscriptio/tessera` package. It starts a project, runs it, checks it without bundling, and manages the accountability tools: the baseline, exemptions and the report. Run it with `npx tessera`, or through the scripts a new project has (`npm run dev`).
 
 Every command runs in the nearest folder above the current one that looks like a project (it has `app/`, `system/components/` or a `tessera.config.ts`). Pass `--root <folder>` to name one.
 
 ## Start a project
 
-```text
-tessera init my-app
+```bash
+mkdir my-app
 cd my-app
-pnpm install
-pnpm dev
+npm init -y
+npm install @pixelscriptio/tessera
+npx tessera init
+npm run dev
 ```
 
-`init` writes a project that runs: a Vite config, `system/` with the base tokens and the light, dark and compact themes, one `Button`, and an `app/` with `main.ts`, a default layout and `pages/index.tess`. The dev server shows the index page at `/`. It refuses a folder that already has a `package.json`, `app/`, `system/` or `vite.config.ts`, and changes nothing.
+`init` writes the app (`main.ts`, a default layout, an index page) and, per the preset, the design system. In a terminal it asks which preset; `--preset tailwind` or `--preset none` answers the question, and with neither it uses `tailwind`. See [Starter presets](/guide/presets).
 
-`pnpm create tessera my-app` does the same thing through the `create-tessera` package, so newcomers need no global install.
+It works in an empty folder or beside an existing `package.json`: it adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency, never overwrites a file, and lists what it left alone. Run it twice and the second run changes nothing.
 
-Until packages are published, the new project's dependencies are `link:` paths to the checkout the CLI came from (`--link <folder>` names another). If the CLI is not running from a checkout, the versions are placeholders and `init` says so.
+`npm create @pixelscriptio/tessera my-app` does the same thing in a new folder, through the `@pixelscriptio/create-tessera` package, with no prior install.
+
+## `tessera dev`, `build` and `preview`
+
+```bash
+npx tessera dev
+npx tessera build
+npx tessera preview
+```
+
+These run the app with no configuration files. The CLI supplies the Vite config (with the Tessera plugin) and the HTML page, so a new project has no `vite.config.ts` and no `index.html`. Add either to the project and yours is used instead: a project that has its own `vite.config.ts` registers the plugin itself, and one with its own `index.html` keeps its own page. `--port <n>` sets the port.
+
+`build` writes `dist/`, with each page as its own chunk. `preview` serves it, to check it locally.
 
 ## `tessera check`
 

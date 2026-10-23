@@ -223,7 +223,7 @@ ${script ? `<script>\n${script}\n</script>` : ''}
       const source = page('', 'const n = state(0)')
       const result = compileAs(source, { autoImports: false })
       expect(formatDiagnostic(result.diagnostics[0]!)).toMatch(
-        /^ERROR {2}T5003 {2}app\/components\/Page\.tess:\d+:\d+\n {2}"state" is not defined\. Auto-imports are off, so it must be imported\.\n {2}Add: import \{ state \} from "@tessera\/core"\n/,
+        /^ERROR {2}T5003 {2}app\/components\/Page\.tess:\d+:\d+\n {2}"state" is not defined\. Auto-imports are off, so it must be imported\.\n {2}Add: import \{ state \} from "@pixelscriptio\/tessera\/core"\n/,
       )
       expect(result.ok).toBe(false)
     })

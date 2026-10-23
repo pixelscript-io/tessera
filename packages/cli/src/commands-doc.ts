@@ -12,17 +12,45 @@ export interface CommandDoc {
 export const COMMANDS_DOC: CommandDoc[] = [
   {
     name: 'init',
-    usage: 'tessera init [folder]',
-    summary: 'Scaffold a project',
+    usage: 'tessera init [folder] [--preset tailwind|none]',
+    summary: 'Start a project, in an empty folder or beside an existing package.json',
     details:
-      'Writes a project that runs: a Vite config, `system/` with the base tokens and the light, dark and compact themes, one `Button`, and an `app/` with `main.ts`, a default layout and `pages/index.tess`. It refuses a folder that already has a `package.json`, `app/`, `system/` or `vite.config.ts`, and changes nothing. Until packages are published, dependencies are `link:` paths to the checkout the CLI came from.',
+      'Writes the app (a layout, an index page, `main.ts`) and, per the preset, the design system. `tailwind` writes a full `system/` built from the default theme of Tailwind (every color, the spacing scale, radii, type, shadows, easing and more as tokens, light and dark themes, three components) and a styled index page. `none` writes no tokens, themes or components, and example files with the examples commented out. In a terminal it asks which preset; `--preset` answers it, and with neither it uses `tailwind`. It adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency to an existing `package.json`, never overwrites a file, and lists what it left alone.',
     options: [
+      { flag: '--preset <name>', description: 'tailwind or none. Skips the question.' },
       {
         flag: '--link <folder>',
         description:
-          'Link dependencies to this checkout of Tessera instead of the one the CLI runs from.',
+          'For working on Tessera itself: depend on this checkout of the package instead of the published version.',
       },
     ],
+  },
+  {
+    name: 'dev',
+    usage: 'tessera dev [--port <n>]',
+    summary: 'Run the app with hot updates',
+    details:
+      'Starts the dev server with no configuration files: the CLI supplies the Vite config (with the Tessera plugin) and the HTML page. A project that has its own `vite.config.ts` or `index.html` uses them instead.',
+    options: [
+      {
+        flag: '--port <n>',
+        description: 'The port to serve on. Default 5173, or the next free one.',
+      },
+    ],
+  },
+  {
+    name: 'build',
+    usage: 'tessera build',
+    summary: 'Build the app for production into dist/',
+    details:
+      'Builds with the same zero-configuration setup as `tessera dev`. Each page is its own chunk.',
+  },
+  {
+    name: 'preview',
+    usage: 'tessera preview [--port <n>]',
+    summary: 'Serve the production build',
+    details: 'Serves `dist/`, the output of `tessera build`, to check it locally.',
+    options: [{ flag: '--port <n>', description: 'The port to serve on.' }],
   },
   {
     name: 'check',

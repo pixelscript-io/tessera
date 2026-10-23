@@ -1,4 +1,4 @@
 import 'virtual:tessera/tokens.css'
-import { createApp } from '@tessera/router/app'
+import { createApp } from '@pixelscriptio/tessera/router/app'
 
 createApp().mount('#app')

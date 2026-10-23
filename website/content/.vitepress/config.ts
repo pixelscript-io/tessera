@@ -11,6 +11,7 @@ const guide = [
   { text: 'Pages and routing', link: '/guide/pages-and-routing' },
   { text: 'Layouts', link: '/guide/layouts' },
   { text: 'Testing', link: '/guide/testing' },
+  { text: 'Starter presets', link: '/guide/presets' },
   { text: 'The command line', link: '/guide/cli' },
   { text: 'Editor support', link: '/guide/editor' },
 ]

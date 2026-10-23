@@ -26,7 +26,7 @@ describe('wiring a behavior event in a template', () => {
     )
     expect(diagnostics).toEqual([])
     expect(code.split('\n')[1]).toBe(
-      'import { attachPress as $attachPress } from "@tessera/behavior"',
+      'import { attachPress as $attachPress } from "@pixelscriptio/tessera/behavior"',
     )
     expect(code).toContain(
       'use: [($el: any) => $attachPress($r.adapter, $el, { onPress: ($event: any) => { emit(\'press\') }, native: true, role: "button" })]',

@@ -1,57 +1,92 @@
 # Quick start
 
-Introduced in v0.1 (Milestone 11).
+Introduced in v0.1 (Milestones 11 and 12b).
 
-Tessera is not published yet, so you run it from a checkout of the repository. The commands marked below are run in a clean folder by the docs test suite, exactly as written, and must end with the dev server serving the index page.
+Tessera is one package, `@pixelscriptio/tessera`. You make a folder, install it, and start a project in it. The commands below are the same in every shell: no `export`, no `&&`.
 
 ## Prerequisites
 
-- Node.js 20 or newer and [pnpm](https://pnpm.io/) 10.
-- A checkout of the Tessera repository, with its packages installed and built (`pnpm install && pnpm build` in the checkout). Set `TESSERA` to its path:
-
-```bash
-export TESSERA=/path/to/tessera
-```
+Node.js 20 or newer and npm (pnpm and Yarn work the same way).
 
 ## Create a project
 
-```bash quickstart
-node $TESSERA/packages/cli/bin/tessera.js init my-app
+::: code-group
+
+```bash [bash, zsh]
+mkdir my-app
 cd my-app
-pnpm install
+git init
+npm init -y
+npm install @pixelscriptio/tessera
+npx tessera init
+npm run dev
 ```
 
-Once packages are published this becomes `pnpm create tessera my-app`. The `create-tessera` package is a one-line wrapper for `tessera init` and already works from the checkout.
+```powershell [PowerShell]
+mkdir my-app
+cd my-app
+git init
+npm init -y
+npm install @pixelscriptio/tessera
+npx tessera init
+npm run dev
+```
 
-`init` links the new project to your checkout instead of downloading Tessera's packages, which is why `pnpm install` needs no network access for them.
+:::
 
-## Run it
+`npx tessera init` asks which starting point you want (see below) and writes the project into the folder you are in. `npm run dev` starts the dev server and prints its address. Open it and you have a page.
+
+If you would rather not install first, `npm create @pixelscriptio/tessera my-app` starts a project in a new folder in one step.
+
+### Until the package is published
+
+Packages are not on npm yet, so install from a tarball made in a checkout of the repository (`pnpm install && pnpm build` there first), then continue as above:
+
+```bash quickstart
+mkdir my-app
+cd my-app
+git init
+npm init -y
+npm install "$TESSERA_TARBALL"
+npx tessera init
+```
 
 ```bash quickstart-serve
-pnpm dev
+npm run dev
 ```
 
-Open the address Vite prints. You see the index page: a heading, a short instruction, and a `Button` that counts its clicks.
+Make the tarball with `pnpm pack` in `packages/tessera` of the checkout, and set `TESSERA_TARBALL` to its path. In PowerShell: `$env:TESSERA_TARBALL = "C:\path\to\pixelscriptio-tessera-0.1.0.tgz"` and `npm install $env:TESSERA_TARBALL`. The docs test suite runs the commands in the first block exactly as written, in a clean folder, and checks that the dev server serves the page.
 
-## Tour of the project
+## Choose a starting point
+
+| Preset     | What you get                                                                                                                                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tailwind` | A complete design system in `system/`, built from Tailwind's default theme: every color, the spacing scale, radii, type, shadows and more, with light and dark themes and three components. A styled index page. |
+| `none`     | No tokens, themes or components, so nothing is checked against a design system yet. An index page and example files with the examples commented out.                                                             |
+
+Skip the question with `npx tessera init --preset tailwind` or `--preset none`. With no terminal and no flag, `init` uses `tailwind` and says so. See [Starter presets](/guide/presets).
+
+## What you have
 
 ```text
 my-app/
-  index.html                 the page Vite serves; loads app/main.ts
-  vite.config.ts             registers the Tessera plugin
-  tessera.config.ts          style rules and exemptions (empty to start)
-  system/
-    tokens/                  base tokens and the dark and compact themes (DTCG JSON)
-    components/Button.tess   a system component
+  package.json            scripts: dev, build, preview, check
+  tessera.config.ts       style rules and exemptions (empty to start)
+  tsconfig.json
+  system/                 the design system (tailwind preset)
+    tokens/               colors, scale, effects, layout, semantic colors, themes/dark
+    components/           Button, Card, Badge
   app/
-    main.ts                  imports the token CSS and starts the router
-    layouts/default.tess     wraps every page
-    pages/index.tess         the page at /
+    main.ts               loads the token CSS and starts the router
+    layouts/default.tess  wraps every page
+    pages/index.tess      the page at /
 ```
+
+There is no `vite.config.ts` and no `index.html`: `tessera dev`, `build` and `preview` supply them. Add either file to the project and yours is used instead.
 
 ## Edit the first page
 
-Open `app/pages/index.tess` and change the heading. Save: the page updates without a reload.
+Open `app/pages/index.tess`, change the heading and save: the page updates without a reload.
 
 ```xml tess kind=page
 <page>
@@ -71,14 +106,14 @@ Open `app/pages/index.tess` and change the heading. Save: the page updates witho
 ## Add a component
 
 ```bash
-node $TESSERA/packages/cli/bin/tessera.js new component Note
+npx tessera new component Note
 ```
 
-This writes `app/components/Note.tess` with a valid contract. Use `<Note>` in any template; no import is needed. Run `tessera check` to validate the project.
+This writes `app/components/Note.tess` with a valid contract. Use `<Note>` in any template; no import is needed. Run `npx tessera check` to validate the project.
 
 ## Change a token
 
-Open `system/tokens/base.tokens.json` and change `space.4`. Every component that uses `$space.4` changes with it, and `tessera check` still passes because styles refer to the token by name.
+With the `tailwind` preset, open `system/tokens/semantic.tokens.json` and change `color.action.primary.bg` to another color, say `{color.emerald.600}`. The buttons change everywhere, and `npx tessera check` still passes unless the new color has too little contrast with white text, in which case it says which pair fails.
 
 Then try the opposite on purpose: in a component's `<style>`, write `padding: 13px`.
 
@@ -89,20 +124,21 @@ ERROR  T2102  app/components/Note.tess:14:12
   Run `tessera explain T2102` for details.
 ```
 
-`tessera check --fix` applies the suggestion when it is an exact match.
+`npx tessera check --fix` applies the suggestion when it is an exact match.
 
 ## Add Tessera to an existing codebase
 
-You do not have to fix everything first. Record today's violations as a baseline, and enforcement fails only on new ones:
+Run `npx tessera init --preset none` in a folder that already has a `package.json`. It adds the scripts and the dependency, writes the files that are missing, and never overwrites one. Then record today's violations as a baseline, so enforcement fails only on new ones:
 
 ```bash
-node $TESSERA/packages/cli/bin/tessera.js baseline
+npx tessera baseline
 ```
 
 Commit `tessera.baseline.json`. The counts can only go down. See [The command line](/guide/cli) and [Adopting in a legacy codebase](/cookbook/legacy-baseline).
 
 ## Next steps
 
+- [Starter presets](/guide/presets): what each one generates.
 - [Tutorial](/tutorial/): build up a page step by step.
 - [Contracts](/guide/contracts) and [Styles and enforcement](/guide/styles).
 - [The command line](/guide/cli).

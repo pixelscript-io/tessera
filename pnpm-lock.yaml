@@ -11,6 +11,27 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.13.0)
+      '@pixelscriptio/tessera':
+        specifier: workspace:*
+        version: link:packages/tessera
+      '@tessera/behavior':
+        specifier: workspace:*
+        version: link:packages/behavior
+      '@tessera/cli':
+        specifier: workspace:*
+        version: link:packages/cli
+      '@tessera/compiler':
+        specifier: workspace:*
+        version: link:packages/compiler
+      '@tessera/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@tessera/router':
+        specifier: workspace:*
+        version: link:packages/router
+      '@tessera/tokens':
+        specifier: workspace:*
+        version: link:packages/tokens
       '@types/node':
         specifier: ^26.6.5
         version: 26.6.5
@@ -56,18 +77,9 @@ importers:
 
   examples/kitchen-sink:
     dependencies:
-      '@tessera/behavior':
+      '@pixelscriptio/tessera':
         specifier: workspace:*
-        version: link:../../packages/behavior
-      '@tessera/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@tessera/router':
-        specifier: workspace:*
-        version: link:../../packages/router
-      '@tessera/tokens':
-        specifier: workspace:*
-        version: link:../../packages/tokens
+        version: link:../../packages/tessera
     devDependencies:
       '@tessera/compiler':
         specifier: workspace:*
@@ -122,6 +134,10 @@ importers:
       vite:
         specifier: ^6.0.0 || ^7.0.0
         version: 7.3.7(@types/node@26.6.5)
+    devDependencies:
+      vite-node:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@26.6.5)
 
   packages/compiler:
     dependencies:
@@ -154,9 +170,9 @@ importers:
 
   packages/create-tessera:
     dependencies:
-      '@tessera/cli':
+      '@pixelscriptio/tessera':
         specifier: workspace:*
-        version: link:../cli
+        version: link:../tessera
 
   packages/docs: {}
 
@@ -190,19 +206,32 @@ importers:
         specifier: workspace:*
         version: link:../tokens
 
+  packages/tessera:
+    dependencies:
+      acorn:
+        specifier: ^8.14.0
+        version: 8.19.0
+      vite:
+        specifier: ^7.3.0
+        version: 7.3.7(@types/node@26.6.5)
+    devDependencies:
+      axe-core:
+        specifier: ^4.14.0
+        version: 4.14.0
+      playwright:
+        specifier: ^1.64.1
+        version: 1.64.1
+
   packages/tokens: {}
 
   system:
     devDependencies:
+      '@pixelscriptio/tessera':
+        specifier: workspace:*
+        version: link:../packages/tessera
       '@tessera/a11y':
         specifier: workspace:*
         version: link:../packages/a11y
-      '@tessera/behavior':
-        specifier: workspace:*
-        version: link:../packages/behavior
-      '@tessera/core':
-        specifier: workspace:*
-        version: link:../packages/core
 
   website:
     devDependencies:

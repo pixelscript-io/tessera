@@ -27,7 +27,10 @@ const options: ts.CompilerOptions = {
   skipLibCheck: true,
   types: [],
   baseUrl: repo,
-  paths: { '@tessera/core': ['packages/core/src/index.ts'] },
+  paths: {
+    '@tessera/core': ['packages/core/src/index.ts'],
+    '@pixelscriptio/tessera/core': ['packages/core/src/index.ts'],
+  },
 }
 
 /** Type-check generated module text as `/Generated.ts`, with the real @tessera/core types. */
@@ -148,7 +151,7 @@ import Button from './Button.tess'
     // from contracts (components.d.ts, Milestone 8) are what would catch it.
     const stubbed = result.code.replace(
       "import Button from './Button.tess'",
-      'declare const Button: import("@tessera/core").Component',
+      'declare const Button: import("@pixelscriptio/tessera/core").Component',
     )
     expect(typecheck(stubbed)).toEqual([])
   })

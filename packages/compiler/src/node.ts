@@ -123,15 +123,26 @@ export function loadComponentRegistry(
   return { registry: ComponentRegistry.build(files, display), dirs }
 }
 
-/** The router package's own components (`<Link>`), if the project depends on `@tessera/router`. */
+/**
+ * The router's own components (`<Link>`), found through the published package (`@pixelscriptio/tessera`, which
+ * ships them as source in `dist/components`) or, inside this repository, the router workspace package.
+ */
 export function routerComponentsDir(root: string): string | null {
-  try {
-    const entry = createRequire(join(root, 'package.json')).resolve('@tessera/router')
-    const dir = join(dirname(entry), '..', 'components')
-    return existsSync(dir) ? dir : null
-  } catch {
-    return null
+  const require = createRequire(resolve(root, 'package.json'))
+  const candidates: Array<() => string> = [
+    () =>
+      join(dirname(require.resolve('@pixelscriptio/tessera/package.json')), 'dist', 'components'),
+    () => join(dirname(require.resolve('@tessera/router')), '..', 'components'),
+  ]
+  for (const candidate of candidates) {
+    try {
+      const dir = candidate()
+      if (existsSync(dir)) return dir
+    } catch {
+      /* not installed here */
+    }
   }
+  return null
 }
 
 export interface ProjectRoutes {

@@ -13,7 +13,7 @@ defineA11ySuites({
 })
 ```
 
-For each component, in each theme, the generated suites check:
+`@tessera/a11y` is a development tool in the Tessera repository and is not in the published package yet; until it is, run these suites from a checkout, or rely on `tessera check` for the compile-time contrast checks. For each component, in each theme, the generated suites check:
 
 - axe-core finds no violations for every combination of the contract's variant values and every declared state the test can create, using a real mouse and keyboard (hover, focus-visible, pressed, disabled);
 - the element's role matches the contract;

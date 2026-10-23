@@ -187,7 +187,7 @@ describe('the Vite plugin: auto-imports in plain .ts files', () => {
     expect(ctx.errors[0]).toBe(
       [
         'ERROR  T5002  app/utils/nav.ts:2:17',
-        '  Unresolved identifier "useRoute" in app/utils/nav.ts. Auto-imports only apply inside .tess files; import it from "@tessera/router".',
+        '  Unresolved identifier "useRoute" in app/utils/nav.ts. Auto-imports only apply inside .tess files; import it from "@pixelscriptio/tessera/router".',
         '  Run `tessera explain T5002` for details.',
       ].join('\n'),
     )

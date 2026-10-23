@@ -16,7 +16,7 @@ async function bundle(root: string): Promise<void> {
       write: false,
       minify: false,
       lib: { entry: join(root, 'app/entry.ts'), formats: ['es'], cssFileName: 'style' },
-      rollupOptions: { external: [/^@tessera\//] },
+      rollupOptions: { external: [/^@(tessera|pixelscriptio)\//] },
     },
   })
 }
@@ -58,7 +58,7 @@ describe('tessera.config.ts', () => {
         build: {
           write: false,
           lib: { entry: join(root, 'app/entry.ts'), formats: ['es'], cssFileName: 'style' },
-          rollupOptions: { external: [/^@tessera\//] },
+          rollupOptions: { external: [/^@(tessera|pixelscriptio)\//] },
         },
       }),
     ).rejects.toThrow(/T2102/)

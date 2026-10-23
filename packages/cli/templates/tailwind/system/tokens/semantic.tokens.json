@@ -1,0 +1,87 @@
+{
+  "$description": "Semantic colors: what components use. Primitives are in colors.tokens.json.",
+  "color": {
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "$type": "color",
+    "surface": {
+      "default": {
+        "$value": "{color.white}"
+      },
+      "raised": {
+        "$value": "{color.slate.50}"
+      },
+      "hover": {
+        "$value": "{color.slate.100}"
+      },
+      "inverse": {
+        "$value": "{color.slate.900}"
+      }
+    },
+    "text": {
+      "default": {
+        "$value": "{color.slate.900}"
+      },
+      "muted": {
+        "$value": "{color.slate.600}"
+      },
+      "inverse": {
+        "$value": "{color.white}"
+      }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.slate.200}"
+      },
+      "strong": {
+        "$value": "{color.slate.300}"
+      }
+    },
+    "action": {
+      "primary": {
+        "bg": {
+          "$value": "{color.indigo.600}"
+        },
+        "bg-hover": {
+          "$value": "{color.indigo.700}"
+        },
+        "fg": {
+          "$value": "{color.white}"
+        },
+        "text": {
+          "$value": "{color.indigo.700}"
+        }
+      },
+      "danger": {
+        "bg": {
+          "$value": "{color.red.600}"
+        },
+        "bg-hover": {
+          "$value": "{color.red.700}"
+        },
+        "fg": {
+          "$value": "{color.white}"
+        },
+        "text": {
+          "$value": "{color.red.700}"
+        }
+      }
+    },
+    "focus": {
+      "ring": {
+        "$value": "{color.indigo.600}"
+      }
+    },
+    "brand": {
+      "start": {
+        "$value": "{color.indigo.500}"
+      },
+      "end": {
+        "$value": "{color.violet.500}"
+      }
+    }
+  }
+}

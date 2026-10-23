@@ -1,16 +1,17 @@
 import { lineTable } from '@tessera/contract'
 import type { CompilerDiagnostic } from './diagnostics'
 import { analyzeScript } from './script'
+import { PUBLIC_PACKAGES } from './packages'
 
 /** Names that need no import inside a `.tess` file, and the package each one comes from. */
 export const AUTO_IMPORTS: Readonly<Record<string, string>> = {
-  state: '@tessera/core',
-  derived: '@tessera/core',
-  effect: '@tessera/core',
-  onCleanup: '@tessera/core',
-  onMount: '@tessera/core',
-  navigate: '@tessera/router',
-  useRoute: '@tessera/router',
+  state: PUBLIC_PACKAGES.core,
+  derived: PUBLIC_PACKAGES.core,
+  effect: PUBLIC_PACKAGES.core,
+  onCleanup: PUBLIC_PACKAGES.core,
+  onMount: PUBLIC_PACKAGES.core,
+  navigate: PUBLIC_PACKAGES.router,
+  useRoute: PUBLIC_PACKAGES.router,
 }
 
 const escape = (name: string) => name.replace(/[$]/g, '\\$&')

@@ -1,7 +1,7 @@
 import 'virtual:tessera/tokens.css'
 import { userEvent } from '@vitest/browser/context'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { flush, getRenderer } from '@tessera/core'
+import { flush, getRenderer } from '@pixelscriptio/tessera/core'
 import ConfirmBar from './components/ConfirmBar.tess'
 
 const r = getRenderer()

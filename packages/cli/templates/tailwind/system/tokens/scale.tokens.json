@@ -1,0 +1,529 @@
+{
+  "$description": "Derived from the default theme of Tailwind CSS (MIT).",
+  "space": {
+    "0": {
+      "$value": {
+        "value": 0,
+        "unit": "rem"
+      }
+    },
+    "1": {
+      "$value": {
+        "value": 0.25,
+        "unit": "rem"
+      }
+    },
+    "2": {
+      "$value": {
+        "value": 0.5,
+        "unit": "rem"
+      }
+    },
+    "3": {
+      "$value": {
+        "value": 0.75,
+        "unit": "rem"
+      }
+    },
+    "4": {
+      "$value": {
+        "value": 1,
+        "unit": "rem"
+      }
+    },
+    "5": {
+      "$value": {
+        "value": 1.25,
+        "unit": "rem"
+      }
+    },
+    "6": {
+      "$value": {
+        "value": 1.5,
+        "unit": "rem"
+      }
+    },
+    "7": {
+      "$value": {
+        "value": 1.75,
+        "unit": "rem"
+      }
+    },
+    "8": {
+      "$value": {
+        "value": 2,
+        "unit": "rem"
+      }
+    },
+    "9": {
+      "$value": {
+        "value": 2.25,
+        "unit": "rem"
+      }
+    },
+    "10": {
+      "$value": {
+        "value": 2.5,
+        "unit": "rem"
+      }
+    },
+    "11": {
+      "$value": {
+        "value": 2.75,
+        "unit": "rem"
+      }
+    },
+    "12": {
+      "$value": {
+        "value": 3,
+        "unit": "rem"
+      }
+    },
+    "14": {
+      "$value": {
+        "value": 3.5,
+        "unit": "rem"
+      }
+    },
+    "16": {
+      "$value": {
+        "value": 4,
+        "unit": "rem"
+      }
+    },
+    "20": {
+      "$value": {
+        "value": 5,
+        "unit": "rem"
+      }
+    },
+    "24": {
+      "$value": {
+        "value": 6,
+        "unit": "rem"
+      }
+    },
+    "28": {
+      "$value": {
+        "value": 7,
+        "unit": "rem"
+      }
+    },
+    "32": {
+      "$value": {
+        "value": 8,
+        "unit": "rem"
+      }
+    },
+    "36": {
+      "$value": {
+        "value": 9,
+        "unit": "rem"
+      }
+    },
+    "40": {
+      "$value": {
+        "value": 10,
+        "unit": "rem"
+      }
+    },
+    "44": {
+      "$value": {
+        "value": 11,
+        "unit": "rem"
+      }
+    },
+    "48": {
+      "$value": {
+        "value": 12,
+        "unit": "rem"
+      }
+    },
+    "52": {
+      "$value": {
+        "value": 13,
+        "unit": "rem"
+      }
+    },
+    "56": {
+      "$value": {
+        "value": 14,
+        "unit": "rem"
+      }
+    },
+    "60": {
+      "$value": {
+        "value": 15,
+        "unit": "rem"
+      }
+    },
+    "64": {
+      "$value": {
+        "value": 16,
+        "unit": "rem"
+      }
+    },
+    "72": {
+      "$value": {
+        "value": 18,
+        "unit": "rem"
+      }
+    },
+    "80": {
+      "$value": {
+        "value": 20,
+        "unit": "rem"
+      }
+    },
+    "96": {
+      "$value": {
+        "value": 24,
+        "unit": "rem"
+      }
+    },
+    "$type": "dimension",
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "0-5": {
+      "$value": {
+        "value": 0.125,
+        "unit": "rem"
+      }
+    },
+    "1-5": {
+      "$value": {
+        "value": 0.375,
+        "unit": "rem"
+      }
+    },
+    "2-5": {
+      "$value": {
+        "value": 0.625,
+        "unit": "rem"
+      }
+    },
+    "3-5": {
+      "$value": {
+        "value": 0.875,
+        "unit": "rem"
+      }
+    },
+    "px": {
+      "$value": {
+        "value": 1,
+        "unit": "px"
+      }
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "none": {
+      "$value": {
+        "value": 0,
+        "unit": "px"
+      }
+    },
+    "xs": {
+      "$value": {
+        "value": 0.125,
+        "unit": "rem"
+      }
+    },
+    "sm": {
+      "$value": {
+        "value": 0.25,
+        "unit": "rem"
+      }
+    },
+    "md": {
+      "$value": {
+        "value": 0.375,
+        "unit": "rem"
+      }
+    },
+    "lg": {
+      "$value": {
+        "value": 0.5,
+        "unit": "rem"
+      }
+    },
+    "xl": {
+      "$value": {
+        "value": 0.75,
+        "unit": "rem"
+      }
+    },
+    "2xl": {
+      "$value": {
+        "value": 1,
+        "unit": "rem"
+      }
+    },
+    "3xl": {
+      "$value": {
+        "value": 1.5,
+        "unit": "rem"
+      }
+    },
+    "4xl": {
+      "$value": {
+        "value": 2,
+        "unit": "rem"
+      }
+    },
+    "full": {
+      "$value": {
+        "value": 9999,
+        "unit": "px"
+      }
+    }
+  },
+  "font": {
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "family": {
+      "$type": "fontFamily",
+      "sans": {
+        "$value": [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Noto Sans",
+          "Arial",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol",
+          "Noto Color Emoji"
+        ]
+      },
+      "serif": {
+        "$value": [
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "Times New Roman",
+          "Times",
+          "serif"
+        ]
+      },
+      "mono": {
+        "$value": [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "Liberation Mono",
+          "Courier New",
+          "monospace"
+        ]
+      }
+    },
+    "size": {
+      "$type": "dimension",
+      "xs": {
+        "$value": {
+          "value": 0.75,
+          "unit": "rem"
+        }
+      },
+      "sm": {
+        "$value": {
+          "value": 0.875,
+          "unit": "rem"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 1,
+          "unit": "rem"
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 1.125,
+          "unit": "rem"
+        }
+      },
+      "xl": {
+        "$value": {
+          "value": 1.25,
+          "unit": "rem"
+        }
+      },
+      "2xl": {
+        "$value": {
+          "value": 1.5,
+          "unit": "rem"
+        }
+      },
+      "3xl": {
+        "$value": {
+          "value": 1.875,
+          "unit": "rem"
+        }
+      },
+      "4xl": {
+        "$value": {
+          "value": 2.25,
+          "unit": "rem"
+        }
+      },
+      "5xl": {
+        "$value": {
+          "value": 3,
+          "unit": "rem"
+        }
+      },
+      "6xl": {
+        "$value": {
+          "value": 3.75,
+          "unit": "rem"
+        }
+      },
+      "7xl": {
+        "$value": {
+          "value": 4.5,
+          "unit": "rem"
+        }
+      },
+      "8xl": {
+        "$value": {
+          "value": 6,
+          "unit": "rem"
+        }
+      },
+      "9xl": {
+        "$value": {
+          "value": 8,
+          "unit": "rem"
+        }
+      }
+    },
+    "size-leading": {
+      "$type": "number",
+      "xs": {
+        "$value": 1.333333
+      },
+      "sm": {
+        "$value": 1.428571
+      },
+      "base": {
+        "$value": 1.5
+      },
+      "lg": {
+        "$value": 1.555556
+      },
+      "xl": {
+        "$value": 1.4
+      },
+      "2xl": {
+        "$value": 1.333333
+      },
+      "3xl": {
+        "$value": 1.2
+      },
+      "4xl": {
+        "$value": 1.111111
+      },
+      "5xl": {
+        "$value": 1
+      },
+      "6xl": {
+        "$value": 1
+      },
+      "7xl": {
+        "$value": 1
+      },
+      "8xl": {
+        "$value": 1
+      },
+      "9xl": {
+        "$value": 1
+      }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "thin": {
+        "$value": 100
+      },
+      "extralight": {
+        "$value": 200
+      },
+      "light": {
+        "$value": 300
+      },
+      "normal": {
+        "$value": 400
+      },
+      "medium": {
+        "$value": 500
+      },
+      "semibold": {
+        "$value": 600
+      },
+      "bold": {
+        "$value": 700
+      },
+      "extrabold": {
+        "$value": 800
+      },
+      "black": {
+        "$value": 900
+      }
+    },
+    "leading": {
+      "$type": "number",
+      "tight": {
+        "$value": 1.25
+      },
+      "snug": {
+        "$value": 1.375
+      },
+      "normal": {
+        "$value": 1.5
+      },
+      "relaxed": {
+        "$value": 1.625
+      },
+      "loose": {
+        "$value": 2
+      }
+    },
+    "tracking": {
+      "$type": "number",
+      "tighter": {
+        "$value": -0.05
+      },
+      "tight": {
+        "$value": -0.025
+      },
+      "normal": {
+        "$value": 0
+      },
+      "wide": {
+        "$value": 0.025
+      },
+      "wider": {
+        "$value": 0.05
+      },
+      "widest": {
+        "$value": 0.1
+      }
+    }
+  }
+}

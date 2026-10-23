@@ -6,7 +6,12 @@ import {
   notFound as generatedNotFound,
   layouts as generatedLayouts,
 } from 'virtual:tessera/routes'
-import { createRouter, layoutsFromModules, routesFromModules, type Router } from '@tessera/router'
+import {
+  createRouter,
+  layoutsFromModules,
+  routesFromModules,
+  type Router,
+} from '@pixelscriptio/tessera/router'
 
 // The pages are the real `app/pages`, loaded the way the build loads them.
 const fromGlob = routesFromModules(import.meta.glob('./pages/**/*.tess'), './pages')

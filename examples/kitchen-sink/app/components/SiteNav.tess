@@ -8,7 +8,7 @@
 </contract>
 
 <script>
-import { setDensity, setTheme } from '@tessera/tokens'
+import { setDensity, setTheme } from '@pixelscriptio/tessera/tokens'
 
 const light = () => setTheme(null)
 const dark = () => setTheme('dark')

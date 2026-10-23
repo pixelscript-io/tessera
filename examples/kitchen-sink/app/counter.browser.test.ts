@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import 'virtual:tessera/tokens.css'
-import { flush, getRenderer } from '@tessera/core'
-import { setDensity, setTheme } from '@tessera/tokens'
+import { flush, getRenderer } from '@pixelscriptio/tessera/core'
+import { setDensity, setTheme } from '@pixelscriptio/tessera/tokens'
 import Counter from './components/Counter.tess'
 
 const r = getRenderer()
