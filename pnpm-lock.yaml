@@ -133,6 +133,9 @@ importers:
       '@tessera/contract':
         specifier: workspace:*
         version: link:../contract
+      '@tessera/docs':
+        specifier: workspace:*
+        version: link:../docs
       '@tessera/router':
         specifier: workspace:*
         version: link:../router
@@ -185,7 +188,21 @@ importers:
         specifier: workspace:*
         version: link:../tessera
 
-  packages/docs: {}
+  packages/docs:
+    dependencies:
+      '@tessera/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@tessera/tokens':
+        specifier: workspace:*
+        version: link:../tokens
+      vite:
+        specifier: ^6.0.0 || ^7.0.0
+        version: 7.3.7(@types/node@26.6.5)
+    devDependencies:
+      '@tessera/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/editor:
     dependencies:

@@ -4,5 +4,15 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts"
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@tessera/compiler": "workspace:*",
+    "@tessera/tokens": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0 || ^7.0.0"
+  },
+  "devDependencies": {
+    "@tessera/core": "workspace:*"
+  }
 }

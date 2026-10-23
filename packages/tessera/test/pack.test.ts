@@ -150,6 +150,8 @@ describe('the packed package', () => {
       'package/dist/vite.js',
       'package/dist/cli.js',
       'package/dist/components/Link.tess',
+      'package/dist/docs-client/main.ts',
+      'package/dist/docs-client/style.ts',
       'package/dist/types/packages/tessera/src/core.d.ts',
       'package/dist/types/packages/tessera/src/router.d.ts',
     ]) {
@@ -319,6 +321,14 @@ describe.each(['tailwind', 'none'] as const)(
       expect(manifest.scripts.dev).toBe('tessera dev')
 
       expect(run(dir, 'check')).toContain('0 errors')
+
+      // The design system docs export from the installed package: static files, with the components in them.
+      expect(run(dir, 'docs', '--static', '--out', 'docs-out')).toContain(
+        'Exported the docs to docs-out',
+      )
+      for (const file of ['index.html', 'docs.js']) {
+        expect(existsSync(join(dir, 'docs-out', file)), file).toBe(true)
+      }
 
       const dev = await startDev(dir)
       const browser = await chromium.launch({ channel: 'msedge' })

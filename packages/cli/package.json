@@ -21,6 +21,7 @@
   "dependencies": {
     "@tessera/agent": "workspace:*",
     "@tessera/compiler": "workspace:*",
+    "@tessera/docs": "workspace:*",
     "@tessera/contract": "workspace:*",
     "@tessera/router": "workspace:*",
     "@tessera/tokens": "workspace:*",

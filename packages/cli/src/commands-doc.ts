@@ -99,6 +99,21 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'docs',
+    usage: 'tessera docs [--port <n>] [--static [--out <folder>]]',
+    summary: 'Documentation for your design system, generated from its contracts and tokens',
+    details:
+      'Runs a documentation app for the project: a page for every component (description, a live preview with a control for each variant, the variant, part, state, slot and event tables, usage examples, the tokens its styles use and the source), a page for every token group (the value in every theme after aliases are followed, with swatches and specimens), a contrast table, and an overview with the coverage report that `tessera report` prints (also downloadable as JSON). Theme and density switchers are always visible. Nothing is written by hand: add a component with a valid contract and it appears, with its controls, without a restart. A `Name.docs.md` beside a component adds guidance prose, and a fenced `tess live` block in it runs as a real example. `--static` writes a folder of plain files (default `docs-dist`) that any file server can host.',
+    options: [
+      { flag: '--port <n>', description: 'The port to serve on.' },
+      { flag: '--static', description: 'Write static files instead of serving.' },
+      {
+        flag: '--out <folder>',
+        description: 'With --static, where to write. Default `docs-dist`.',
+      },
+    ],
+  },
+  {
     name: 'tokens import',
     usage:
       'tessera tokens import <file or folder...> [--format dtcg|tokens-studio] [--out <folder>] [--force]',
