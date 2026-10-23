@@ -5,6 +5,7 @@ import {
   applyToTokens,
   collectRenames,
   hasRenames,
+  kindFromPath,
   type CodemodEdit,
 } from '@tessera/compiler'
 import type { Args } from '../args'
@@ -74,11 +75,36 @@ export async function codemod(args: Args, io: Io): Promise<number> {
   const project = await openProject(io.cwd, args)
   const tokenFileList = project.tokensDir() ? tokenFiles(project.tokensDir()!) : []
   const renames = collectRenames(project.agentManifest().components, tokenRenames(tokenFileList))
+
+  // A component whose contract does not validate is not in the registry, so a rename it declares is not read. Say so:
+  // "nothing to do" must never hide that.
+  const loaded = new Set([...project.components().registry.entries.values()].map((e) => e.file))
+  const skipped = project
+    .files()
+    .filter((path) => kindFromPath(path) === 'component' && !loaded.has(path.replaceAll('\\', '/')))
+    .filter((path) => /"(renamedFrom|renamedValues)"/.test(readFileSync(path, 'utf8')))
+    .map((path) => project.display(path))
+  const skippedNote = (file: string) =>
+    `${file}  SKIPPED  its contract is not valid, so the renames it declares were not read. Run \`tessera check\` to see why.`
+
   if (!hasRenames(renames)) {
-    io.out(
-      'Nothing to do: no component, variant value or token says it was renamed (renamedFrom, renamedValues).',
-    )
-    return 0
+    if (has(args, 'json')) {
+      io.out(
+        JSON.stringify(
+          { write: has(args, 'write'), files: [], edits: 0, manual: 0, skipped },
+          null,
+          2,
+        ),
+      )
+    } else {
+      for (const file of skipped) io.out(skippedNote(file))
+      io.out(
+        skipped.length
+          ? '\nNothing could be applied.'
+          : 'Nothing to do: no component, variant value or token says it was renamed (renamedFrom, renamedValues).',
+      )
+    }
+    return skipped.length ? 1 : 0
   }
 
   const write = has(args, 'write')
@@ -113,9 +139,10 @@ export async function codemod(args: Args, io: Io): Promise<number> {
   }
 
   if (has(args, 'json')) {
-    io.out(JSON.stringify({ write, files: report, edits: edited, manual }, null, 2))
-    return 0
+    io.out(JSON.stringify({ write, files: report, edits: edited, manual, skipped }, null, 2))
+    return skipped.length ? 1 : 0
   }
+  for (const file of skipped) io.out(skippedNote(file))
   for (const f of report) {
     for (const e of f.edits)
       io.out(`${f.file}:${e.line}  ${KIND_LABEL[e.kind]}  ${e.from} → ${e.to}`)
@@ -126,5 +153,5 @@ export async function codemod(args: Args, io: Io): Promise<number> {
       ? `\n${write ? 'Updated' : 'Would update'} ${edited} ${edited === 1 ? 'use' : 'uses'} in ${changed} ${changed === 1 ? 'file' : 'files'}${manual ? `; ${manual} ${manual === 1 ? 'needs' : 'need'} a hand` : ''}.${write ? ' Run `tessera check` to confirm.' : ' Run it again with --write to apply.'}`
       : 'Every use is already up to date.',
   )
-  return 0
+  return skipped.length ? 1 : 0
 }

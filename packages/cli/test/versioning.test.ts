@@ -399,3 +399,31 @@ describe('tessera report: what still depends on a deprecated or renamed thing', 
     expect(after.pendingRenames).toEqual([])
   })
 })
+
+describe('tessera codemod: a contract that does not validate', () => {
+  it('says its renames were not read, instead of "nothing to do"', async () => {
+    const root = scratch()
+    write(root, 'tessera.config.ts', config)
+    // The contract says Label, the file says Badge: T3004, so the component is not loaded.
+    write(
+      root,
+      'app/components/Badge.tess',
+      '<contract>\n{ "name": "Label", "renamedFrom": "Badge", "role": "generic", "parts": ["root"] }\n</contract>\n<template><span class="root"></span></template>\n',
+    )
+    write(root, 'app/pages/index.tess', '<template><main><Badge /></main></template>\n')
+    const { code, out } = await run(root, 'codemod')
+    expect(code).toBe(1)
+    expect(out).toContain(
+      'app/components/Badge.tess  SKIPPED  its contract is not valid, so the renames it declares were not read. Run `tessera check` to see why.',
+    )
+    expect(out).toContain('Nothing could be applied.')
+    expect(out).not.toContain('Nothing to do')
+    // Once the file is named for the component, the rename is found.
+    mkdirSync(join(root, 'app/components'), { recursive: true })
+    writeFileSync(join(root, 'app/components/Label.tess'), read(root, 'app/components/Badge.tess'))
+    rmSync(join(root, 'app/components/Badge.tess'))
+    const fixed = await run(root, 'codemod')
+    expect(fixed.code).toBe(0)
+    expect(fixed.out).toContain('app/pages/index.tess:1  component  <Badge> → <Label>')
+  })
+})

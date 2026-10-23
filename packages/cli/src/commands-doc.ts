@@ -133,7 +133,7 @@ export const COMMANDS_DOC: CommandDoc[] = [
     usage: 'tessera codemod [--write] [--json]',
     summary: 'Update every use of a component, variant value or token that was renamed',
     details:
-      'Reads the renames the design system declares (`renamedFrom` on a component or a token, `renamedValues` on a contract) and rewrites the project to match: component tags and explicit imports, static variant values on the tags of the component and in its own style selectors, and token references in styles and in other token files. Without `--write` it only lists the changes. It reads the lexical blocks it can name and reports, as needing a hand, a computed value that still mentions an old one. The declarations themselves are never changed.',
+      'Reads the renames the design system declares (`renamedFrom` on a component or a token, `renamedValues` on a contract) and rewrites the project to match: component tags and explicit imports, static variant values on the tags of the component and in its own style selectors, and token references in styles and in other token files. Without `--write` it only lists the changes. It reads the lexical blocks it can name and reports, as needing a hand, a computed value that still mentions an old one. The declarations themselves are never changed. A component whose contract is not valid (its name does not match its file, say) is not loaded, so a rename it declares cannot be read: the codemod lists it as skipped and exits 1, never "nothing to do".',
     options: [
       { flag: '--write', description: 'Apply the changes. Without it nothing is written.' },
       { flag: '--json', description: 'Print the changes as JSON.' },

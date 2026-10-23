@@ -82,7 +82,7 @@ Without `--write` it lists every change and touches nothing. With it, the files 
 - a static `tone="danger"` on the component's tags becomes `tone="destructive"`, and the `[data-tone='danger']` selectors in the component's own styles follow;
 - `$space.medium` in styles becomes `$space.3`, and so does `{space.medium}` in other token files.
 
-It is lexical, reading only the blocks it can find by name, and it says what it will not guess: a computed value (`:tone="..."`) that mentions an old value is listed as needing a hand. The definitions that declare a rename (the `renamedFrom` field itself) are never touched. Run `tessera check` afterwards; it passes when the rename was the only thing wrong.
+It is lexical, reading only the blocks it can find by name, and it says what it will not guess: a computed value (`:tone="..."`) that mentions an old value is listed as needing a hand. The definitions that declare a rename (the `renamedFrom` field itself) are never touched. If a component's contract is not valid (its name does not match its file name, for example), it is not loaded and its renames cannot be read: the codemod lists it as skipped and exits 1 instead of saying there is nothing to do. Run `tessera check` afterwards; it passes when the rename was the only thing wrong.
 
 It works even when the rename has left the tokens unable to build (an alias that still names the old token), because it reads the rename declarations from the files themselves.
 
