@@ -2,7 +2,7 @@
 
 Introduced in v0.1 (Milestones 11 and 12b).
 
-Tessera is one package, `@pixelscriptio/tessera`. You make a folder, install it, and start a project in it. The commands below are the same in every shell: no `export`, no `&&`.
+Tessera is one package, `@pixelscriptio/tessera`. You make a folder, install it, and start a project in it. The commands below are the same in every shell: no `export`, no `&&`. The docs test suite runs the bash block exactly as written, in a clean folder, and checks that the dev server serves the page.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ Node.js 20 or newer and npm (pnpm and Yarn work the same way).
 
 ::: code-group
 
-```bash [bash, zsh]
+```bash quickstart [bash, zsh]
 mkdir my-app
 cd my-app
 git init
@@ -40,26 +40,7 @@ npm run dev
 pnpm 11 stops an install when a dependency has an install script nobody has approved, and Vite depends on esbuild, which has one. If `pnpm add @pixelscriptio/tessera` ends with `ERR_PNPM_IGNORED_BUILDS`, run `pnpm approve-builds`, allow `esbuild`, and run the install again. npm only prints a warning about it, and the project works either way: esbuild runs from a prebuilt binary.
 :::
 
-If you would rather not install first, `npm create @pixelscriptio/tessera my-app` starts a project in a new folder in one step.
-
-### Until the package is published
-
-Packages are not on npm yet, so install from a tarball made in a checkout of the repository (`pnpm install && pnpm build` there first), then continue as above:
-
-```bash quickstart
-mkdir my-app
-cd my-app
-git init
-npm init -y
-npm install "$TESSERA_TARBALL"
-npx tessera init
-```
-
-```bash quickstart-serve
-npm run dev
-```
-
-Make the tarball with `pnpm pack` in `packages/tessera` of the checkout, and set `TESSERA_TARBALL` to its path. In PowerShell: `$env:TESSERA_TARBALL = "C:\path\to\pixelscriptio-tessera-0.1.0.tgz"` and `npm install $env:TESSERA_TARBALL`. The docs test suite runs the commands in the first block exactly as written, in a clean folder, and checks that the dev server serves the page.
+If you would rather not install first, `npm create @pixelscriptio/tessera my-app` starts a project in a new folder in one step. It asks the same question, then writes the project into `my-app`; run `cd my-app`, `npm install` and `npm run dev` after it.
 
 ## Choose a starting point
 

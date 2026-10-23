@@ -28,8 +28,15 @@ const quickStart = readFileSync(
 const ANSI = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g')
 
 const blocks = parseBlocks(quickStart)
-const setup = blocks.filter((b) => b.lang === 'bash' && b.tags.has('quickstart')).map((b) => b.code)
-const serve = blocks.find((b) => b.lang === 'bash' && b.tags.has('quickstart-serve'))!.code.trim()
+// The page's bash block: every line but the last sets the project up, and the last starts the dev server.
+const commands = blocks
+  .find((b) => b.lang === 'bash' && b.tags.has('quickstart'))!
+  .code.split('\n')
+  .filter((l) => l.trim())
+const setup = commands.slice(0, -1)
+const serve = commands[commands.length - 1]!
+/** The one line this test changes: the install reads the package from the checkout's tarball, so a run tests the code under change and not whatever was last published. */
+const INSTALL = 'npm install @pixelscriptio/tessera'
 
 const made: string[] = []
 // `git init` leaves read-only files on Windows, and a just-stopped server can still hold a handle for a moment:
@@ -70,10 +77,14 @@ function registryReachable(): boolean {
 
 describe('the Quick start', () => {
   it('has commands to run and a server to start, and no shell-specific syntax in the shared ones', () => {
-    const commands = setup.join('\n')
-    expect(commands).toContain('npm init -y')
-    expect(commands).toContain('npm install "$TESSERA_TARBALL"')
-    expect(commands).toContain('npx tessera init')
+    expect(setup).toEqual([
+      'mkdir my-app',
+      'cd my-app',
+      'git init',
+      'npm init -y',
+      INSTALL,
+      'npx tessera init',
+    ])
     expect(serve).toBe('npm run dev')
     // The documented create commands work in bash and PowerShell alike.
     const shown = blocks
@@ -110,10 +121,10 @@ describe('the Quick start', () => {
       const work = join(dir, 'work')
       mkdirSync(work)
       // Run line by line in the platform's own shell (cmd.exe, sh), so it needs no bash. `cd` moves where the
-      // next line runs, and `$TESSERA_TARBALL` is filled in, as a person would set it.
+      // next line runs. Only the install line differs from the page: it installs the tarball.
       let cwd = work
-      const filled = (line: string) => line.replaceAll('$TESSERA_TARBALL', tarball)
-      for (const line of setup.flatMap((block) => block.split('\n')).filter((l) => l.trim())) {
+      const filled = (line: string) => (line === INSTALL ? `npm install "${tarball}"` : line)
+      for (const line of setup) {
         const cd = /^cd\s+(.+)$/.exec(line.trim())
         if (cd) cwd = join(cwd, cd[1]!)
         else execSync(filled(line), { cwd, env, stdio: 'pipe' })

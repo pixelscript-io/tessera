@@ -74,7 +74,7 @@ Tessera's runtime is deliberately small and sits behind an adapter so it can cha
 
 ## Status
 
-Tessera is at v0.1: the pieces in this site exist and are tested, but nothing is published, the API will change, and the in-browser playground, versioned docs and a hosted site are deferred. [Releases](/releases/) lists what each milestone delivered and [the roadmap](/releases/roadmap) what is next.
+Tessera is at v0.1: the pieces in this site exist and are tested, and the first release is on npm, but the API will change, and the in-browser playground, versioned docs and a hosted site are deferred. [Releases](/releases/) lists what each milestone delivered and [the roadmap](/releases/roadmap) what is next.
 
 ## Non-goals for v0.x
 
