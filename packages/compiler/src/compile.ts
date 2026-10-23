@@ -351,6 +351,7 @@ function withImports(
         ...imported.filter((n) => /^[A-Z]/.test(n)),
       ]),
     ],
+    renamedTo: (tag) => auto?.renamedTo(tag),
     importHint: (tag) => {
       const line = auto?.importHint(tag)
       if (!line) return undefined

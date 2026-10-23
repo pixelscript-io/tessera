@@ -52,9 +52,50 @@ export interface Report {
     message: string
     usages: Array<{ file: string; count: number }>
   }>
+  /** Variant values the contracts deprecate, and who still sets them. */
+  deprecatedValues: Array<{
+    component: string
+    variant: string
+    value: string
+    message: string
+    usages: Array<{ file: string; count: number }>
+  }>
+  /** Tokens marked deprecated, and the styles that still use them. */
+  deprecatedTokens: Array<{
+    token: string
+    message: string
+    usages: Array<{ file: string; count: number }>
+  }>
+  /** Renames the design system declares that this project has not applied yet: `tessera codemod` updates them. */
+  pendingRenames: Array<{
+    kind: 'component' | 'value' | 'token'
+    from: string
+    to: string
+    usages: Array<{ file: string; count: number }>
+  }>
 }
 
 const ratio = (part: number, whole: number) => (whole === 0 ? null : part / whole)
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** A static use of a variant value: `<Card tone="loud"`. */
+const valueUse = (component: string, variant: string, value: string) =>
+  new RegExp(String.raw`<${component}(?=[\s/>])[^>]*\s${variant}=(["'])${escapeRe(value)}\1`, 'g')
+
+/** A use of a token in a style: `$space.4`, but not `$space.40`. */
+const tokenUse = (path: string) => new RegExp(String.raw`\$${escapeRe(path)}(?![\w.-])`, 'g')
+
+function usagesOf(
+  sources: Map<string, string>,
+  pattern: RegExp,
+  exceptFile?: string,
+): Array<{ file: string; count: number }> {
+  return [...sources]
+    .filter(([file]) => file !== exceptFile)
+    .map(([file, source]) => ({ file, count: source.match(pattern)?.length ?? 0 }))
+    .filter((u) => u.count > 0)
+}
 
 const stats = (declarations: number, tokenized: number, raw: number): DirectoryStats => ({
   declarations,
@@ -62,6 +103,46 @@ const stats = (declarations: number, tokenized: number, raw: number): DirectoryS
   raw,
   ratio: ratio(tokenized, declarations),
 })
+
+/** Every `*.tokens.json` under a folder. */
+function tokenJsonFiles(dir: string): string[] {
+  try {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? tokenJsonFiles(join(dir, e.name))
+        : e.name.endsWith('.tokens.json')
+          ? [join(dir, e.name)]
+          : [],
+    )
+  } catch {
+    return []
+  }
+}
+
+/** Collect `deprecated` and `renamedFrom` from the `$extensions.tessera` of every token in a document. */
+function collectLifecycle(
+  node: unknown,
+  segments: string[],
+  out: {
+    deprecated: Array<{ path: string; message: string }>
+    renamed: Array<{ from: string; to: string }>
+  },
+): void {
+  if (typeof node !== 'object' || node === null || Array.isArray(node)) return
+  const doc = node as Record<string, unknown>
+  if ('$value' in doc) {
+    const own = (
+      doc.$extensions as { tessera?: { deprecated?: unknown; renamedFrom?: unknown } } | undefined
+    )?.tessera
+    const path = segments.join('.')
+    if (typeof own?.deprecated === 'string') out.deprecated.push({ path, message: own.deprecated })
+    if (typeof own?.renamedFrom === 'string') out.renamed.push({ from: own.renamedFrom, to: path })
+    return
+  }
+  for (const [key, child] of Object.entries(doc)) {
+    if (!key.startsWith('$') || key === '$root') collectLifecycle(child, [...segments, key], out)
+  }
+}
 
 /** Does a folder hold a test file that generates accessibility suites for the components beside it? */
 function hasA11ySuites(dir: string): boolean {
@@ -84,6 +165,9 @@ export function buildReport(project: Project): Report {
     dir: string
     hasContract: boolean
     deprecated?: string
+    deprecatedValues?: Record<string, Record<string, string>>
+    renamedValues?: Record<string, Record<string, string>>
+    renamedFrom?: string
   }> = []
   const sources = new Map<string, string>()
 
@@ -123,6 +207,9 @@ export function buildReport(project: Project): Report {
         dir: dirname(path),
         hasContract: !!contract,
         ...(contract?.deprecated !== undefined ? { deprecated: contract.deprecated } : {}),
+        ...(contract?.deprecatedValues ? { deprecatedValues: contract.deprecatedValues } : {}),
+        ...(contract?.renamedValues ? { renamedValues: contract.renamedValues } : {}),
+        ...(contract?.renamedFrom ? { renamedFrom: contract.renamedFrom } : {}),
       })
     }
   }
@@ -140,6 +227,22 @@ export function buildReport(project: Project): Report {
   const byRule: Record<string, number> = {}
   for (const codes of Object.values(baseline.files)) {
     for (const [code, n] of Object.entries(codes)) byRule[code] = (byRule[code] ?? 0) + n
+  }
+
+  // Token lifecycle, read from the token files so it works while the tokens do not build (a rename leaves aliases behind).
+  const tokenLifecycle = {
+    deprecated: [] as Array<{ path: string; message: string }>,
+    renamed: [] as Array<{ from: string; to: string }>,
+  }
+  const dir = project.tokensDir()
+  if (dir) {
+    for (const file of tokenJsonFiles(dir)) {
+      try {
+        collectLifecycle(JSON.parse(readFileSync(file, 'utf8')), [], tokenLifecycle)
+      } catch {
+        // A file that is not JSON is the tokens build's to report.
+      }
+    }
   }
 
   const withContract = components.filter((c) => c.hasContract)
@@ -187,12 +290,50 @@ export function buildReport(project: Project): Report {
       .filter((c) => c.deprecated !== undefined)
       .map((c) => {
         const tag = new RegExp(String.raw`<${c.name}(?=[\s/>])`, 'g')
-        const usages = [...sources]
-          .filter(([file]) => file !== c.file)
-          .map(([file, source]) => ({ file, count: source.match(tag)?.length ?? 0 }))
-          .filter((u) => u.count > 0)
-        return { component: c.name, message: c.deprecated!, usages }
+        return { component: c.name, message: c.deprecated!, usages: usagesOf(sources, tag, c.file) }
       }),
+    deprecatedValues: components.flatMap((c) =>
+      Object.entries(c.deprecatedValues ?? {}).flatMap(([variant, values]) =>
+        Object.entries(values).map(([value, message]) => ({
+          component: c.name,
+          variant,
+          value,
+          message,
+          usages: usagesOf(sources, valueUse(c.name, variant, value), c.file),
+        })),
+      ),
+    ),
+    deprecatedTokens: tokenLifecycle.deprecated.map((t) => ({
+      token: t.path,
+      message: t.message,
+      usages: usagesOf(sources, tokenUse(t.path)),
+    })),
+    pendingRenames: [
+      ...components
+        .filter((c) => c.renamedFrom)
+        .map((c) => ({
+          kind: 'component' as const,
+          from: c.renamedFrom!,
+          to: c.name,
+          usages: usagesOf(sources, new RegExp(String.raw`<${c.renamedFrom}(?=[\s/>])`, 'g')),
+        })),
+      ...components.flatMap((c) =>
+        Object.entries(c.renamedValues ?? {}).flatMap(([variant, values]) =>
+          Object.keys(values).map((from) => ({
+            kind: 'value' as const,
+            from: `${c.name}.${variant}="${from}"`,
+            to: `${c.name}.${variant}="${values[from]}"`,
+            usages: usagesOf(sources, valueUse(c.name, variant, from)),
+          })),
+        ),
+      ),
+      ...tokenLifecycle.renamed.map((t) => ({
+        kind: 'token' as const,
+        from: t.from,
+        to: t.to,
+        usages: usagesOf(sources, tokenUse(t.from)),
+      })),
+    ].filter((r) => r.usages.length > 0),
   }
 }
 
@@ -247,6 +388,28 @@ export function formatReport(r: Report): string {
   for (const d of r.deprecated) {
     lines.push(`  ${d.component}: ${d.message}`)
     for (const u of d.usages) lines.push(`    ${u.file} (${u.count})`)
+  }
+  lines.push('', `Deprecated variant values: ${r.deprecatedValues.length}`)
+  for (const d of r.deprecatedValues) {
+    lines.push(`  ${d.component}.${d.variant} "${d.value}": ${d.message || 'deprecated'}`)
+    if (!d.usages.length) lines.push('    no remaining uses')
+    for (const u of d.usages) lines.push(`    ${u.file} (${u.count})`)
+  }
+  lines.push('', `Deprecated tokens: ${r.deprecatedTokens.length}`)
+  for (const d of r.deprecatedTokens) {
+    lines.push(`  $${d.token}: ${d.message || 'deprecated'}`)
+    if (!d.usages.length) lines.push('    no remaining uses')
+    for (const u of d.usages) lines.push(`    ${u.file} (${u.count})`)
+  }
+  if (r.pendingRenames.length) {
+    lines.push(
+      '',
+      `Renames not applied yet: ${r.pendingRenames.length} (run tessera codemod --write)`,
+    )
+    for (const p of r.pendingRenames) {
+      lines.push(`  ${p.from} -> ${p.to}`)
+      for (const u of p.usages) lines.push(`    ${u.file} (${u.count})`)
+    }
   }
   return lines.join('\n') + '\n'
 }

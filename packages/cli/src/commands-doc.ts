@@ -114,6 +114,32 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'diff',
+    usage:
+      'tessera diff <git-ref> [--to <git-ref>] [--changelog [--version <v>]] [--json] [--fail-on-breaking]',
+    summary: 'What changed in the design system since a git ref, and what breaks',
+    details:
+      'Compares the contracts and tokens in the working tree (or at `--to`) with another version, and classifies each change. **Breaking**: a removed or renamed component, variant, value, part, state, slot, event, token or theme; a changed role, behavior or default; a changed token type; a value change that flips a contrast result in any theme; and one that moves a token past its neighbour in a scale. **Additive**: something new, or newly deprecated. **Cosmetic**: any other token value change. A rename a codemod can apply says so. The ref is read without touching the working tree or the index.',
+    options: [
+      { flag: '--to <ref>', description: 'Compare with this ref instead of the working tree.' },
+      { flag: '--changelog', description: 'Print a changelog section in Markdown.' },
+      { flag: '--version <v>', description: 'With --changelog, the heading for the section.' },
+      { flag: '--json', description: 'Print the changes as JSON.' },
+      { flag: '--fail-on-breaking', description: 'Exit 1 if any change is breaking, for CI.' },
+    ],
+  },
+  {
+    name: 'codemod',
+    usage: 'tessera codemod [--write] [--json]',
+    summary: 'Update every use of a component, variant value or token that was renamed',
+    details:
+      'Reads the renames the design system declares (`renamedFrom` on a component or a token, `renamedValues` on a contract) and rewrites the project to match: component tags and explicit imports, static variant values on the tags of the component and in its own style selectors, and token references in styles and in other token files. Without `--write` it only lists the changes. It reads the lexical blocks it can name and reports, as needing a hand, a computed value that still mentions an old one. The declarations themselves are never changed.',
+    options: [
+      { flag: '--write', description: 'Apply the changes. Without it nothing is written.' },
+      { flag: '--json', description: 'Print the changes as JSON.' },
+    ],
+  },
+  {
     name: 'tokens import',
     usage:
       'tessera tokens import <file or folder...> [--format dtcg|tokens-studio] [--out <folder>] [--force]',

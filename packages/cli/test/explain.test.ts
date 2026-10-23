@@ -49,6 +49,8 @@ describe('the command documentation', () => {
       'manifest',
       'mcp',
       'agent-files',
+      'diff',
+      'codemod',
     ]) {
       expect(documented.has(name), name).toBe(true)
       expect(out).toContain(name)

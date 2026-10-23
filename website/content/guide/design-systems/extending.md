@@ -46,7 +46,7 @@ This copies the component into `app/components/` under the new name and records 
 "forkedFrom": { "component": "Button", "version": "0.1.0" },
 ```
 
-The copy is yours: change anything. The `forkedFrom` record is what keeps the drift visible, so a later report (`tessera diff`, planned) can say when the original has changed. Ejecting one of your own components is refused.
+The copy is yours: change anything. The `forkedFrom` record is what keeps the drift visible, so a later report can say when the original has changed. Ejecting one of your own components is refused.
 
 ## Do not shadow
 

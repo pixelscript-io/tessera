@@ -4,7 +4,7 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 ## Next
 
-- **Versioning tools.** `tessera diff`, codemods for renames, and a deprecation window.
+- **A deprecation window** that the tooling enforces (`tessera diff` and the codemods exist; the window does not).
 
 ## Later
 

@@ -175,6 +175,8 @@ const allFields = [
   'since',
   'deprecated',
   'renamedFrom',
+  'deprecatedValues',
+  'renamedValues',
   'forkedFrom',
 ]
 

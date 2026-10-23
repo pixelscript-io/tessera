@@ -31,3 +31,4 @@ export {
 export { exportTokens, resolverRefs, detectFormat } from './interchange'
 export { importTokens } from './tokens-studio'
 export type { ExportResult, ImportResult, InterchangeFile, InterchangeFormat } from './interchange'
+export { contrastPairs, type ContrastRow } from './contrast'

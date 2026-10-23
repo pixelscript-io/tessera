@@ -163,6 +163,24 @@ interface ReportLike {
     message: string
     usages: Array<{ file: string; count: number }>
   }>
+  deprecatedValues?: Array<{
+    component: string
+    variant: string
+    value: string
+    message: string
+    usages: Array<{ file: string; count: number }>
+  }>
+  deprecatedTokens?: Array<{
+    token: string
+    message: string
+    usages: Array<{ file: string; count: number }>
+  }>
+  pendingRenames?: Array<{
+    kind: string
+    from: string
+    to: string
+    usages: Array<{ file: string; count: number }>
+  }>
 }
 
 const pct = (n: number | null) => (n === null ? 'n/a' : `${Math.round(n * 100)}%`)
@@ -305,6 +323,40 @@ function overview(): HTMLElement {
           d.message,
           d.usages.map((u) => `${u.file} (${u.count})`).join(', '),
         ]),
+      ),
+    )
+  }
+  const uses = (u: Array<{ file: string; count: number }>) =>
+    u.length ? u.map((x) => `${x.file} (${x.count})`).join(', ') : 'no remaining uses'
+  if (report.deprecatedValues?.length) {
+    main.append(
+      h('h2', null, 'Deprecated variant values'),
+      table(
+        ['Value', 'Message', 'Used in'],
+        report.deprecatedValues.map((d) => [
+          `${d.component}.${d.variant} "${d.value}"`,
+          d.message,
+          uses(d.usages),
+        ]),
+      ),
+    )
+  }
+  if (report.deprecatedTokens?.length) {
+    main.append(
+      h('h2', null, 'Deprecated tokens'),
+      table(
+        ['Token', 'Message', 'Used in'],
+        report.deprecatedTokens.map((d) => [code(`$${d.token}`), d.message, uses(d.usages)]),
+      ),
+    )
+  }
+  if (report.pendingRenames?.length) {
+    main.append(
+      h('h2', null, 'Renames not applied yet'),
+      h('p', { class: 'docs-muted' }, 'Run tessera codemod --write to update these uses.'),
+      table(
+        ['Was', 'Now', 'Used in'],
+        report.pendingRenames.map((r) => [code(r.from), code(r.to), uses(r.usages)]),
       ),
     )
   }

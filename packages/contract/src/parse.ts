@@ -26,6 +26,10 @@ export interface Contract {
   since?: string
   deprecated?: string
   renamedFrom?: string
+  /** Variant name to the values that are deprecated and why. The values are still allowed. */
+  deprecatedValues?: Record<string, Record<string, string>>
+  /** Variant name to the values that were renamed: old value to its replacement. The old value is no longer allowed. */
+  renamedValues?: Record<string, Record<string, string>>
   forkedFrom?: { component: string; version: string }
 }
 
@@ -64,6 +68,8 @@ const FIELDS = [
   'since',
   'deprecated',
   'renamedFrom',
+  'deprecatedValues',
+  'renamedValues',
   'forkedFrom',
 ] as const
 
@@ -499,6 +505,79 @@ export function parseContract(source: string, options: ParseContractOptions): Pa
     }
   }
 
+  // deprecatedValues and renamedValues: variant name to value to a message or a replacement.
+  const valueMap = (
+    key: 'deprecatedValues' | 'renamedValues',
+  ): Record<string, Record<string, string>> | undefined => {
+    const prop = fields.get(key)
+    if (!prop) return undefined
+    const node = prop.value
+    const example =
+      key === 'renamedValues'
+        ? '{ "tone": { "danger": "destructive" } }'
+        : '{ "tone": { "neutral": "Use ghost." } }'
+    if (node.type !== 'object') {
+      report('T3003', node.start, `"${key}" must be an object like ${example}.`)
+      return undefined
+    }
+    const out: Record<string, Record<string, string>> = {}
+    for (const variant of node.props) {
+      const allowed = variants[variant.key]
+      if (!allowed) {
+        const close = nearest(variant.key, Object.keys(variants))
+        report(
+          'T3014',
+          variant.keyStart,
+          `"${key}" names the variant ${q(variant.key)}, which this component does not have.`,
+          close ? `Did you mean ${q(close)}?` : undefined,
+        )
+        continue
+      }
+      if (variant.value.type !== 'object') {
+        report('T3003', variant.value.start, `"${key}.${variant.key}" must be an object of values.`)
+        continue
+      }
+      const inner: Record<string, string> = {}
+      for (const entry of variant.value.props) {
+        const text = str(entry.value, `"${key}.${variant.key}.${entry.key}"`)
+        if (text === undefined) continue
+        if (key === 'deprecatedValues') {
+          if (!allowed.includes(entry.key)) {
+            report(
+              'T3014',
+              entry.keyStart,
+              `${q(entry.key)} is deprecated but is not a value of ${variant.key}. A deprecated value is still allowed; to remove one, use "renamedValues".`,
+            )
+            continue
+          }
+        } else {
+          if (allowed.includes(entry.key)) {
+            report(
+              'T3014',
+              entry.keyStart,
+              `${q(entry.key)} is listed as renamed but is still a value of ${variant.key}. Remove it from "variants" once it is renamed.`,
+            )
+            continue
+          }
+          if (!allowed.includes(text)) {
+            report(
+              'T3014',
+              entry.value.start,
+              `${q(entry.key)} was renamed to ${q(text)}, which is not a value of ${variant.key}.`,
+              `Allowed values: ${list(allowed)}.`,
+            )
+            continue
+          }
+        }
+        inner[entry.key] = text
+      }
+      if (Object.keys(inner).length) out[variant.key] = inner
+    }
+    return Object.keys(out).length ? out : undefined
+  }
+  const deprecatedValues = valueMap('deprecatedValues')
+  const renamedValues = valueMap('renamedValues')
+
   const failed = diagnostics.some((d) => d.severity === 'error')
   const contract: Contract | undefined =
     failed || name === undefined || role === undefined
@@ -517,6 +596,8 @@ export function parseContract(source: string, options: ParseContractOptions): Pa
           ...(since !== undefined ? { since } : {}),
           ...(deprecated !== undefined ? { deprecated } : {}),
           ...(renamedFrom !== undefined ? { renamedFrom } : {}),
+          ...(deprecatedValues ? { deprecatedValues } : {}),
+          ...(renamedValues ? { renamedValues } : {}),
           ...(forkedFrom ? { forkedFrom } : {}),
         }
 

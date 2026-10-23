@@ -14,6 +14,10 @@ export type Example =
       source: string
       /** Make `<Button>` and `<Link>` known, as they are in a project. */
       uses?: Array<'Button' | 'Link'>
+      /** Other components the example's project has, by name and `.tess` source (a deprecated one, say). */
+      components?: Array<{ name: string; source: string }>
+      /** Tokens to treat as deprecated in this example, by path. */
+      deprecatedTokens?: string[]
       options?: {
         routes?: string[]
         layouts?: string[]
@@ -358,6 +362,14 @@ export const EXPLANATIONS: Record<string, Explanation> = {
     fixed:
       "severity: [{ files: 'app/legacy/**', rules: '*', level: 'warn', reason: 'old screens', expires: '2027-03-01' }]",
   },
+  T2113: {
+    cause:
+      'A style uses a token that is marked deprecated (`$extensions.tessera.deprecated`). It still works; the warning says what to use instead, so it can be removed safely later.',
+    fix: 'Use the token the message names. `tessera report` lists every remaining use.',
+    example: tess(style('.root { color: $color.text.muted; }'), {
+      deprecatedTokens: ['color.text.muted'],
+    }),
+  },
   T2114: {
     cause:
       'A `[data-variant="value"]` selector names a value the contract does not declare for that variant, so it could never match.',
@@ -467,6 +479,14 @@ export const EXPLANATIONS: Record<string, Explanation> = {
     fix: 'Add the field the message names.',
     example: tess(
       '<contract>\n{ "name": "Card", "role": "group" }\n</contract>\n<template><div class="root"></div></template>\n',
+    ),
+  },
+  T3014: {
+    cause:
+      '"deprecatedValues" and "renamedValues" describe the life of a variant value. A deprecated value must still be in "variants" (it is allowed, with a warning); a renamed value must not be (it is gone), and its replacement must be.',
+    fix: 'Keep a deprecated value in "variants". For a rename, remove the old value from "variants" and map it to the new one in "renamedValues".',
+    example: tess(
+      '<contract>\n{ "name": "Card", "role": "group", "parts": ["root"], "variants": { "tone": ["info", "warn"] }, "renamedValues": { "tone": { "info": "warn" } } }\n</contract>\n<template><div class="root"></div></template>\n',
     ),
   },
   T3013: {
@@ -688,6 +708,34 @@ export const EXPLANATIONS: Record<string, Explanation> = {
       '<contract>\n{ "name": "Card", "role": "group", "parts": ["root"] }\n</contract>\n<script>\nconst c = state("a")\n</script>\n<template><div class="root" :class="c"></div></template>\n',
     ),
   },
+  W4103: {
+    cause:
+      'The template uses a component whose contract says `"deprecated"`. It still works; the warning carries the reason, usually what to use instead.',
+    fix: 'Switch to the component the message names. `tessera report` lists every remaining use, so a maintainer can see who still depends on it.',
+    example: pageExample('<template><main><Old /></main></template>\n', {
+      components: [
+        {
+          name: 'Old',
+          source:
+            '<contract>\n{ "name": "Old", "role": "group", "parts": ["root"], "deprecated": "Use Card instead." }\n</contract>\n<template><div class="root"></div></template>\n',
+        },
+      ],
+    }),
+  },
+  W4104: {
+    cause:
+      'The template sets a variant to a value the contract lists in "deprecatedValues". It still works; the warning carries the reason.',
+    fix: 'Use the value the message names.',
+    example: pageExample('<template><main><Tag tone="loud" /></main></template>\n', {
+      components: [
+        {
+          name: 'Tag',
+          source:
+            '<contract>\n{ "name": "Tag", "role": "group", "parts": ["root"], "variants": { "tone": ["calm", "loud"] }, "deprecatedValues": { "tone": { "loud": "Use calm." } } }\n</contract>\n<template><div class="root"></div></template>\n',
+        },
+      ],
+    }),
+  },
 }
 
 /** Every code in every registry, with its short title. */
@@ -736,6 +784,12 @@ export function explainText(code: string): string | undefined {
 export function exampleSource(example: Example): string {
   switch (example.kind) {
     case 'tess':
+      return example.components?.length
+        ? [
+            ...example.components.map((c) => `// ${c.name}.tess\n${c.source}`),
+            `// ${example.file}\n${example.source}`,
+          ].join('\n')
+        : example.source
     case 'ts':
       return example.source
     case 'tokens':

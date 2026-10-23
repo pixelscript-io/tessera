@@ -12,7 +12,7 @@ import type { ComponentResolver } from './codegen'
 import type { Example } from './explanations'
 import { ComponentRegistry } from './registry'
 import { routeDiagnostics } from './routes'
-import type { StyleTokens } from './style/tokens'
+import { StyleTokens } from './style/tokens'
 
 /** What running an example needs from the project: the tokens, and the sources of the components it may use. */
 export interface ExampleEnv {
@@ -41,6 +41,12 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
         string,
         { contract: NonNullable<ReturnType<typeof extractContract>>; importPath: string }
       >()
+      for (const extra of example.components ?? []) {
+        components.set(extra.name, {
+          contract: extractContract(extra.source, `${extra.name}.tess`)!,
+          importPath: `./${extra.name}.tess`,
+        })
+      }
       for (const name of example.uses ?? []) {
         const source = name === 'Button' ? env.button : env.link
         components.set(name, {
@@ -59,7 +65,18 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
         path: `/${example.file}`,
         kind: kindFromPath(`/${example.file}`),
         components: resolver,
-        tokens: env.tokens,
+        tokens: example.deprecatedTokens
+          ? new StyleTokens(
+              env.tokens
+                .all()
+                .map((t) =>
+                  example.deprecatedTokens!.includes(t.path)
+                    ? { ...t, deprecated: 'Use a newer token.' }
+                    : t,
+                ),
+              env.tokens.scopes,
+            )
+          : env.tokens,
         today: '2026-10-22',
         ...example.options,
       })

@@ -2,6 +2,8 @@ import { parseArgs, type Args } from './args'
 import { agentFiles, manifest, mcp } from './commands/agent'
 import { baseline } from './commands/baseline'
 import { check } from './commands/check'
+import { codemod } from './commands/codemod'
+import { diff } from './commands/diff'
 import { docs } from './commands/docs'
 import { eject } from './commands/eject'
 import { explain } from './commands/explain'
@@ -28,6 +30,8 @@ const COMMANDS: Record<string, Command> = {
   eject,
   explain,
   docs,
+  diff,
+  codemod,
   manifest,
   mcp,
   'agent-files': agentFiles,

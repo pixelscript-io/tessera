@@ -147,7 +147,7 @@ describe('invalid contracts', () => {
       parse('{ "name": "Button", "role": "button", "parts": ["root"], "zzzzzzzz": 1 }')
         .diagnostics[0]!.hint,
     ).toBe(
-      'Known fields: "name", "role", "parts", "variants", "states", "behavior", "slots", "events", "description", "contrast", "since", "deprecated", "renamedFrom", "forkedFrom".',
+      'Known fields: "name", "role", "parts", "variants", "states", "behavior", "slots", "events", "description", "contrast", "since", "deprecated", "renamedFrom", "deprecatedValues", "renamedValues", "forkedFrom".',
     )
   })
 

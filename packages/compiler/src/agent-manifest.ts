@@ -1,6 +1,7 @@
 import type { Contract } from '@tessera/contract'
 import type { RouteManifest } from '@tessera/router/manifest'
 import type { TokenManifest } from '@tessera/tokens'
+import { tokenLifecycle } from './style/tokens'
 import { resolveConfig, type Accept, type TesseraConfig } from './config'
 
 /**
@@ -29,6 +30,10 @@ export interface ManifestComponent {
   /** Present when the component is deprecated: what to use instead. */
   deprecated?: string
   renamedFrom?: string
+  /** Variant values that are deprecated, by variant, with the reason. They still work. */
+  deprecatedValues?: Record<string, Record<string, string>>
+  /** Variant values that were renamed, by variant: old value to replacement. */
+  renamedValues?: Record<string, Record<string, string>>
   forkedFrom?: { component: string; version: string }
   /** The documented class names, which are the only parts a consumer may style. */
   parts: string[]
@@ -57,6 +62,10 @@ export interface ManifestTokens {
     /** `primitive` tokens are raw values, `semantic` ones carry meaning, `component` ones belong to one component. */
     tier: string
     description?: string
+    /** Present when the token is deprecated: what to use instead. */
+    deprecated?: string
+    /** The token this one replaced. */
+    renamedFrom?: string
     cssVar: string
     /** The value as CSS in each scope: `base`, then `theme=dark` and so on. */
     values: Record<string, string>
@@ -113,6 +122,8 @@ export function componentsOf(
       ...(c.since ? { since: c.since } : {}),
       ...(c.deprecated !== undefined ? { deprecated: c.deprecated } : {}),
       ...(c.renamedFrom ? { renamedFrom: c.renamedFrom } : {}),
+      ...(c.deprecatedValues ? { deprecatedValues: c.deprecatedValues } : {}),
+      ...(c.renamedValues ? { renamedValues: c.renamedValues } : {}),
       ...(c.forkedFrom ? { forkedFrom: c.forkedFrom } : {}),
       parts: c.parts,
       variants: Object.entries(c.variants).map(([name, values]) => ({
@@ -143,6 +154,7 @@ export function tokensOf(manifest: TokenManifest | undefined): ManifestTokens {
       type: t.type,
       tier: t.tier,
       ...(t.description ? { description: t.description } : {}),
+      ...tokenLifecycle(t.extensions),
       cssVar: t.cssVar,
       values: Object.fromEntries(Object.entries(t.values).map(([scope, v]) => [scope, v.css])),
     })),

@@ -1,10 +1,11 @@
 # Releases
 
-This page records what each milestone of v0.1 delivered, newest first. A generated changelog from `tessera diff` (planned) will sit above the hand-written highlights once there is a version to compare.
+This page records what each milestone of v0.1 delivered, newest first. `tessera diff --changelog` generates a section from any two versions.
 
 ## v0.1 (in progress)
 
 - **Published:** `@pixelscriptio/tessera` and `@pixelscriptio/create-tessera` 0.1.0 are on npm; 0.2.0 adds Milestones 13 to 15.
+- **Milestone 16: versioning and codemods.** `tessera diff <ref>` classifies changes as breaking, additive or cosmetic (a contrast flip or a token moving past its neighbour in a scale is breaking) and can print a changelog section; contracts and tokens can say what was deprecated or renamed, and the compiler warns or says what it became; `tessera codemod` rewrites the uses of a rename; `tessera report` lists remaining uses of deprecated and renamed things. See [Versioning and deprecation](/guide/design-systems/versioning).
 - **Milestone 15: the design system docs.** `tessera docs` runs a documentation app generated from your contracts and tokens: a page per component with a live preview and a control for each variant, token pages with every theme's value, a contrast table, theme and density switchers, and the coverage report with JSON export. `Name.docs.md` adds prose and `tess live` examples. `tessera docs --static` exports files any file server can host. See [The design system docs](/guide/docs-app).
 - **Milestone 14: token interchange.** `tessera tokens export` writes strict DTCG 2025.10 with a Resolver document, or Tokens Studio sets; `tessera tokens import` reads those, plain DTCG files and Penpot exports, converts the string values older tools write, keeps aliases, reports (T1016) and keeps what Tessera cannot represent, and writes nothing if the result does not build. See [Importing and exporting tokens](/guide/interchange).
 - **Milestone 13: agent-readable exports.** `.tessera/manifest.json` (components, tokens in every theme, routes, rules), `tessera mcp` (a read-only MCP server that lists and searches components, returns contracts, resolves a raw value to a token and validates a snippet with the compiler), `tessera agent-files` (AGENTS.md and llms.txt) and a `custom-elements.json` export. See [AI coding tools](/guide/agents).

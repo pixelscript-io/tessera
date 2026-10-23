@@ -153,8 +153,10 @@ export function processStyle(input: StyleInput): StyleResult {
         .sort((x, y) => x.d - y.d)
       // A fix only when one token is clearly the typo's target: within two edits and strictly closer than the rest.
       const first = ranked[0]
+      const renamed = tokens.renamedTo(atom.path)
+      // A rename is the codemod's job: the new token may not have the old one's value, so it is not an autofix.
       const target =
-        first && first.d <= 2 && (ranked[1] === undefined || ranked[1].d > first.d)
+        !renamed && first && first.d <= 2 && (ranked[1] === undefined || ranked[1].d > first.d)
           ? first.p
           : undefined
       issue(
@@ -162,10 +164,22 @@ export function processStyle(input: StyleInput): StyleResult {
         'error',
         atom.start,
         `Unknown token "${dollar(atom.path)}"`,
-        close ? `Did you mean "${dollar(close)}"?` : undefined,
+        renamed
+          ? `"${dollar(atom.path)}" was renamed to "${dollar(renamed)}".`
+          : close
+            ? `Did you mean "${dollar(close)}"?`
+            : undefined,
         target ? { start: atom.start, end: atom.end, text: dollar(target) } : undefined,
       )
       return
+    }
+    if (token.deprecated !== undefined) {
+      issue(
+        'T2113',
+        'warning',
+        atom.start,
+        `"${dollar(atom.path)}" is deprecated${token.deprecated ? `: ${token.deprecated}` : '.'}`,
+      )
     }
     if (accepts && token.type !== 'unknown' && !accepts.some((a) => matches(token, a))) {
       issue(

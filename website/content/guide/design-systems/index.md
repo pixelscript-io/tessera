@@ -10,4 +10,4 @@ The essentials guides show how to write components and pages. These pages are fo
 - [Extending and ejecting](/guide/design-systems/extending): wrapping, `tessera eject` and `forkedFrom`.
 - [Versioning and deprecation](/guide/design-systems/versioning): `since`, `deprecated` and `renamedFrom`.
 
-Some parts of the design-systems story are not built yet: the generated docs app for your own system, agent exports and the MCP server, Figma and Penpot interchange, and codemods for renames. They are listed on [the roadmap](/releases/roadmap) so you can see what to expect and what not to rely on.
+Not everything is built yet. What is missing (a deprecation window, a playground, and more behaviors and components) is listed on [the roadmap](/releases/roadmap) so you can see what to expect and what not to rely on.

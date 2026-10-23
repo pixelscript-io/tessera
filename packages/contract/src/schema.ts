@@ -94,6 +94,18 @@ export const contractSchema = {
       pattern: '^[A-Z][A-Za-z0-9]*$',
       description: 'Previous component name, used by codemods.',
     },
+    deprecatedValues: {
+      type: 'object',
+      description:
+        'Variant name to the values that are deprecated, each with why and what to use instead. The values stay allowed.',
+      additionalProperties: { type: 'object', additionalProperties: { type: 'string' } },
+    },
+    renamedValues: {
+      type: 'object',
+      description:
+        'Variant name to values that were renamed, each old value mapped to its replacement. Used by codemods; the old value is no longer allowed.',
+      additionalProperties: { type: 'object', additionalProperties: { type: 'string' } },
+    },
     forkedFrom: {
       type: 'object',
       required: ['component', 'version'],

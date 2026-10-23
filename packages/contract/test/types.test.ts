@@ -123,6 +123,8 @@ describe('contract.schema.json', () => {
       'since',
       'deprecated',
       'renamedFrom',
+      'deprecatedValues',
+      'renamedValues',
       'forkedFrom',
     ])
     expect(contractSchema.properties.role.enum).toEqual([...ARIA_ROLES])

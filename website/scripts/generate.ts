@@ -84,7 +84,8 @@ function errors() {
     const options = e.example.kind === 'tess' ? e.example.options : undefined
     // The checker compiles a sample with the project's own settings, so an example that needs others is shown as text.
     const needsOptions =
-      !!options && (options.autoImports !== undefined || options.contract !== undefined)
+      (!!options && (options.autoImports !== undefined || options.contract !== undefined)) ||
+      (e.example.kind === 'tess' && (!!e.example.components || !!e.example.deprecatedTokens))
     const fence =
       e.example.kind === 'tess' && !needsOptions
         ? `xml tess error=${c} file=${e.example.file}`

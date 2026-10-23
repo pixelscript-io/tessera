@@ -13,6 +13,7 @@ export const COMPILER_CODES = {
   T2110: 'raw() escape expired',
   T2111: 'raw() escape used',
   T2112: 'Invalid severity exemption',
+  T2113: 'Deprecated token used',
   T2114: 'Unknown variant value in a selector',
   T4001: 'Invalid block',
   T4002: 'Missing template',
@@ -39,6 +40,8 @@ export const COMPILER_CODES = {
   T6006: 'Layout has no slot',
   W4101: 'derived() is not pure',
   W4102: 'Dynamic class names are not scoped',
+  W4103: 'Deprecated component used',
+  W4104: 'Deprecated variant value used',
 } as const
 
 export type CompilerCode = keyof typeof COMPILER_CODES

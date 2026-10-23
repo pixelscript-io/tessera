@@ -18,6 +18,8 @@ export interface ComponentResolver {
   names(): string[]
   /** The import line to add for a component that exists but is not importable here (auto-imports off). */
   importHint?(tag: string): string | undefined
+  /** The component a tag was renamed to (`renamedFrom` in a contract), if some component replaced it. */
+  renamedTo?(tag: string): string | undefined
 }
 
 export interface GenerateContext {
@@ -467,19 +469,29 @@ export function generateTemplate(
     const info = ctx.resolver?.resolve(el.tag)
     if (!info) {
       const close = nearest(el.tag, ctx.resolver?.names() ?? [])
+      const renamed = ctx.resolver?.renamedTo?.(el.tag)
       report.error(
         'T4007',
         el.start + 1,
         `Unknown component <${el.tag}>.`,
-        ctx.resolver?.importHint?.(el.tag) ??
-          (close
-            ? `Did you mean <${close}>?`
-            : `Import it in <script>, for example: import ${el.tag} from "./${el.tag}.tess"`),
+        renamed
+          ? `<${el.tag}> was renamed to <${renamed}>. Run \`tessera codemod\` to update every use.`
+          : (ctx.resolver?.importHint?.(el.tag) ??
+              (close
+                ? `Did you mean <${close}>?`
+                : `Import it in <script>, for example: import ${el.tag} from "./${el.tag}.tess"`)),
       )
       return undefined
     }
     components.set(el.tag, info)
     const { contract } = info
+    if (contract.deprecated !== undefined) {
+      report.warn(
+        'W4103',
+        el.start + 1,
+        `<${el.tag}> is deprecated${contract.deprecated ? `: ${contract.deprecated}` : '.'}`,
+      )
+    }
     const props: string[] = []
     const events: string[] = []
     let ok = true
@@ -520,14 +532,30 @@ export function generateTemplate(
         const allowed = contract.variants[name]
         if (allowed && attr.value !== null && !allowed.includes(attr.value)) {
           const close = nearest(attr.value, allowed)
+          const renamed = contract.renamedValues?.[name]?.[attr.value]
           report.error(
             'T4008',
             attr.valueStart,
             `${contract.name}.${name} has no value ${q(attr.value)}.`,
-            close ? `Did you mean ${q(close)}?` : `Allowed values: ${allowed.map(q).join(', ')}.`,
+            renamed
+              ? `${q(attr.value)} was renamed to ${q(renamed)}. Run \`tessera codemod\` to update every use.`
+              : close
+                ? `Did you mean ${q(close)}?`
+                : `Allowed values: ${allowed.map(q).join(', ')}.`,
           )
           ok = false
           continue
+        }
+        const deprecatedValue =
+          allowed && attr.value !== null
+            ? contract.deprecatedValues?.[name]?.[attr.value]
+            : undefined
+        if (deprecatedValue !== undefined) {
+          report.warn(
+            'W4104',
+            attr.valueStart,
+            `${contract.name}.${name} ${q(attr.value!)} is deprecated${deprecatedValue ? `: ${deprecatedValue}` : '.'}`,
+          )
         }
         if (name === 'to' && contract.name === 'Link' && attr.value !== null && ctx.routes) {
           const problem = unknownRoute(attr.value, ctx.routes)

@@ -9,6 +9,10 @@ export interface StyleToken {
   cssVar: string
   /** Resolved CSS value per scope: `base`, then `theme=dark`, `density=compact`, and so on. */
   resolved: Record<string, string>
+  /** Why the token is deprecated and what to use instead, from `$extensions.tessera.deprecated`. */
+  deprecated?: string
+  /** The token it replaced, from `$extensions.tessera.renamedFrom`. */
+  renamedFrom?: string
 }
 
 /** The design tokens that style checks look things up in. */
@@ -34,6 +38,7 @@ export class StyleTokens {
         resolved: Object.fromEntries(
           Object.entries(t.values).map(([scope, v]) => [scope, v.resolved]),
         ),
+        ...tokenLifecycle(t.extensions),
       })),
       scopes,
     )
@@ -53,6 +58,12 @@ export class StyleTokens {
         resolved: {},
       })),
     )
+  }
+
+  /** The token that replaced `path`, if one says it did (`renamedFrom`). */
+  renamedTo(path: string): string | undefined {
+    for (const t of this.byPath.values()) if (t.renamedFrom === path) return t.path
+    return undefined
   }
 
   has(path: string): boolean {
@@ -80,6 +91,18 @@ export class StyleTokens {
   color(path: string, scope: string): Color | undefined {
     const value = this.byPath.get(path)?.resolved[scope]
     return value === undefined ? undefined : parseCssColor(value)
+  }
+}
+
+/** `deprecated` and `renamedFrom` from a token's `$extensions.tessera`. */
+export function tokenLifecycle(extensions: Record<string, unknown> | undefined): {
+  deprecated?: string
+  renamedFrom?: string
+} {
+  const own = extensions?.tessera as { deprecated?: unknown; renamedFrom?: unknown } | undefined
+  return {
+    ...(typeof own?.deprecated === 'string' ? { deprecated: own.deprecated } : {}),
+    ...(typeof own?.renamedFrom === 'string' ? { renamedFrom: own.renamedFrom } : {}),
   }
 }
 

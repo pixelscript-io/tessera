@@ -12,6 +12,7 @@ export const CONTRACT_CODES = {
   T3011: 'Declared part is not used in the template',
   T3012: 'Missing required contract field',
   T3013: 'Root element does not carry the root part',
+  T3014: 'Invalid rename or deprecation of a variant value',
 } as const
 
 export type ContractCode = keyof typeof CONTRACT_CODES

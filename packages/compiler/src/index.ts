@@ -73,3 +73,22 @@ export {
   type ManifestRules,
   type ManifestTokens,
 } from './agent-manifest'
+export {
+  diffSnapshots,
+  renderChangelog,
+  summarize,
+  type Change,
+  type ChangeKind,
+  type ChangelogOptions,
+  type DiffOptions,
+  type Snapshot,
+} from './diff'
+export {
+  applyToTess,
+  applyToTokens,
+  collectRenames,
+  hasRenames,
+  type CodemodEdit,
+  type CodemodResult,
+  type Renames,
+} from './codemod'

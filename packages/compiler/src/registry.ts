@@ -120,10 +120,12 @@ export class ComponentRegistry {
   }
 
   /** Looks tags up for the file at `importer` (an absolute path), producing imports relative to it. */
-  resolverFor(
-    importer: string,
-  ): ComponentResolver & { importHint(tag: string): string | undefined } {
+  resolverFor(importer: string): ComponentResolver & {
+    importHint(tag: string): string | undefined
+    renamedTo(tag: string): string | undefined
+  } {
     return {
+      renamedTo: (tag) => this.renamedTo(tag),
       resolve: (tag): ComponentInfo | undefined => {
         const entry = this.entries.get(tag)
         return entry
@@ -138,6 +140,14 @@ export class ComponentRegistry {
           : undefined
       },
     }
+  }
+
+  /** The component whose contract says it replaced `tag` (`renamedFrom`). */
+  renamedTo(tag: string): string | undefined {
+    for (const entry of this.entries.values()) {
+      if (entry.contract.renamedFrom === tag) return entry.name
+    }
+    return undefined
   }
 
   /** The closest component name to a misspelled tag. */
