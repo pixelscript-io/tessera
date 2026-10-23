@@ -59,6 +59,25 @@ const TSCONFIG = `{
 }
 `
 
+/** Files a project may already configure Prettier in. */
+const PRETTIER_CONFIGS = [
+  '.prettierrc',
+  '.prettierrc.json',
+  '.prettierrc.yaml',
+  '.prettierrc.yml',
+  '.prettierrc.json5',
+  '.prettierrc.js',
+  '.prettierrc.cjs',
+  '.prettierrc.mjs',
+  '.prettierrc.toml',
+  'prettier.config.js',
+  'prettier.config.cjs',
+  'prettier.config.mjs',
+  'prettier.config.ts',
+]
+
+const PRETTIERRC = JSON.stringify({ plugins: ['@pixelscriptio/tessera/prettier'] }, null, 2) + '\n'
+
 const GITIGNORE_LINES = ['node_modules', 'dist', '.tessera']
 
 /** Where the package comes from: a `link:` to a checkout (`--link`, for working on Tessera itself) or its version. */
@@ -129,6 +148,7 @@ export async function init(args: Args, io: Io): Promise<number> {
     build: 'tessera build',
     preview: 'tessera preview',
     check: 'tessera check',
+    format: 'tessera format',
   }
   let hasDependency
   if (existsSync(manifestPath)) {
@@ -184,6 +204,10 @@ export async function init(args: Args, io: Io): Promise<number> {
   put('app/tess.d.ts', TYPES)
   put('tessera.config.ts', CONFIG)
   put('tsconfig.json', TSCONFIG)
+  // Prettier knows `.tess` through the plugin. A project that already has Prettier configuration keeps its own.
+  if (!PRETTIER_CONFIGS.some((name) => existsSync(join(target, name)))) {
+    put('.prettierrc.json', PRETTIERRC)
+  }
 
   // .gitignore: add what is missing, never remove.
   const ignorePath = join(target, '.gitignore')
@@ -208,5 +232,7 @@ export async function init(args: Args, io: Io): Promise<number> {
   if (where) io.out(`  cd ${where}`)
   if (!hasDependency) io.out('  npm install')
   io.out('  npm run dev')
+  io.out('')
+  io.out('To format .tess files, add Prettier as a dev dependency, then run npm run format.')
   return 0
 }

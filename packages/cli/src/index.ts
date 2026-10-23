@@ -6,6 +6,7 @@ import { codemod } from './commands/codemod'
 import { diff } from './commands/diff'
 import { docs } from './commands/docs'
 import { eject } from './commands/eject'
+import { format } from './commands/format'
 import { explain } from './commands/explain'
 import { init } from './commands/init'
 import { newCommand } from './commands/new'
@@ -32,6 +33,7 @@ const COMMANDS: Record<string, Command> = {
   docs,
   diff,
   codemod,
+  format,
   manifest,
   mcp,
   'agent-files': agentFiles,

@@ -9,6 +9,6 @@ export default defineConfig({
     emptyOutDir: true,
     minify: false,
     target: 'node20',
-    rollupOptions: { external: ['vite', 'acorn', /^node:/] },
+    rollupOptions: { external: ['vite', 'acorn', 'prettier', /^prettier\//, /^node:/] },
   },
 })

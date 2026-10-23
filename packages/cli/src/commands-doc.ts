@@ -114,6 +114,24 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'format',
+    usage: 'tessera format [files...] [--check] [--stdin-filepath <file>]',
+    summary: 'Format .tess files with Prettier, in any editor or in CI',
+    details:
+      'Formats the `.tess` files of the project (or the files you name) with Prettier and the Tessera plugin, so formatting does not depend on an editor extension. Each block is formatted with the right tool: the contract as JSONC, the script as TypeScript, the style as CSS; the template is only re-indented. It uses the Prettier installed in the project and its Prettier configuration, and says how to install Prettier if the project has none. With `--check` it changes nothing and exits 1 if any file is not formatted.',
+    options: [
+      {
+        flag: '--check',
+        description: 'Report unformatted files and exit 1 instead of changing them.',
+      },
+      {
+        flag: '--stdin-filepath <file>',
+        description:
+          'Read one file from standard input and write the formatted text to standard output, for an editor that formats a buffer through an external command.',
+      },
+    ],
+  },
+  {
     name: 'diff',
     usage:
       'tessera diff <git-ref> [--to <git-ref>] [--changelog [--version <v>]] [--json] [--fail-on-breaking]',

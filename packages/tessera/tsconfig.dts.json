@@ -11,6 +11,7 @@
     "paths": {
       "@tessera/*": ["packages/*/src/index.ts"],
       "@tessera/behavior/conformance": ["packages/behavior/src/conformance.ts"],
+      "@tessera/editor/prettier": ["packages/editor/src/prettier-plugin.ts"],
       "@tessera/compiler/node": ["packages/compiler/src/node.ts"],
       "@tessera/compiler/project": ["packages/compiler/src/project-entry.ts"],
       "@tessera/compiler/vite": ["packages/compiler/src/vite.ts"],
@@ -28,6 +29,7 @@
     "src/tokens.ts",
     "src/vite.ts",
     "src/cli.ts",
+    "src/prettier.ts",
     "../cli/src/env.d.ts",
     "../router/src/virtual.d.ts"
   ]

@@ -21,3 +21,4 @@ packages/cli/tailwind
 packages/cli/templates/tailwind/system/tokens
 experiments/agent-mcp/work
 .docs-test
+.format-test

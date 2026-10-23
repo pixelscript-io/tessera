@@ -26,6 +26,9 @@ importers:
       '@tessera/core':
         specifier: workspace:*
         version: link:packages/core
+      '@tessera/editor':
+        specifier: workspace:*
+        version: link:packages/editor
       '@tessera/router':
         specifier: workspace:*
         version: link:packages/router
@@ -136,6 +139,9 @@ importers:
       '@tessera/docs':
         specifier: workspace:*
         version: link:../docs
+      '@tessera/editor':
+        specifier: workspace:*
+        version: link:../editor
       '@tessera/router':
         specifier: workspace:*
         version: link:../router
@@ -239,6 +245,9 @@ importers:
       acorn:
         specifier: ^8.14.0
         version: 8.19.0
+      prettier:
+        specifier: ^3.0.0
+        version: 3.9.10
       vite:
         specifier: ^7.3.0
         version: 7.3.7(@types/node@26.6.5)

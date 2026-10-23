@@ -31,15 +31,54 @@ In the `<contract>` block, completions offer field names, ARIA roles, behaviors 
 
 The TextMate grammar (`packages/editor/vscode/syntaxes/tess.tmLanguage.json`) works anywhere that reads TextMate grammars. The contract JSON Schema is `packages/contract/contract.schema.json`.
 
-## Prettier
+## Formatting
 
-The Prettier plugin formats every block with the right tool: the contract with the JSONC parser, the script with TypeScript, the style with CSS. The template is only re-indented: Prettier's HTML parser lowercases component tags (`<Button>` becomes `<button>`) and reflows text, so Tessera's formatter keeps your line breaks and changes only indentation, trailing whitespace and runs of blank lines.
+The Prettier plugin formats every block with the right tool: the contract with the JSONC parser, the script with TypeScript, the style with CSS. The template is only re-indented: Prettier's HTML parser lowercases component tags (`<Button>` becomes `<button>`) and reflows text, so Tessera's formatter keeps your line breaks and changes only indentation, trailing whitespace and runs of blank lines. A block that does not parse is left exactly as written.
+
+The plugin ships in the package, and `tessera init` writes the configuration for it (unless the project already has Prettier configuration):
 
 ```json
-{ "plugins": ["@tessera/editor/prettier"] }
+{ "plugins": ["@pixelscriptio/tessera/prettier"] }
 ```
 
-A block that does not parse is left exactly as written.
+Prettier itself is yours to install:
+
+```bash
+npm install --save-dev prettier
+npm run format
+```
+
+`npm run format` is `tessera format`, which formats the project's `.tess` files with the Prettier in the project and its configuration. It does not depend on any editor. `tessera format --check` changes nothing and exits 1 if a file is not formatted, which is what CI wants.
+
+### In an editor
+
+Any editor that runs the project's Prettier on save will format `.tess` files once the configuration above is there, provided the editor knows `.tess` is a language it should format. VS Code does, through the extension in this repository.
+
+An editor that cannot run a Prettier plugin for a file type it does not know can call `tessera format` as an external formatter. With `--stdin-filepath` it reads the buffer from standard input and writes the result to standard output, the way editors expect:
+
+```bash
+npx tessera format --stdin-filepath app/components/Card.tess
+```
+
+For Zed, this is the setting to try in `settings.json`. It is written from Zed's documented external-formatter option and has **not** been tested in Zed, so check it against your Zed version:
+
+```json
+{
+  "file_types": { "HTML": ["tess"] },
+  "languages": {
+    "HTML": {
+      "formatter": {
+        "external": {
+          "command": "npx",
+          "arguments": ["tessera", "format", "--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  }
+}
+```
+
+This treats `.tess` as HTML for highlighting, which is approximate. The command passes any file that is not `.tess` through unchanged, so your real HTML files are not touched, but it is a stopgap: a proper Zed language extension for `.tess` is not built.
 
 ## Type-checking templates
 

@@ -34,6 +34,7 @@
     "@tessera/cli": "workspace:*",
     "@tessera/compiler": "workspace:*",
     "@tessera/core": "workspace:*",
+    "@tessera/editor": "workspace:*",
     "@tessera/router": "workspace:*",
     "@tessera/tokens": "workspace:*"
   }

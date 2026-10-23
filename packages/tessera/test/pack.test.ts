@@ -149,6 +149,7 @@ describe('the packed package', () => {
       'package/dist/tokens.js',
       'package/dist/vite.js',
       'package/dist/cli.js',
+      'package/dist/prettier.js',
       'package/dist/components/Link.tess',
       'package/dist/docs-client/main.ts',
       'package/dist/docs-client/style.ts',
@@ -171,6 +172,33 @@ describe('the packed package', () => {
     expect(manifest.bin.tessera).toBe('./bin/tessera.js')
     expect(Object.keys(manifest.dependencies).sort()).toEqual(['acorn', 'vite'])
     expect(JSON.stringify(manifest)).not.toContain('workspace:')
+  })
+
+  it('formats .tess files through Prettier, from an editor or from the command line', () => {
+    const dir = install()
+    run(dir, 'init', '--preset', 'none')
+    // init wrote the Prettier configuration, so an editor's Prettier finds the plugin.
+    expect(JSON.parse(readFileSync(join(dir, '.prettierrc.json'), 'utf8'))).toEqual({
+      plugins: ['@pixelscriptio/tessera/prettier'],
+    })
+    expect(() => run(dir, 'format')).toThrow(/Prettier is not installed in this project/)
+
+    pnpmAdd('prettier', dir, env())
+    const file = join(dir, 'app', 'components', 'Messy.tess')
+    const messy =
+      '<contract>\n{"name":"Messy","role":"group","parts":["root"]}\n</contract>\n<template><div class="root"></div></template>\n'
+    mkdirSync(join(dir, 'app', 'components'), { recursive: true })
+    writeFileSync(file, messy)
+    // `tessera format --check` exits 1 for an unformatted file.
+    expect(() => run(dir, 'format', '--check', 'app/components/Messy.tess')).toThrow()
+    // Prettier itself, the way an editor runs it, formats the file with the plugin the config names.
+    execFileSync(
+      process.execPath,
+      [join(dir, 'node_modules', 'prettier', 'bin', 'prettier.cjs'), '--write', file],
+      { cwd: dir, stdio: 'pipe' },
+    )
+    expect(readFileSync(file, 'utf8')).toContain('"name": "Messy"')
+    expect(run(dir, 'format', '--check', 'app/components/Messy.tess')).toContain('are formatted')
   })
 
   it('has type declarations that resolve, with no @tessera/* import left in them', () => {

@@ -11,6 +11,8 @@ export default defineConfig({
     alias: [
       // The compiler's prebuilt Vite entry is its own bundle; build from source so chunks are shared.
       { find: '@tessera/compiler/vite', replacement: packages('compiler/src/vite.ts') },
+      // The editor package builds its Prettier plugin on its own; here it is built from source with the rest.
+      { find: '@tessera/editor/prettier', replacement: packages('editor/src/prettier-plugin.ts') },
     ],
   },
   build: {
@@ -23,6 +25,7 @@ export default defineConfig({
         tokens: 'src/tokens.ts',
         vite: 'src/vite.ts',
         cli: 'src/cli.ts',
+        prettier: 'src/prettier.ts',
       },
       formats: ['es'],
     },
@@ -32,7 +35,8 @@ export default defineConfig({
     target: 'node20',
     sourcemap: false,
     rollupOptions: {
-      external: ['vite', 'acorn', /^node:/, /^virtual:/],
+      // Prettier is the user's own: the plugin is loaded by it, and `tessera format` finds it in the project.
+      external: ['vite', 'acorn', 'prettier', /^prettier\//, /^node:/, /^virtual:/],
     },
   },
 })
