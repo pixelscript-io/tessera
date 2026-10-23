@@ -13,7 +13,7 @@ function bump() {
 <template>
   <main class="root">
     <section class="hero">
-      <Badge tone="primary">Design-system-first</Badge>
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Design-system-first</p>
       <h1 class="title">Build interfaces from a system you can trust</h1>
       <p class="lead">
         Your tokens, themes and components live in <code>system/</code>. The compiler checks every
@@ -25,22 +25,30 @@ function bump() {
       </div>
     </section>
 
-    <section class="grid">
-      <Card>
-        <span slot="header">Design tokens</span>
-        Colors, spacing, type and shadows, written as tokens you own and can change. The docs
-        (<code>npx tessera docs</code>) are styled by the same files.
-      </Card>
-      <Card>
-        <span slot="header">Light and dark</span>
-        Components use meaning (surface, text, action), so the theme switch in the header changes
-        everything at once.
-      </Card>
-      <Card>
-        <span slot="header">Checked at compile time</span>
-        A value off the scale, or a variant that does not exist, is an error with the fix
-        suggested.
-      </Card>
+    <section class="terminal" aria-label="Example">
+      <p class="line"><span class="prompt">$</span> npx tessera check</p>
+      <p class="line out">0 errors, 0 warnings in 5 files.</p>
+      <p class="line"><span class="prompt">$</span> npx tessera docs</p>
+      <p class="line out">Docs for this system, styled by the same tokens as this page.</p>
+    </section>
+
+    <section class="features">
+      <div class="feature">
+        <h2 class="name">Design tokens</h2>
+        <p class="body">Colors, spacing, type and shadows, written as tokens you own and can change.</p>
+      </div>
+      <div class="feature">
+        <h2 class="name">Light and dark</h2>
+        <p class="body">Components use meaning (surface, text, action), so the theme switch changes everything at once.</p>
+      </div>
+      <div class="feature">
+        <h2 class="name">Checked at compile time</h2>
+        <p class="body">A value off the scale, or a variant that does not exist, is an error with the fix suggested.</p>
+      </div>
+      <div class="feature">
+        <h2 class="name">Docs that stay current</h2>
+        <p class="body">Run <code>npx tessera docs</code>: every component and token, generated from the system.</p>
+      </div>
     </section>
 
     <p class="note">Edit this page and save: it updates without a reload.</p>
@@ -51,8 +59,8 @@ function bump() {
 .root {
   display: flex;
   flex-direction: column;
-  gap: $space.12;
-  max-width: 64rem;
+  gap: $space.16;
+  max-width: 67.5rem;
   margin: 0 auto;
   padding: $space.20 $space.6 $space.12;
 }
@@ -64,33 +72,96 @@ function bump() {
   gap: $space.5;
 }
 
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: $space.2;
+  margin: 0;
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.xs;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: $radius.none;
+  background: $color.accent.default;
+}
+
 .title {
   margin: 0;
-  max-width: 16ch;
+  max-width: 15ch;
   font-size: $font.size.5xl;
   font-weight: $font.weight.medium;
-  line-height: 1.05;
+  line-height: 1.02;
   letter-spacing: -0.03em;
 }
 
 .lead {
   margin: 0;
-  max-width: 40rem;
+  max-width: 46ch;
   color: $color.text.muted;
   font-size: $font.size.lg;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: $space.3;
+  gap: $space.2;
 }
 
-.grid {
+.terminal {
+  padding: $space.5 $space.6;
+  border: 1px solid $color.code.border;
+  border-radius: $radius.xl;
+  background: $color.code.bg;
+  color: $color.code.fg;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.sm;
+  line-height: 1.65;
+  overflow: auto;
+}
+
+.line {
+  margin: 0;
+  white-space: pre;
+}
+
+.prompt {
+  color: $color.code.comment;
+}
+
+.out {
+  color: $color.code.string;
+}
+
+.features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: $space.6;
+  grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr));
+  gap: $space.8;
+  padding-top: $space.12;
+  border-top: 1px solid $color.border.default;
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: $space.2;
+}
+
+.name {
+  margin: 0;
+  font-size: $font.size.base;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.sm;
+  line-height: 1.55;
 }
 
 .note {

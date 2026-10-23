@@ -10,7 +10,7 @@ a { color: var(--d-link); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--d-accent); outline-offset: 2px; }
 code, pre { font-family: var(--d-mono); font-size: 13px; }
-pre { background: var(--f-code); color: #e9e6dd; border: 1px solid var(--f-code-line); padding: 14px 18px; line-height: 1.65; border-radius: var(--d-r-lg); overflow: auto; margin: 8px 0 16px; }
+pre { background: var(--t-color-code-bg, var(--f-code)); color: var(--t-color-code-fg, #e9e6dd); border: 1px solid var(--t-color-code-border, var(--f-code-line)); padding: 14px 18px; line-height: 1.65; border-radius: var(--d-r-lg); overflow: auto; margin: 8px 0 16px; }
 :not(pre) > code { background: var(--d-inline); padding: 1px 6px; border-radius: var(--d-r-sm); font-size: 12px; }
 .docs-top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; min-height: 56px; padding: 8px 20px; border-bottom: 1px solid var(--d-line); position: sticky; top: 0; background: var(--d-bg); z-index: 2; }
 .docs-top h1 { display: flex; align-items: center; font-size: 15px; font-weight: 600; margin: 0; flex: 1 1 auto; }

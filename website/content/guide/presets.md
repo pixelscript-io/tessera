@@ -22,7 +22,7 @@ system/components/
   Button.tess  Card.tess  Badge.tess
 app/
   layouts/default.tess   a header with a Light, Dark and Auto switch
-  pages/index.tess       a styled index page
+  pages/index.tess       a styled index page, in the style of the Tessera site
 ```
 
 It is organized like the `tailwind` preset (primitives, a semantic layer that components use, a dark theme that overrides the semantic layer), with far fewer tokens, so it is easy to read all of.

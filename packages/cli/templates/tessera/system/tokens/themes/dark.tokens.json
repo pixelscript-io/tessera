@@ -88,6 +88,44 @@
       "ring": {
         "$value": "{color.stone.150}"
       }
+    },
+    "code": {
+      "bg": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.10588235, 0.10196078, 0.08235294]
+        }
+      },
+      "fg": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.91372549, 0.90196078, 0.86666667]
+        }
+      },
+      "border": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.17254902, 0.16470588, 0.13333333]
+        }
+      },
+      "comment": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.54117647, 0.5254902, 0.48235294]
+        }
+      },
+      "string": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.70196078, 0.82745098, 0.62745098]
+        }
+      },
+      "key": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.61568627, 0.72156863, 0.87843137]
+        }
+      }
     }
   }
 }
