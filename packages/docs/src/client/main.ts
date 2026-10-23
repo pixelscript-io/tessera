@@ -2,7 +2,7 @@ import raw from 'virtual:tessera-docs/data'
 import { components, live } from 'virtual:tessera-docs/components'
 import { createRoot, state } from 'virtual:tessera-docs/runtime'
 import type { DocsComponent, DocsData } from '../data'
-import { componentEditor, editBar, gitPanel, importPage, newComponentForm, readKey } from './editor'
+import { editBar, exportPage, gitPanel, importPage, readKey } from './editor'
 import { STYLE } from './style'
 
 const data = raw as DocsData
@@ -55,18 +55,6 @@ const afterSave = {
   discarded: () => {},
 }
 
-/** A place on the page for the change panel, and the function that fills it. */
-function planRegion(): { region: HTMLElement; show: (panel: HTMLElement | null) => void } {
-  const region = h('div', { class: 'docs-plan-region', 'aria-live': 'polite' })
-  return {
-    region,
-    show: (panel) => {
-      region.replaceChildren(...(panel ? [panel] : []))
-      panel?.scrollIntoView({ block: 'nearest' })
-    },
-  }
-}
-
 const tokenGroups = [...new Set(data.tokens.entries.map((t) => t.path.split('.')[0]!))]
 
 function nav(current: string): HTMLElement {
@@ -104,6 +92,7 @@ function nav(current: string): HTMLElement {
             null,
             ...tokenGroups.map((g) => link(`/tokens/${g}`, g)),
             link('/tokens/contrast', 'Contrast'),
+            data.exports ? link('/export', 'Export') : null,
           ),
         )
       : null,
@@ -218,15 +207,6 @@ const card = (value: string, label: string) =>
   h('div', { class: 'docs-card' }, h('b', null, value), h('span', null, label))
 
 function overview(): HTMLElement {
-  const page = overviewPage()
-  if (editing) {
-    const { region, show } = planRegion()
-    page.append(h('h2', null, 'Add a component'), region, newComponentForm(show, afterSave))
-  }
-  return page
-}
-
-function overviewPage(): HTMLElement {
   const report = data.report as ReportLike | undefined
   const main = h(
     'div',
@@ -584,10 +564,6 @@ function componentPage(name: string): HTMLElement {
     h('h2', null, 'Preview'),
     preview(m),
   )
-  if (editing) {
-    const { region, show } = planRegion()
-    main.append(h('h2', null, 'Edit this component'), region, componentEditor(m, show, afterSave))
-  }
 
   if (c.prose) {
     const prose = h('div', { class: 'docs-prose' })
@@ -826,10 +802,17 @@ function render() {
   const component = /^\/components\/(.+)$/.exec(route)
   const tokens = /^\/tokens\/(.+)$/.exec(route)
   const pageName =
-    route === '/import' ? 'Bring in tokens' : route === '/changes' ? 'Changes' : undefined
+    route === '/import'
+      ? 'Bring in tokens'
+      : route === '/changes'
+        ? 'Changes'
+        : route === '/export' && data.exports
+          ? 'Export tokens'
+          : undefined
   try {
     if (editing && route === '/import') page = importPage(afterSave)
     else if (editing && route === '/changes') page = changesPage()
+    else if (route === '/export' && data.exports) page = exportPage(data.project.name, data.exports)
     else if (component) page = componentPage(component[1]!)
     else if (tokens) page = tokenPage(tokens[1]!)
     else page = overview()

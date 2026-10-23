@@ -103,13 +103,13 @@ export const COMMANDS_DOC: CommandDoc[] = [
     usage: 'tessera docs [--port <n>] [--edit] [--static [--out <folder>]]',
     summary: 'Documentation for your design system, generated from its contracts and tokens',
     details:
-      'Runs a documentation app for the project: a page for every component (description, a live preview with a control for each variant, the variant, part, state, slot and event tables, usage examples, the tokens its styles use and the source), a page for every token group (the value in every theme after aliases are followed, with swatches and specimens), a contrast table, and an overview with the coverage report that `tessera report` prints (also downloadable as JSON). Theme and density switchers are always visible. Nothing is written by hand: add a component with a valid contract and it appears, with its controls, without a restart. A `Name.docs.md` beside a component adds guidance prose, and a fenced `tess live` block in it runs as a real example. `--static` writes a folder of plain files (default `docs-dist`) that any file server can host. `--edit` turns on the system manager: forms to edit component contracts and bring in a token export, each change validated by the compiler first, on this computer only.',
+      'Runs a documentation app for the project: a page for every component (description, a live preview with a control for each variant, the variant, part, state, slot and event tables, usage examples, the tokens its styles use and the source), a page for every token group (the value in every theme after aliases are followed, with swatches and specimens), a contrast table, and an overview with the coverage report that `tessera report` prints (also downloadable as JSON). Theme and density switchers are always visible. Nothing is written by hand: add a component with a valid contract and it appears, with its controls, without a restart. A `Name.docs.md` beside a component adds guidance prose, and a fenced `tess live` block in it runs as a real example. `--static` writes a folder of plain files (default `docs-dist`) that any file server can host. An Export page offers the tokens as DTCG or Tokens Studio files, as a zip or one by one. `--edit` adds a page to bring in a token export, each change validated by the compiler first, on this computer only.',
     options: [
       { flag: '--port <n>', description: 'The port to serve on.' },
       {
         flag: '--edit',
         description:
-          'Turn on the system manager: edit component contracts and bring in a token export, through forms. Local only, behind a key printed at startup. Tokens themselves are edited in your design tool.',
+          'Let the docs bring in a token export (the Export page needs no flag): the change is previewed and checked by the compiler first. Local only, behind a key printed at startup.',
       },
       { flag: '--static', description: 'Write static files instead of serving.' },
       {

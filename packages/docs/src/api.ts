@@ -2,18 +2,8 @@ import { execFileSync } from 'node:child_process'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { Project } from '@tessera/compiler/project'
 import type { InterchangeFile, InterchangeFormat } from '@tessera/tokens'
-import type { ContractOp } from './edit/contract-ops'
-import { OpError } from './edit/contract-ops'
 import { planTokenImport } from './edit/import-plan'
-import {
-  applyPlan,
-  planContractChange,
-  planNewComponent,
-  StaleError,
-  undoApplied,
-  type Applied,
-  type Plan,
-} from './edit/plan'
+import { applyPlan, PlanError, StaleError, undoApplied, type Applied, type Plan } from './edit/plan'
 
 /**
  * The write interface of the docs app (the system manager). It is a function from a request to a response, with no
@@ -142,7 +132,7 @@ export class Editor {
       }
     } catch (error) {
       if (error instanceof StaleError) return { status: 409, body: { error: error.message } }
-      if (error instanceof OpError || error instanceof BadRequest) {
+      if (error instanceof PlanError || error instanceof BadRequest) {
         return { status: 400, body: { error: error.message } }
       }
       return { status: 500, body: { error: 'Something went wrong in the editor.' } }
@@ -164,20 +154,6 @@ export class Editor {
     this.project.resetAll()
     let plan: Plan
     switch (body.kind) {
-      case 'contract':
-        plan = planContractChange(
-          this.project,
-          str(body.component, 'component'),
-          body.op as ContractOp,
-        )
-        break
-      case 'newComponent':
-        plan = planNewComponent(
-          this.project,
-          str(body.name, 'name'),
-          typeof body.description === 'string' ? body.description : '',
-        )
-        break
       case 'tokenImport':
         plan = planTokenImport(
           this.project,

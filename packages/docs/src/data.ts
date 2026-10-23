@@ -2,7 +2,14 @@ import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import type { AgentManifest } from '@tessera/compiler'
 import type { Project } from '@tessera/compiler/project'
-import { contrastPairs, type ContrastRow } from '@tessera/tokens'
+import {
+  contrastPairs,
+  exportTokens,
+  type ContrastRow,
+  type InterchangeFile,
+  type InterchangeFormat,
+} from '@tessera/tokens'
+import { loadTokenDir } from '@tessera/tokens/node'
 import { renderMarkdown } from './markdown'
 
 /** Everything the docs app shows, as plain JSON. The app reads this at runtime; nothing here is hand-written. */
@@ -14,6 +21,8 @@ export interface DocsData {
   /** `tessera report` as it would print with `--json`, when the host provides it. */
   report?: unknown
   hasTokens: boolean
+  /** The tokens as files a design tool reads, by format. Present when the project has tokens. */
+  exports?: Partial<Record<InterchangeFormat, InterchangeFile[]>>
   /** Whether the system manager (write mode) is on. Set by the plugin, not by the builder. */
   edit?: boolean
 }
@@ -148,5 +157,23 @@ export function buildDocsData(project: Project, options: BuildOptions): DocsData
     },
     ...(options.report !== undefined ? { report: options.report } : {}),
     hasTokens: !!tokenManifest && tokenManifest.tokens.length > 0,
+    ...exportsOf(project, tokenManifest !== undefined),
+  }
+}
+
+/** The tokens exported in both formats, so the docs can offer them (in the static site too). */
+function exportsOf(project: Project, built: boolean): Pick<DocsData, 'exports'> {
+  const dir = project.tokensDir()
+  if (!built || !dir) return {}
+  try {
+    const input = loadTokenDir(dir)
+    const out: NonNullable<DocsData['exports']> = {}
+    for (const format of ['dtcg', 'tokens-studio'] as const) {
+      const result = exportTokens(input, format)
+      if (result.files.length) out[format] = result.files
+    }
+    return Object.keys(out).length ? { exports: out } : {}
+  } catch {
+    return {}
   }
 }

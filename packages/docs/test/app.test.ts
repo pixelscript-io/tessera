@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { crc32 } from 'node:zlib'
 import { readFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import { extname, join } from 'node:path'
@@ -83,6 +84,28 @@ function staticServer(dir: string): Promise<{ url: string; server: Server }> {
   )
 }
 
+/** The entries of a stored (uncompressed) ZIP, read from its central directory, with their checksums verified. */
+function unzip(bytes: Buffer): Record<string, string> {
+  const end = bytes.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]))
+  const count = bytes.readUInt16LE(end + 10)
+  let at = bytes.readUInt32LE(end + 16)
+  const out: Record<string, string> = {}
+  for (let i = 0; i < count; i++) {
+    expect(bytes.readUInt32LE(at)).toBe(0x02014b50)
+    const crc = bytes.readUInt32LE(at + 16)
+    const size = bytes.readUInt32LE(at + 20)
+    const nameLength = bytes.readUInt16LE(at + 28)
+    const local = bytes.readUInt32LE(at + 42)
+    const name = bytes.subarray(at + 46, at + 46 + nameLength).toString('utf8')
+    const start = local + 30 + bytes.readUInt16LE(local + 26) + bytes.readUInt16LE(local + 28)
+    const data = bytes.subarray(start, start + size)
+    expect(crc32(data), name).toBe(crc)
+    out[name] = data.toString('utf8')
+    at += 46 + nameLength
+  }
+  return out
+}
+
 const report = () => ({ a11y: { generated: [] } })
 
 describe('the docs app', () => {
@@ -129,6 +152,42 @@ describe('the docs app', () => {
     expect(await page.getAttribute('.docs-live [data-tone]', 'data-tone')).toBe('warn')
     expect(await page.textContent('h2:has-text("Variants") + table')).toContain('info, warn')
     expect(errors).toEqual([])
+  }, 90_000)
+
+  it('offers the tokens for download in both formats, as a zip and file by file', async () => {
+    const dev = await serveDocs(root, { report, port: 0 })
+    closers.push(() => dev.close())
+    browser ??= await chromium.launch({ channel: 'msedge' })
+    const page = await browser.newPage()
+    await page.goto(`${dev.resolvedUrls!.local[0]!}#/export`)
+    await page.getByRole('heading', { name: 'Send tokens to your design tool' }).waitFor()
+    // DTCG first: a resolver and one file per set.
+    const listed = await page.locator('.docs-export-files code').allTextContents()
+    expect(listed).toContain('tessera.resolver.json')
+    expect(listed).toContain('sets/base.tokens.json')
+
+    const [zip] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download all as a zip' }).click(),
+    ])
+    expect(zip.suggestedFilename()).toBe('scratch-docs-dtcg.zip')
+    const entries = unzip(readFileSync((await zip.path())!))
+    expect(Object.keys(entries).sort()).toEqual([...listed].sort())
+    expect(JSON.parse(entries['sets/base.tokens.json']!).color).toBeDefined()
+
+    const [one] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download sets/base.tokens.json' }).click(),
+    ])
+    expect(one.suggestedFilename()).toBe('base.tokens.json')
+    expect(readFileSync((await one.path())!, 'utf8')).toBe(entries['sets/base.tokens.json'])
+
+    await page.getByLabel('Format', { exact: true }).selectOption('tokens-studio')
+    const studio = await page.locator('.docs-export-files code').allTextContents()
+    expect(studio).toContain('$themes.json')
+    expect(studio).not.toContain('tessera.resolver.json')
+    // Export needs no editing mode and no key: nothing here writes a file.
+    expect(await page.locator('.docs-nav a', { hasText: 'Bring in tokens' }).count()).toBe(0)
   }, 90_000)
 
   it('exports static files that serve from a plain file server', async () => {

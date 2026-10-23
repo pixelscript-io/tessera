@@ -1,9 +1,10 @@
 import type { Plan, PlanFile } from '../edit/plan'
 
 /**
- * The system manager's side of the docs app: forms that ask the server to prepare a change, a panel that shows
- * what it would do (the files as a diff, the compiler's verdict, what it means for the people using the system),
- * and the buttons that save, discard and undo. The server decides everything; this only asks and shows.
+ * The token exchange of the docs app. Export needs no server: it offers files the docs data already holds. Import
+ * (system manager, write mode) asks the server to prepare a change, shows what it would do (the files as a diff, the
+ * compiler's verdict, what it means for the people using the system), and has the buttons that save, discard and
+ * undo. The server decides everything; this only asks and shows.
  */
 
 type Child = Node | string | null | undefined | false
@@ -243,27 +244,6 @@ export function planPanel(plan: Plan, hooks: PanelHooks): HTMLElement {
     )
   }
 
-  for (const u of plan.usage) {
-    panel.append(
-      h(
-        'div',
-        { class: 'docs-plan-usage' },
-        h('h4', null, u.label),
-        u.uses.length
-          ? h('ul', null, ...u.uses.map((x) => h('li', null, `${x.file} (${x.count})`)))
-          : h('p', { class: 'docs-muted' }, 'No uses found.'),
-      ),
-    )
-  }
-  if (plan.codemod) {
-    panel.append(
-      h(
-        'p',
-        null,
-        `Saving also rewrites ${plan.codemod.edits} ${plan.codemod.edits === 1 ? 'use' : 'uses'} in ${plan.codemod.files} ${plan.codemod.files === 1 ? 'file' : 'files'}.`,
-      ),
-    )
-  }
   if (plan.notes.length) {
     panel.append(
       h(
@@ -322,238 +302,6 @@ function field(label: string, input: HTMLElement): HTMLElement {
 
 const input = (value = '', placeholder = '') =>
   h('input', { type: 'text', value, placeholder }) as HTMLInputElement
-const textarea = (value = '') => {
-  const el = h('textarea', { rows: 3 }) as HTMLTextAreaElement
-  el.value = value
-  return el
-}
-
-interface ComponentLike {
-  name: string
-  description?: string
-  since?: string
-  deprecated?: string
-  variants: Array<{ name: string; values: string[]; default: string }>
-  slots: Record<string, string>
-  events: Record<string, string>
-  deprecatedValues?: Record<string, Record<string, string>>
-}
-
-/** The editing section of a component page. `show` receives the plan panel to put on the page. */
-export function componentEditor(
-  c: ComponentLike,
-  show: (panel: HTMLElement | null) => void,
-  hooks: PanelHooks,
-): HTMLElement {
-  const root = h('div', { class: 'docs-editor' })
-  const errorLine = h('p', { class: 'docs-error-line', role: 'alert' })
-
-  const preview = async (op: unknown) => {
-    errorLine.textContent = ''
-    try {
-      const plan = await api<Plan>('POST', 'plan', { kind: 'contract', component: c.name, op })
-      show(
-        planPanel(plan, {
-          saved: hooks.saved,
-          discarded: () => {
-            show(null)
-            hooks.discarded()
-          },
-        }),
-      )
-    } catch (error) {
-      show(null)
-      errorLine.textContent = error instanceof Error ? error.message : String(error)
-    }
-  }
-  const button = (label: string, onclick: () => void) =>
-    h('button', { class: 'docs-button', type: 'button', onclick }, label)
-
-  // About: description, version, deprecation.
-  const description = textarea(c.description ?? '')
-  const since = input(c.since ?? '', '1.0.0')
-  const deprecated = input(c.deprecated ?? '', 'What to use instead')
-  root.append(
-    h(
-      'fieldset',
-      null,
-      h('legend', null, 'About this component'),
-      field('Description', description),
-      button('Preview description change', () =>
-        preview({ kind: 'description', value: description.value }),
-      ),
-      field('Introduced in version', since),
-      button('Preview version change', () => preview({ kind: 'since', value: since.value.trim() })),
-      field(
-        'Deprecated: say what to use instead (leave empty if it is not deprecated)',
-        deprecated,
-      ),
-      button('Preview deprecation change', () =>
-        preview({
-          kind: 'deprecated',
-          value: deprecated.value.trim() === '' ? null : deprecated.value,
-        }),
-      ),
-    ),
-  )
-
-  // Variants.
-  for (const v of c.variants) {
-    const value = h(
-      'select',
-      null,
-      ...v.values.map((x) => h('option', { value: x }, x + (x === v.default ? ' (default)' : ''))),
-    ) as HTMLSelectElement
-    const action = h(
-      'select',
-      null,
-      h('option', { value: 'default' }, 'Make the default'),
-      h('option', { value: 'rename' }, 'Rename to…'),
-      h('option', { value: 'deprecate' }, 'Deprecate…'),
-      h('option', { value: 'undeprecate' }, 'Remove the deprecation'),
-      h('option', { value: 'remove' }, 'Remove'),
-    ) as HTMLSelectElement
-    const extra = input('', 'New name, or what to use instead')
-    const add = input('', 'A new value')
-    root.append(
-      h(
-        'fieldset',
-        null,
-        h('legend', null, `Variant: ${v.name}`),
-        h(
-          'p',
-          { class: 'docs-muted' },
-          `Values: ${v.values.join(', ')}. The first is the default.`,
-        ),
-        field('Value', value),
-        field('Do this', action),
-        field('Name or message (for Rename and Deprecate)', extra),
-        button(`Preview change to ${v.name}`, () => {
-          const base = { variant: v.name, value: value.value }
-          switch (action.value) {
-            case 'default':
-              return preview({ kind: 'setDefault', ...base })
-            case 'rename':
-              return preview({
-                kind: 'renameValue',
-                variant: v.name,
-                from: value.value,
-                to: extra.value.trim(),
-              })
-            case 'deprecate':
-              return preview({ kind: 'deprecateValue', ...base, message: extra.value })
-            case 'undeprecate':
-              return preview({ kind: 'deprecateValue', ...base, message: null })
-            default:
-              return preview({ kind: 'removeValue', ...base })
-          }
-        }),
-        field('Add a value', add),
-        button(`Preview adding the value to ${v.name}`, () =>
-          preview({ kind: 'addValue', variant: v.name, value: add.value.trim() }),
-        ),
-      ),
-    )
-  }
-  const variantName = input('', 'size')
-  const variantValues = input('', 'sm, md, lg')
-  root.append(
-    h(
-      'fieldset',
-      null,
-      h('legend', null, 'Add a variant'),
-      field('Name', variantName),
-      field('Values, separated by commas (the first is the default)', variantValues),
-      button('Preview adding the variant', () =>
-        preview({
-          kind: 'addVariant',
-          variant: variantName.value.trim(),
-          values: variantValues.value
-            .split(',')
-            .map((x) => x.trim())
-            .filter(Boolean),
-        }),
-      ),
-    ),
-  )
-
-  // Slots and events: their descriptions.
-  for (const group of ['slot', 'event'] as const) {
-    const items = Object.entries(group === 'slot' ? c.slots : c.events)
-    const fieldset = h('fieldset', null, h('legend', null, group === 'slot' ? 'Slots' : 'Events'))
-    for (const [name, text] of items) {
-      const box = input(text)
-      fieldset.append(
-        field(`${name}: what it is for`, box),
-        button(`Preview change to ${name}`, () =>
-          preview({ kind: group, name, description: box.value }),
-        ),
-      )
-    }
-    const newName = input('', group === 'slot' ? 'icon' : 'change')
-    const newText = input('', 'What it is for')
-    fieldset.append(
-      field(`Add a ${group}: name`, newName),
-      field('What it is for', newText),
-      button(`Preview adding the ${group}`, () =>
-        preview({ kind: group, name: newName.value.trim(), description: newText.value }),
-      ),
-    )
-    root.append(fieldset)
-  }
-  root.append(errorLine)
-  return root
-}
-
-/** "Add a component": a form for the overview. */
-export function newComponentForm(
-  show: (panel: HTMLElement | null) => void,
-  hooks: PanelHooks,
-): HTMLElement {
-  const name = input('', 'UserCard')
-  const description = input('', 'What it is for')
-  const error = h('p', { class: 'docs-error-line', role: 'alert' })
-  const go = h(
-    'button',
-    {
-      class: 'docs-button',
-      type: 'button',
-      onclick: async () => {
-        error.textContent = ''
-        try {
-          const plan = await api<Plan>('POST', 'plan', {
-            kind: 'newComponent',
-            name: name.value.trim(),
-            description: description.value,
-          })
-          show(
-            planPanel(plan, {
-              saved: hooks.saved,
-              discarded: () => {
-                show(null)
-                hooks.discarded()
-              },
-            }),
-          )
-        } catch (e) {
-          show(null)
-          error.textContent = e instanceof Error ? e.message : String(e)
-        }
-      },
-    },
-    'Preview the new component',
-  )
-  return h(
-    'fieldset',
-    null,
-    h('legend', null, 'Add a component'),
-    field('Name (PascalCase)', name),
-    field('Description', description),
-    go,
-    error,
-  )
-}
-
 /** The token import page: choose the files of an export, preview, save. */
 export function importPage(hooks: PanelHooks): HTMLElement {
   const region = h('div', { 'aria-live': 'polite' })
@@ -634,6 +382,174 @@ export function importPage(hooks: PanelHooks): HTMLElement {
       go,
       error,
     ),
+    region,
+  )
+}
+
+// --- token export -----------------------------------------------------------------------------------------
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+  return c >>> 0
+})
+
+function crc32(bytes: Uint8Array): number {
+  let c = 0xffffffff
+  for (const b of bytes) c = CRC_TABLE[(c ^ b) & 0xff]! ^ (c >>> 8)
+  return (c ^ 0xffffffff) >>> 0
+}
+
+/** A ZIP of the files, stored without compression (token files are small), so no library is needed. */
+export function zipFiles(files: Array<{ path: string; content: string }>): Uint8Array {
+  const encoder = new TextEncoder()
+  const now = new Date()
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()
+  const chunks: Uint8Array[] = []
+  const central: Uint8Array[] = []
+  let offset = 0
+  const u16 = (view: DataView, at: number, v: number) => view.setUint16(at, v, true)
+  const u32 = (view: DataView, at: number, v: number) => view.setUint32(at, v, true)
+  for (const file of files) {
+    const name = encoder.encode(file.path)
+    const data = encoder.encode(file.content)
+    const crc = crc32(data)
+    const local = new Uint8Array(30 + name.length)
+    const lv = new DataView(local.buffer)
+    u32(lv, 0, 0x04034b50)
+    u16(lv, 4, 20)
+    u16(lv, 6, 0x0800) // names are UTF-8
+    u16(lv, 10, time)
+    u16(lv, 12, date)
+    u32(lv, 14, crc)
+    u32(lv, 18, data.length)
+    u32(lv, 22, data.length)
+    u16(lv, 26, name.length)
+    local.set(name, 30)
+    const entry = new Uint8Array(46 + name.length)
+    const ev = new DataView(entry.buffer)
+    u32(ev, 0, 0x02014b50)
+    u16(ev, 4, 20)
+    u16(ev, 6, 20)
+    u16(ev, 8, 0x0800)
+    u16(ev, 12, time)
+    u16(ev, 14, date)
+    u32(ev, 16, crc)
+    u32(ev, 20, data.length)
+    u32(ev, 24, data.length)
+    u16(ev, 28, name.length)
+    u32(ev, 42, offset)
+    entry.set(name, 46)
+    chunks.push(local, data)
+    central.push(entry)
+    offset += local.length + data.length
+  }
+  const size = central.reduce((n, c) => n + c.length, 0)
+  const end = new Uint8Array(22)
+  const dv = new DataView(end.buffer)
+  u32(dv, 0, 0x06054b50)
+  u16(dv, 8, files.length)
+  u16(dv, 10, files.length)
+  u32(dv, 12, size)
+  u32(dv, 16, offset)
+  const all = [...chunks, ...central, end]
+  const out = new Uint8Array(all.reduce((n, c) => n + c.length, 0))
+  let at = 0
+  for (const part of all) {
+    out.set(part, at)
+    at += part.length
+  }
+  return out
+}
+
+function download(name: string, type: string, bytes: Uint8Array | string): void {
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }))
+  const link = h('a', { href: url, download: name })
+  document.body.append(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+const EXPORT_FORMATS: Array<{ id: 'dtcg' | 'tokens-studio'; label: string; help: string }> = [
+  {
+    id: 'dtcg',
+    label: 'DTCG (with a Resolver)',
+    help: 'The W3C Design Tokens format: one file per set plus a resolver file. Figma variables and most token tools read it.',
+  },
+  {
+    id: 'tokens-studio',
+    label: 'Tokens Studio or Penpot',
+    help: 'The files the Tokens Studio plugin and Penpot read: one file per set, with $themes.json and $metadata.json.',
+  },
+]
+
+/** The token export page: choose a format, see the files, download them one by one or as a zip. */
+export function exportPage(
+  project: string,
+  exports: Partial<Record<'dtcg' | 'tokens-studio', Array<{ path: string; content: string }>>>,
+): HTMLElement {
+  const available = EXPORT_FORMATS.filter((f) => exports[f.id]?.length)
+  const region = h('div', { 'aria-live': 'polite' })
+  const select = h(
+    'select',
+    null,
+    ...available.map((f) => h('option', { value: f.id }, f.label)),
+  ) as HTMLSelectElement
+  const show = () => {
+    const format = available.find((f) => f.id === select.value)
+    const files = (format && exports[format.id]) || []
+    const slug = project.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'tokens'
+    region.replaceChildren(
+      h('p', { class: 'docs-muted' }, format?.help),
+      h(
+        'button',
+        {
+          class: 'docs-button docs-primary',
+          type: 'button',
+          onclick: () =>
+            download(`${slug}-${select.value}.zip`, 'application/zip', zipFiles(files)),
+        },
+        'Download all as a zip',
+      ),
+      h('h2', null, `Files (${files.length})`),
+      h(
+        'ul',
+        { class: 'docs-export-files' },
+        ...files.map((f) =>
+          h(
+            'li',
+            null,
+            h('code', null, f.path),
+            ' ',
+            h(
+              'button',
+              {
+                class: 'docs-button',
+                type: 'button',
+                'aria-label': `Download ${f.path}`,
+                onclick: () => download(f.path.split('/').pop()!, 'application/json', f.content),
+              },
+              'Download',
+            ),
+          ),
+        ),
+      ),
+    )
+  }
+  select.addEventListener('change', show)
+  show()
+  return h(
+    'div',
+    null,
+    h('h1', null, 'Send tokens to your design tool'),
+    h(
+      'p',
+      { class: 'docs-lead' },
+      'The tokens in this project, as files a design tool reads. Edit them there, then bring the export back in with “Bring in tokens”.',
+    ),
+    h('fieldset', null, h('legend', null, 'Format'), field('Format', select)),
     region,
   )
 }

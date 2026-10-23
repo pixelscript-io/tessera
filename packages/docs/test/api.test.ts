@@ -5,6 +5,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { Project } from '@tessera/compiler/project'
+import { exportTokens, type InterchangeFile } from '@tessera/tokens'
+import { loadTokenDir } from '@tessera/tokens/node'
 import { API_PREFIX, authorize, Editor, newSecret, type ApiRequest } from '../src/api'
 
 const repo = fileURLToPath(new URL('../../..', import.meta.url)).replaceAll('\\', '/')
@@ -29,8 +31,8 @@ function session(options: { edit?: boolean } = {}) {
     recursive: true,
     filter: (src) => !/(\.browser\.test\.ts|__screenshots__|seeded|\.d\.ts)/.test(src),
   })
-  cpSync(join(repo, 'system/components/Button.tess'), join(root, 'app/components/Button.tess'))
-  const tokens = join(repo, 'system/tokens').replaceAll('\\', '/')
+  cpSync(join(repo, 'system/components/Button.tess'), join(root, BASE))
+  cpSync(join(repo, 'system/tokens'), join(root, 'system/tokens'), { recursive: true })
   writeFileSync(join(root, 'package.json'), '{ "name": "scratch" }\n')
   git(root, 'init', '-b', 'main', '-q')
   git(root, 'add', '-A')
@@ -38,7 +40,7 @@ function session(options: { edit?: boolean } = {}) {
   const secret = newSecret()
   let changes = 0
   const editor = new Editor(
-    new Project(root, { tokens, today: '2026-10-22' }),
+    new Project(root, { today: '2026-10-22' }),
     { edit: options.edit ?? true, secret },
     () => changes++,
   )
@@ -66,11 +68,30 @@ function session(options: { edit?: boolean } = {}) {
     call,
     changes: () => changes,
     read: (f: string) => readFileSync(join(root, f), 'utf8'),
+    exported: (): InterchangeFile[] =>
+      exportTokens(loadTokenDir(join(root, 'system/tokens')), 'dtcg').files,
   }
 }
 
-const plan = (s: ReturnType<typeof session>, op: object) =>
-  s.call('POST', 'plan', { kind: 'contract', component: 'Button', op })
+const BASE = 'system/tokens/base.tokens.json'
+
+/** An import of the current tokens with one base color changed, which is what a designer's new export looks like. */
+function imported(s: ReturnType<typeof session>, edit: (doc: any) => void) {
+  const files = s.exported().map((f) => {
+    if (f.path !== 'sets/base.tokens.json') return f
+    const doc = JSON.parse(f.content)
+    edit(doc)
+    return { path: f.path, content: JSON.stringify(doc, null, 2) }
+  })
+  return { kind: 'tokenImport', files }
+}
+const bluer = (s: ReturnType<typeof session>) =>
+  imported(s, (d) => (d.color.blue['300'].$value.components = [0.6137, 0.78, 0.99]))
+const darker = (s: ReturnType<typeof session>) =>
+  imported(s, (d) => (d.color.neutral['0'].$value.components = [0.05, 0.05, 0.1]))
+
+const plan = (s: ReturnType<typeof session>, body: object = bluer(s)) =>
+  s.call('POST', 'plan', body)
 
 describe('who may use the write interface', () => {
   const request = (headers: Record<string, string | undefined>, method = 'GET'): ApiRequest => ({
@@ -87,6 +108,7 @@ describe('who may use the write interface', () => {
 
   it('answers 404 to everything when editing is off, and writes nothing', () => {
     const s = session({ edit: false })
+    const before = s.read(BASE)
     for (const [method, path] of [
       ['GET', 'state'],
       ['POST', 'plan'],
@@ -94,14 +116,10 @@ describe('who may use the write interface', () => {
       ['POST', 'undo'],
       ['POST', 'propose'],
     ] as const) {
-      const res = s.call(method, path, {
-        kind: 'contract',
-        component: 'Button',
-        op: { kind: 'description', value: 'x' },
-      })
+      const res = s.call(method, path, bluer(s))
       expect(res.status, `${method} ${path}`).toBe(404)
     }
-    expect(s.read('app/components/Button.tess')).not.toContain('"description": "x"')
+    expect(s.read(BASE)).toBe(before)
   })
 
   it('accepts a local host with the key, and refuses everything else', () => {
@@ -163,59 +181,57 @@ describe('who may use the write interface', () => {
 describe('planning, saving and undoing through the interface', () => {
   it('plans, saves, and reports what changed, then undoes', () => {
     const s = session()
-    const before = s.read('app/components/Button.tess')
-    const prepared = plan(s, { kind: 'description', value: 'Starts something.' })
+    const before = s.read(BASE)
+    const prepared = plan(s)
     expect(prepared.status).toBe(200)
-    const { id, summary, blocking } = prepared.body as {
+    const { id, blocking, files } = prepared.body as {
       id: string
-      summary: string
       blocking: unknown[]
+      files: Array<{ file: string }>
     }
-    expect(summary).toBe('Change the description of Button')
     expect(blocking).toEqual([])
+    expect(files.map((f) => f.file)).toEqual([BASE])
     // Planning wrote nothing.
-    expect(s.read('app/components/Button.tess')).toBe(before)
+    expect(s.read(BASE)).toBe(before)
 
     const saved = s.call('POST', 'apply', { id })
     expect(saved.status).toBe(200)
-    expect(s.read('app/components/Button.tess')).toContain('"Starts something."')
+    expect(s.read(BASE)).toContain('0.6137')
     expect(s.changes()).toBe(1)
-    expect((s.call('GET', 'state').body as { undo: { summary: string } }).undo.summary).toBe(
-      summary,
-    )
+    expect((s.call('GET', 'state').body as { undo: { files: string[] } }).undo.files).toEqual([
+      BASE,
+    ])
 
     expect(s.call('POST', 'undo', {}).status).toBe(200)
-    expect(s.read('app/components/Button.tess')).toBe(before)
+    expect(s.read(BASE)).toBe(before)
     expect(s.call('POST', 'undo', {}).status).toBe(400)
   })
 
-  it('refuses to save a plan that would break the project (400 from planning is not needed: the plan says so)', () => {
+  it('refuses to save a plan that would break the project', () => {
     const s = session()
-    const prepared = plan(s, { kind: 'removeValue', variant: 'tone', value: 'danger' })
+    // The default surface becomes dark, so the dark text on it no longer passes.
+    const prepared = plan(s, darker(s))
     const body = prepared.body as { id: string; blocking: Array<{ code: string }> }
-    expect(body.blocking.map((b) => b.code)).toContain('T4008')
-    const before = s.read('app/components/Button.tess')
+    expect(body.blocking.map((b) => b.code)).toContain('T2107')
+    const before = s.read(BASE)
     const res = s.call('POST', 'apply', { id: body.id })
     expect(res.status).toBe(409)
     expect((res.body as { error: string }).error).toBe(
       'This change would break the project, so it was not saved.',
     )
-    expect(s.read('app/components/Button.tess')).toBe(before)
+    expect(s.read(BASE)).toBe(before)
   })
 
   it('refuses to save when the file changed after the plan, and does not accept a plan twice', () => {
     const s = session()
-    const { id } = plan(s, { kind: 'description', value: 'Mine.' }).body as { id: string }
-    writeFileSync(
-      join(s.root, 'app/components/Button.tess'),
-      s.read('app/components/Button.tess') + '\n',
-    )
+    const { id } = plan(s).body as { id: string }
+    writeFileSync(join(s.root, BASE), s.read(BASE) + '\n')
     const res = s.call('POST', 'apply', { id })
     expect(res.status).toBe(409)
     expect((res.body as { error: string }).error).toContain(
       'changed on disk after this change was prepared',
     )
-    const fresh = plan(s, { kind: 'description', value: 'Mine.' }).body as { id: string }
+    const fresh = plan(s).body as { id: string }
     expect(s.call('POST', 'apply', { id: fresh.id }).status).toBe(200)
     expect(s.call('POST', 'apply', { id: fresh.id }).status).toBe(400)
   })
@@ -226,8 +242,8 @@ describe('planning, saving and undoing through the interface', () => {
       'Say what to change.',
     )
     expect(
-      (plan(s, { kind: 'addValue', variant: 'x', value: 'y' }).body as { error: string }).error,
-    ).toContain('x is not a variant')
+      (s.call('POST', 'plan', { kind: 'tokenImport', files: 'x' }).body as { error: string }).error,
+    ).toBe('"files" must be a list of files.')
     expect((s.call('POST', 'apply', { id: 'nope' }).body as { error: string }).error).toBe(
       'That change is no longer waiting. Prepare it again.',
     )
@@ -237,15 +253,10 @@ describe('planning, saving and undoing through the interface', () => {
     expect(s.call('GET', 'nowhere').status).toBe(404)
   })
 
-  it('creates a component', () => {
+  it('does not know how to change a component, a token value or anything but an import', () => {
     const s = session()
-    const { id } = s.call('POST', 'plan', {
-      kind: 'newComponent',
-      name: 'Panel',
-      description: 'A panel.',
-    }).body as { id: string }
-    expect(s.call('POST', 'apply', { id }).status).toBe(200)
-    expect(s.read('app/components/Panel.tess')).toContain('"name": "Panel"')
+    for (const kind of ['contract', 'newComponent', 'token'])
+      expect(s.call('POST', 'plan', { kind }).status, kind).toBe(400)
   })
 })
 
@@ -258,7 +269,7 @@ describe('proposing a change through git', () => {
       s.read('app/pages/about.tess') + '\n<!-- mine -->\n',
     )
     git(s.root, 'add', 'app/pages/about.tess')
-    const { id } = plan(s, { kind: 'description', value: 'Starts something.' }).body as {
+    const { id } = plan(s).body as {
       id: string
     }
     s.call('POST', 'apply', { id })
@@ -267,7 +278,7 @@ describe('proposing a change through git', () => {
     expect(status).toMatchObject({
       repo: true,
       branch: 'main',
-      changed: ['app/components/Button.tess'],
+      changed: [BASE],
     })
 
     const res = s.call('POST', 'propose', { message: 'Reword the Button description' })
@@ -278,7 +289,7 @@ describe('proposing a change through git', () => {
     expect(git(s.root, 'show', '--name-only', '--format=%s', 'HEAD').split('\n')).toEqual([
       'Reword the Button description',
       '',
-      'app/components/Button.tess',
+      BASE,
     ])
     // The staged file of the person's own is still staged, not committed.
     expect(git(s.root, 'diff', '--cached', '--name-only')).toBe('app/pages/about.tess')
@@ -290,13 +301,16 @@ describe('proposing a change through git', () => {
     expect((s.call('POST', 'propose', { message: 'x' }).body as { error: string }).error).toBe(
       'The manager has not changed anything to propose.',
     )
-    const { id } = plan(s, { kind: 'description', value: 'A.' }).body as { id: string }
+    const { id } = plan(s).body as { id: string }
     s.call('POST', 'apply', { id })
     expect(s.call('POST', 'propose', { message: '   ' }).status).toBe(400)
     expect(s.call('POST', 'propose', { message: 'x'.repeat(201) }).status).toBe(400)
     // A second proposal with the same message gets its own branch name.
     expect(s.call('POST', 'propose', { message: 'Same' }).status).toBe(200)
-    const again = plan(s, { kind: 'description', value: 'B.' }).body as { id: string }
+    const again = plan(
+      s,
+      imported(s, (d) => (d.color.blue['300'].$value.components = [0.5, 0.7, 0.9])),
+    ).body as { id: string }
     s.call('POST', 'apply', { id: again.id })
     expect(
       (s.call('POST', 'propose', { message: 'Same' }).body as { branch: string }).branch,
@@ -304,7 +318,7 @@ describe('proposing a change through git', () => {
 
     const loose = session()
     rmSync(join(loose.root, '.git'), { recursive: true, force: true })
-    const p = plan(loose, { kind: 'description', value: 'C.' }).body as { id: string }
+    const p = plan(loose).body as { id: string }
     loose.call('POST', 'apply', { id: p.id })
     expect((loose.call('POST', 'propose', { message: 'x' }).body as { error: string }).error).toBe(
       'This project is not in a git repository, so there is nowhere to propose the change.',

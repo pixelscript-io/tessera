@@ -61,7 +61,7 @@ describe('planning a token import', () => {
     expect(plan.files.map((f) => f.file)).toEqual(['system/tokens/base.tokens.json'])
     applyPlan(plan)
     expect(a.read('system/tokens/base.tokens.json')).toContain('0.99')
-    expect([...checkSources(a.project(), new Map()).values()]).toEqual([])
+    expect([...checkSources(a.project()).values()]).toEqual([])
   })
 
   it('shows a value that flips contrast as breaking, and refuses it where a component declares the pair', () => {

@@ -54,7 +54,7 @@ writes `docs-dist` (change it with `--out <folder>`): an `index.html`, one JavaS
 
 ## Editing
 
-The docs are read-only. `tessera docs --edit` turns them into a [system manager](/guide/system-manager): forms to change component contracts, and a way to bring in a token export, with every change checked by the compiler before it is saved.
+The docs are read-only, with one exception for tokens. The **Export** page offers the tokens as files for a design tool (DTCG or Tokens Studio), as a zip or one by one. `tessera docs --edit` adds **Bring in tokens**: a token export from the design tool, previewed and checked by the compiler before it is saved. See [Tokens in the design system docs](/guide/system-manager).
 
 ## What it does not do yet
 

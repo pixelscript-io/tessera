@@ -3,10 +3,7 @@ export { buildDocsData, type DocsComponent, type DocsData, type DocsTokens } fro
 export { docsPlugin, clientEntry, DOCS_DIR, type DocsOptions } from './plugin'
 export { exportDocs, serveDocs } from './host'
 export { Editor, authorize, newSecret, API_PREFIX } from './api'
-export { editContract, describeOp, OpError, type ContractOp } from './edit/contract-ops'
 export {
-  planContractChange,
-  planNewComponent,
   applyPlan,
   undoApplied,
   checkSources,

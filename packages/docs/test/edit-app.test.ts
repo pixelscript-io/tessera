@@ -29,28 +29,6 @@ afterAll(async () => {
   rmSync(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 })
 })
 
-const TAG = [
-  '<contract>',
-  '{',
-  '  "name": "Tag", // a small label',
-  '  "role": "group",',
-  '  "description": "A small label.",',
-  '  "parts": ["root"],',
-  '  "variants": {',
-  '    "tone": ["calm", "loud"], // first value is the default',
-  '    "size": ["sm", "md"]',
-  '  },',
-  '  "slots": { "default": "the text" }',
-  '}',
-  '</contract>',
-  '<template><span class="root"><slot /></span></template>',
-  '<style>',
-  '.root { padding: $space.2; }',
-  '</style>',
-  '',
-].join('\n')
-const PAGE = '<template><main><Tag tone="loud">Beta</Tag></main></template>\n'
-
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
     cwd,
@@ -65,7 +43,7 @@ interface Project {
   read(file: string): string
 }
 
-/** A project with the kitchen-sink app, a Tag component and a page that uses it, its own tokens, and git. */
+/** A project with the kitchen-sink app, its own tokens, and git. */
 async function start(edit = true): Promise<Project> {
   mkdirSync(scratch, { recursive: true })
   const root = mkdtempSync(join(scratch, 'p-')).replaceAll('\\', '/')
@@ -74,8 +52,6 @@ async function start(edit = true): Promise<Project> {
     filter: (src) => !/(\.browser\.test\.ts|__screenshots__|seeded|\.d\.ts)/.test(src),
   })
   cpSync(join(repo, 'system/tokens'), join(root, 'system/tokens'), { recursive: true })
-  writeFileSync(join(root, 'app/components/Tag.tess'), TAG)
-  writeFileSync(join(root, 'app/pages/tags.tess'), PAGE)
   writeFileSync(join(root, 'package.json'), '{ "name": "scratch-manager" }\n')
   git(root, 'init', '-b', 'main', '-q')
   git(root, 'add', '-A')
@@ -101,9 +77,6 @@ async function open(p: Project, hash = '#/'): Promise<Page> {
   return page
 }
 
-const fieldset = (page: Page, legend: string) =>
-  page.locator('fieldset', { has: page.locator('legend', { hasText: legend }) })
-
 async function axe(page: Page): Promise<string[]> {
   await page.evaluate(axeSource)
   const violations = (await page.evaluate(() =>
@@ -122,12 +95,35 @@ async function axe(page: Page): Promise<string[]> {
   return violations
 }
 
+/** A DTCG export of the project's tokens as one flat folder (what a file picker gives without folders), written outside the project so writing it does not look like a change to its token files. */
+function uploadFolder(p: Project): string[] {
+  const files = exportTokens(loadTokenDir(join(p.root, 'system/tokens')), 'dtcg').files
+  const flat = (path: string) => path.split('/').pop()!
+  const dir = mkdtempSync(join(tmpdir(), 'tessera-upload-'))
+  for (const f of files) {
+    let content = f.content
+    if (f.path === 'tessera.resolver.json') {
+      content = content.replace(/"\$ref": "(?:sets|modifiers\/\w+)\/([^"]+)"/g, '"$ref": "$1"')
+    }
+    if (f.path === 'sets/base.tokens.json') {
+      const doc = JSON.parse(content)
+      doc.color.blue['300'].$value.components = [0.6137, 0.78, 0.99]
+      content = JSON.stringify(doc, null, 2)
+    }
+    writeFileSync(join(dir, flat(f.path)), content)
+  }
+  return files.map((f) => join(dir, flat(f.path)))
+}
+
 describe('the system manager', () => {
   it('has no editor at all without --edit, and every write route answers 404', async () => {
     const p = await start(false)
-    const page = await open(p, '#/components/Tag')
-    expect(await page.locator('text=Edit this component').count()).toBe(0)
+    const page = await open(p, '#/')
     expect(await page.locator('.docs-editbar').count()).toBe(0)
+    expect(await page.locator('text=Bring in tokens').count()).toBe(0)
+    // The import page does not exist without write mode: the overview shows instead.
+    await page.goto(page.url().split('#')[0] + '#/import')
+    expect(await page.locator('text=Bring in a token export').count()).toBe(0)
     const status = await page.evaluate(async () => (await fetch('/__tessera/state')).status)
     expect(status).toBe(404)
     const post = await page.evaluate(
@@ -143,11 +139,11 @@ describe('the system manager', () => {
     expect(post).toBe(404)
   }, 120_000)
 
-  it('shows no editor without the key, and refuses a request with a wrong key, from another origin or another host', async () => {
+  it('shows no import without the key, and refuses a request with a wrong key, from another origin or another host', async () => {
     const p = await start()
     const base = p.url.split('?')[0]!
-    const page = await open({ ...p, url: base }, '#/components/Tag')
-    expect(await page.locator('text=Edit this component').count()).toBe(0)
+    const page = await open({ ...p, url: base }, '#/import')
+    expect(await page.locator('text=Bring in a token export').count()).toBe(0)
     const key = p.url.split('key=')[1]!
     const call = (headers: Record<string, string>) =>
       page.request.get(`${base}__tessera/state`, { headers }).then((r) => r.status())
@@ -157,138 +153,25 @@ describe('the system manager', () => {
     expect(await call({ 'x-tessera-key': key, origin: 'https://evil.example' })).toBe(403)
     expect(await call({ 'x-tessera-key': key, host: 'evil.example' })).toBe(403)
     // The key is not left in the address bar.
-    const withKey = await open(p, '#/components/Tag')
+    const withKey = await open(p, '#/import')
     expect(withKey.url()).not.toContain('key=')
-    expect(await withKey.locator('text=Edit this component').count()).toBe(1)
+    expect(await withKey.locator('text=Bring in a token export').count()).toBe(1)
   }, 120_000)
 
-  it('changes a description: preview shows the diff, save changes only the contract block, the page shows it', async () => {
+  it('offers token import and export and nothing else to change: no component editor, no new-component form', async () => {
     const p = await start()
-    const page = await open(p, '#/components/Tag')
-    const before = p.read('app/components/Tag.tess')
-    const about = fieldset(page, 'About this component')
-    await about.getByLabel('Description').fill('A label for a status.')
-    await about.getByRole('button', { name: 'Preview description change' }).click()
-    const panel = page.locator('.docs-plan')
-    await panel.waitFor()
-    expect(await panel.locator('h3').textContent()).toBe('Change the description of Tag')
-    expect(await panel.locator('.docs-diff-add').first().textContent()).toContain(
-      '"description": "A label for a status."',
-    )
-    expect(await panel.locator('.docs-diff-del').first().textContent()).toContain(
-      '"description": "A small label."',
-    )
-    // Previewing wrote nothing.
-    expect(p.read('app/components/Tag.tess')).toBe(before)
-    await panel.getByRole('button', { name: 'Save this change' }).click()
-    await page.waitForFunction(
-      () => document.querySelector('.docs-lead')?.textContent === 'A label for a status.',
-    )
-    expect(p.read('app/components/Tag.tess')).toBe(
-      before.replace('"A small label."', '"A label for a status."'),
-    )
-    expect(await page.locator('.docs-editbar').textContent()).toContain(
-      'Last saved: Change the description of Tag',
-    )
-  }, 120_000)
-
-  it('refuses a change that would break a use: the reason is shown and Save is disabled', async () => {
-    const p = await start()
-    const page = await open(p, '#/components/Tag')
-    const tone = fieldset(page, 'Variant: tone')
-    await tone.getByLabel('Value', { exact: true }).selectOption('loud')
-    await tone.getByLabel('Do this').selectOption('remove')
-    await tone.getByRole('button', { name: 'Preview change to tone' }).click()
-    const panel = page.locator('.docs-plan')
-    await panel.waitFor()
-    expect(await panel.locator('[role=alert]').textContent()).toContain(
-      'This change cannot be saved, because it would break the project',
-    )
-    expect(await panel.locator('[role=alert]').textContent()).toContain(
-      'app/pages/tags.tess: Tag.tone has no value "loud".',
-    )
-    // It is also shown as breaking, so the person sees both.
-    expect(await panel.locator('.docs-plan-breaking').textContent()).toContain(
-      'Tag.tone lost the value "loud".',
-    )
-    expect(await panel.getByRole('button', { name: 'Save this change' }).isDisabled()).toBe(true)
-    expect(p.read('app/components/Tag.tess')).toBe(TAG)
-  }, 120_000)
-
-  it('renames a value: the codemod updates the page in the same save, and undo puts everything back', async () => {
-    const p = await start()
-    const page = await open(p, '#/components/Tag')
-    const tone = fieldset(page, 'Variant: tone')
-    await tone.getByLabel('Value', { exact: true }).selectOption('loud')
-    await tone.getByLabel('Do this').selectOption('rename')
-    await tone.getByLabel('Name or message (for Rename and Deprecate)').fill('bold')
-    await tone.getByRole('button', { name: 'Preview change to tone' }).click()
-    const panel = page.locator('.docs-plan')
-    await panel.waitFor()
-    expect(await panel.textContent()).toContain('Saving also rewrites 1 use in 1 file.')
-    expect(await panel.locator('summary').allTextContents()).toEqual([
-      'app/components/Tag.tess',
-      'app/pages/tags.tess',
-    ])
-    await panel.getByRole('button', { name: 'Save this change' }).click()
-    await page.waitForFunction(() =>
-      document.body.textContent?.includes('Last saved: Rename Tag.tone'),
-    )
-    expect(p.read('app/pages/tags.tess')).toContain('<Tag tone="bold">')
-    expect(p.read('app/components/Tag.tess')).toContain(
-      '"renamedValues": { "tone": { "loud": "bold" } }',
-    )
-    expect(p.read('app/components/Tag.tess')).toContain(
-      '"tone": ["calm", "bold"], // first value is the default',
-    )
-
-    await page.getByRole('button', { name: 'Undo' }).click()
-    await page.waitForFunction(
-      () => !document.querySelector('.docs-editbar')?.textContent?.includes('Last saved'),
-    )
-    expect(p.read('app/pages/tags.tess')).toBe(PAGE)
-    expect(p.read('app/components/Tag.tess')).toBe(TAG)
-  }, 120_000)
-
-  it('creates a component from the overview', async () => {
-    const p = await start()
-    const page = await open(p, '#/')
-    const form = fieldset(page, 'Add a component')
-    await form.getByLabel('Name (PascalCase)').fill('Panel')
-    await form.getByLabel('Description').fill('A panel.')
-    await form.getByRole('button', { name: 'Preview the new component' }).click()
-    const panel = page.locator('.docs-plan')
-    await panel.waitFor()
-    expect(await panel.textContent()).toContain('Panel was added: A panel.')
-    await panel.getByRole('button', { name: 'Save this change' }).click()
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll('.docs-nav a')].some((a) => a.textContent === 'Panel'),
-    )
-    expect(p.read('app/components/Panel.tess')).toContain('"name": "Panel"')
+    const page = await open(p, '#/components/Button')
+    expect(await page.locator('text=Edit this component').count()).toBe(0)
+    expect(await page.locator('text=Add a component').count()).toBe(0)
+    const nav = await page.locator('.docs-nav a').allTextContents()
+    expect(nav).toContain('Bring in tokens')
+    expect(nav).toContain('Export')
   }, 120_000)
 
   it('brings in a token export: preview, classification and notes, then save; a bad export is refused', async () => {
     const p = await start()
     const page = await open(p, '#/import')
-    // A DTCG export as one flat folder (what a file picker gives without folders): the resolver names its files plainly.
-    const files = exportTokens(loadTokenDir(join(p.root, 'system/tokens')), 'dtcg').files
-    const flat = (path: string) => path.split('/').pop()!
-    const upload = files.map((f) => {
-      let content = f.content
-      if (f.path === 'tessera.resolver.json') {
-        content = content.replace(/"\$ref": "(?:sets|modifiers\/\w+)\/([^"]+)"/g, '"$ref": "$1"')
-      }
-      if (f.path === 'sets/base.tokens.json') {
-        const doc = JSON.parse(content)
-        doc.color.blue['300'].$value.components = [0.6, 0.78, 0.99]
-        content = JSON.stringify(doc, null, 2)
-      }
-      return { path: flat(f.path), content }
-    })
-    // Outside the project, so writing them does not look like a change to its token files.
-    const dir = mkdtempSync(join(tmpdir(), 'tessera-upload-'))
-    for (const f of upload) writeFileSync(join(dir, f.path), f.content)
-    const paths = upload.map((f) => join(dir, f.path))
+    const paths = uploadFolder(p)
     await page.getByLabel('Files (choose all of them)').setInputFiles(paths)
     await page.getByRole('button', { name: 'Preview the import' }).click()
     const panel = page.locator('.docs-plan')
@@ -301,14 +184,16 @@ describe('the system manager', () => {
     expect(await panel.locator('summary').allTextContents()).toEqual([
       'system/tokens/base.tokens.json',
     ])
+    // Previewing wrote nothing.
+    expect(p.read('system/tokens/base.tokens.json')).not.toContain('0.6137')
     await panel.getByRole('button', { name: 'Save this change' }).click()
     await page.waitForFunction(() =>
       document.body.textContent?.includes('Last saved: Bring in the token export'),
     )
-    expect(p.read('system/tokens/base.tokens.json')).toContain('0.99')
+    expect(p.read('system/tokens/base.tokens.json')).toContain('0.6137')
 
     // A file that is not an export is refused with the importer's message, and nothing can be saved.
-    const bad = join(dir, 'bad.json')
+    const bad = join(paths[0]!, '..', 'bad.json')
     writeFileSync(bad, '{ nope')
     await page.goto(page.url().split('#')[0] + '#/')
     await page.goto(page.url().split('#')[0] + '#/import')
@@ -322,37 +207,50 @@ describe('the system manager', () => {
     expect(await page.getByRole('button', { name: 'Save this change' }).isDisabled()).toBe(true)
   }, 120_000)
 
-  it('proposes the manager’s changes as a branch and a commit, and says nothing was pushed', async () => {
+  it('takes the last import back with Undo', async () => {
     const p = await start()
-    const page = await open(p, '#/components/Tag')
-    const about = fieldset(page, 'About this component')
-    await about.getByLabel('Description').fill('Proposed wording.')
-    await about.getByRole('button', { name: 'Preview description change' }).click()
+    const before = p.read('system/tokens/base.tokens.json')
+    const page = await open(p, '#/import')
+    await page.getByLabel('Files (choose all of them)').setInputFiles(uploadFolder(p))
+    await page.getByRole('button', { name: 'Preview the import' }).click()
+    await page.locator('.docs-plan').getByRole('button', { name: 'Save this change' }).click()
+    await page.waitForFunction(() => document.body.textContent?.includes('Last saved'))
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await page.waitForFunction(
+      () => !document.querySelector('.docs-editbar')?.textContent?.includes('Last saved'),
+    )
+    expect(p.read('system/tokens/base.tokens.json')).toBe(before)
+  }, 120_000)
+
+  it('proposes the import as a branch and a commit, and says nothing was pushed', async () => {
+    const p = await start()
+    const page = await open(p, '#/import')
+    await page.getByLabel('Files (choose all of them)').setInputFiles(uploadFolder(p))
+    await page.getByRole('button', { name: 'Preview the import' }).click()
     await page.locator('.docs-plan').getByRole('button', { name: 'Save this change' }).click()
     await page.waitForFunction(() => document.body.textContent?.includes('Last saved'))
     await page.goto(page.url().split('#')[0] + '#/changes')
-    await page.getByLabel('Message for the change').fill('Reword the Tag')
+    await page.getByLabel('Message for the change').fill('New blue from design')
     await page.getByRole('button', { name: /Propose this change/ }).click()
     await page.locator('[role=status]', { hasText: 'Nothing was pushed.' }).waitFor()
     expect(git(p.root, 'rev-parse', '--abbrev-ref', 'HEAD')).toMatch(
-      /^tessera\/reword-the-tag-\d{8}$/,
+      /^tessera\/new-blue-from-design-\d{8}$/,
     )
     expect(
       git(p.root, 'show', '--name-only', '--format=%s', 'HEAD').split('\n').filter(Boolean),
-    ).toEqual(['Reword the Tag', 'app/components/Tag.tess'])
+    ).toEqual(['New blue from design', 'system/tokens/base.tokens.json'])
   }, 120_000)
 
-  it('is accessible: the edit forms, the change panel, the import page and the changes page, in light and dark', async () => {
+  it('is accessible: the import page with a change panel, the changes page and the export page, in light and dark', async () => {
     const p = await start()
-    const page = await open(p, '#/components/Tag')
-    const about = fieldset(page, 'About this component')
-    await about.getByLabel('Description').fill('Accessible wording.')
-    await about.getByRole('button', { name: 'Preview description change' }).click()
+    const page = await open(p, '#/import')
+    await page.getByLabel('Files (choose all of them)').setInputFiles(uploadFolder(p))
+    await page.getByRole('button', { name: 'Preview the import' }).click()
     await page.locator('.docs-plan').waitFor()
     for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme })
-      expect(await axe(page), `component page, ${scheme}`).toEqual([])
-      for (const hash of ['#/import', '#/changes', '#/']) {
+      expect(await axe(page), `import page, ${scheme}`).toEqual([])
+      for (const hash of ['#/changes', '#/export', '#/']) {
         await page.goto(page.url().split('#')[0] + hash)
         await page.waitForSelector('.docs-main h1')
         expect(await axe(page), `${hash}, ${scheme}`).toEqual([])

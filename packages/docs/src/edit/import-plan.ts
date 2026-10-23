@@ -46,7 +46,6 @@ const empty = (blocking: PlanProblem[], notes: string[]): Plan => ({
   blocking,
   notes,
   changes: [],
-  usage: [],
 })
 
 /**
@@ -117,7 +116,7 @@ export function planTokenImport(
       writeFileSync(path, f.text)
     }
     const after = new Project(project.root, { ...project.options, tokens: scratch })
-    const plan = finishPlan(project, { summary: SUMMARY, files: planFiles }, { after })
+    const plan = finishPlan(project, { summary: SUMMARY, files: planFiles }, after)
     plan.notes.push(...notes)
     return plan
   } finally {
