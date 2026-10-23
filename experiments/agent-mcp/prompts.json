@@ -1,0 +1,26 @@
+[
+  {
+    "id": "pricing",
+    "prompt": "Add a pricing page at /pricing with three plan cards (Free, Team, Enterprise). Each card has a name, a price, a short feature list and a call-to-action button. Make the middle plan stand out."
+  },
+  {
+    "id": "settings",
+    "prompt": "Add a settings page at /settings with a profile section (name and email fields, a Save button) and a danger zone with a Delete account button that asks for confirmation before it does anything."
+  },
+  {
+    "id": "toolbar",
+    "prompt": "Create a Toolbar component with a title on the left and a group of action buttons on the right, and use it on a new /reports page above an empty-state message."
+  },
+  {
+    "id": "notice",
+    "prompt": "Create a Notice component for success, warning and error messages with an icon area, a message and a dismiss button, and show one of each on a new /notices page."
+  },
+  {
+    "id": "dashboard",
+    "prompt": "Add a /dashboard page with a row of four stat tiles (a label and a large number each) and a recent-activity list underneath. It must look fine in the dark theme."
+  },
+  {
+    "id": "form",
+    "prompt": "Add a /contact page with a contact form: name, email, message and a Send button. Disable Send until all three fields have something in them."
+  }
+]

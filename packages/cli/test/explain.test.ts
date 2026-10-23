@@ -46,6 +46,9 @@ describe('the command documentation', () => {
       'new',
       'eject',
       'explain',
+      'manifest',
+      'mcp',
+      'agent-files',
     ]) {
       expect(documented.has(name), name).toBe(true)
       expect(out).toContain(name)

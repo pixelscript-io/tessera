@@ -1,0 +1,91 @@
+<contract>
+{
+  "name": "PlanCard",
+  "role": "group",
+  "description": "A pricing plan card with a name, a price, a feature list and a call-to-action button.",
+  "parts": ["root", "name", "price", "period", "features", "feature", "badge"],
+  "variants": {
+    "tone": ["neutral", "featured"] // first value is the default
+  },
+  "events": { "choose": "fired when the call-to-action button is pressed" }
+}
+</contract>
+
+<script>
+const { name, price, period, cta, features, badge } = props({
+  name: '',
+  price: '',
+  period: '',
+  cta: 'Choose plan',
+  features: [],
+  badge: '',
+})
+
+function choose() {
+  emit('choose', name)
+}
+</script>
+
+<template>
+  <section class="root" :aria-label="name">
+    <p class="badge" if="badge">{badge}</p>
+    <h2 class="name">{name}</h2>
+    <p class="price">{price}<span class="period" if="period"> {period}</span></p>
+    <ul class="features">
+      <li class="feature" each="feature in features" key="feature">{feature}</li>
+    </ul>
+    <Button tone="primary" size="lg" @press="choose">{cta}</Button>
+  </section>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  padding: $space.6;
+  border: 1px solid $color.surface.hover;
+  border-radius: $radius.lg;
+  background: $color.surface.default;
+  color: $color.text.default;
+
+  &[data-tone='featured'] {
+    background: $color.surface.raised;
+    border: 2px solid $color.action.primary.bg;
+    box-shadow: $shadow.md;
+    padding: $space.8 $space.6;
+  }
+}
+
+.badge {
+  margin: 0;
+  align-self: flex-start;
+  padding: $space.1 $space.3;
+  border-radius: $radius.sm;
+  background: $color.action.primary.bg;
+  color: $color.action.primary.fg;
+  font-weight: $font.weight.bold;
+}
+
+.name {
+  margin: 0;
+}
+
+.price {
+  margin: 0;
+  font-weight: $font.weight.bold;
+}
+
+.period {
+  color: $color.text.muted;
+  font-weight: $font.weight.regular;
+}
+
+.features {
+  display: grid;
+  gap: $space.2;
+  flex: 1;
+  margin: 0;
+  padding-left: $space.6;
+}
+</style>

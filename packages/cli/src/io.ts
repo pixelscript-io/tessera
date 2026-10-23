@@ -1,9 +1,13 @@
 import { createInterface } from 'node:readline/promises'
 import process from 'node:process'
+import type { Readable, Writable } from 'node:stream'
 
 /** Where a command reads and writes, so tests can run commands without a terminal. */
 export interface Io {
   cwd: string
+  /** Raw streams, for the one command (`mcp`) that talks to another program instead of a person. */
+  stdin?: Readable
+  stdout?: Writable
   out(text: string): void
   err(text: string): void
   /**
@@ -15,6 +19,8 @@ export interface Io {
 
 export const processIo = (): Io => ({
   cwd: process.cwd(),
+  stdin: process.stdin,
+  stdout: process.stdout,
   out: (text) => void process.stdout.write(text + '\n'),
   err: (text) => void process.stderr.write(text + '\n'),
   ...(process.stdin.isTTY && process.stdout.isTTY

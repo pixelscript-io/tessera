@@ -1,0 +1,41 @@
+<contract>
+{
+  "name": "StatTile",
+  "role": "group",
+  "description": "A label with a large number, for dashboards.",
+  "parts": ["root", "label", "value"]
+}
+</contract>
+
+<script>
+const { label, value } = props({ label: '', value: '' })
+</script>
+
+<template>
+  <div class="root">
+    <span class="label">{label}</span>
+    <span class="value">{value}</span>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  padding: $space.4;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+  color: $color.text.default;
+}
+
+.label {
+  color: $color.text.muted;
+}
+
+.value {
+  font-size: raw(32px, 'large stat number; no font-size tokens exist', '2027-12-31');
+  font-weight: $font.weight.bold;
+  color: $color.text.default;
+}
+</style>

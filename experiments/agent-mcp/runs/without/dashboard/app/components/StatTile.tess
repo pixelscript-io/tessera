@@ -1,0 +1,44 @@
+<contract>
+{
+  "name": "StatTile",
+  "role": "group",
+  "description": "A tile showing a label and a large number.",
+  "parts": ["root", "label", "value"],
+  "slots": { "default": "the label text" }
+}
+</contract>
+
+<script>
+const { value } = props({ value: '0' })
+</script>
+
+<template>
+  <div class="root" role="group">
+    <span class="label"><slot /></span>
+    <span class="value">{value}</span>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  padding: $space.4;
+  border-radius: $radius.lg;
+  background: $color.surface.raised;
+  color: $color.text.default;
+  box-shadow: $shadow.md;
+}
+
+.label {
+  color: $color.text.muted;
+}
+
+.value {
+  font-size: 2.5rem;
+  font-weight: $font.weight.bold;
+  line-height: 1.1;
+  color: $color.text.default;
+}
+</style>

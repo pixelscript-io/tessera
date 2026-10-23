@@ -1,0 +1,10 @@
+<page>
+{ "title": "Contact" }
+</page>
+
+<template>
+  <main>
+    <h1>Contact</h1>
+    <ContactForm />
+  </main>
+</template>

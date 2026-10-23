@@ -1,0 +1,14 @@
+<page>
+{ "title": "Reports" }
+</page>
+
+<template>
+  <main>
+    <Toolbar title="Reports">
+      <Button tone="neutral" emphasis="outline" size="sm">Filter</Button>
+      <Button tone="neutral" emphasis="outline" size="sm">Export</Button>
+      <Button size="sm">New report</Button>
+    </Toolbar>
+    <p>No reports yet. Create one to get started.</p>
+  </main>
+</template>

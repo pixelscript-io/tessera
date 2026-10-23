@@ -1,0 +1,105 @@
+<page>
+{ "title": "Pricing" }
+</page>
+
+<script>
+const plans = [
+  {
+    id: 'free',
+    name: 'Free',
+    price: '$0',
+    featured: false,
+    cta: 'Get started',
+    features: ['1 project', 'Community support', 'Basic analytics'],
+  },
+  {
+    id: 'team',
+    name: 'Team',
+    price: '$29',
+    featured: true,
+    cta: 'Start free trial',
+    features: ['Unlimited projects', 'Priority support', 'Advanced analytics', 'Shared workspaces'],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 'Custom',
+    featured: false,
+    cta: 'Contact sales',
+    features: ['Single sign-on', 'Dedicated support', 'Audit logs', 'Custom contracts'],
+  },
+]
+</script>
+
+<template>
+  <main class="root">
+    <h1>Pricing</h1>
+    <p class="intro">Pick the plan that fits your team.</p>
+    <div class="plans">
+      <section each="plan in plans" key="plan.id" class="card" :data-featured="plan.featured">
+        <h2 class="name">{plan.name}</h2>
+        <p class="price">{plan.price}</p>
+        <ul class="features">
+          <li each="feature in plan.features" key="feature">{feature}</li>
+        </ul>
+        <Button size="lg" :emphasis="plan.featured ? 'solid' : 'outline'">{plan.cta}</Button>
+      </section>
+    </div>
+  </main>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  padding: $space.8;
+  color: $color.text.default;
+}
+
+.intro {
+  margin: 0;
+  color: $color.text.muted;
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space.6;
+  align-items: center;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  padding: $space.6;
+  border: 1px solid $color.surface.hover;
+  border-radius: $radius.lg;
+  background: $color.surface.raised;
+
+  &[data-featured='true'] {
+    padding-block: $space.8;
+    border: 2px solid $color.action.primary.bg;
+    background: $color.surface.default;
+    box-shadow: $shadow.md;
+  }
+}
+
+.name {
+  margin: 0;
+}
+
+.price {
+  margin: 0;
+  font-weight: $font.weight.bold;
+}
+
+.features {
+  display: grid;
+  gap: $space.2;
+  margin: 0;
+  padding-left: $space.6;
+  color: $color.text.muted;
+}
+</style>

@@ -1,0 +1,97 @@
+<contract>
+{
+  "name": "Notice",
+  "role": "group",
+  "description": "A message for the user with a tone (success, warning or error), an icon area and a dismiss button.",
+  "parts": ["root", "icon", "message", "dismiss"],
+  "variants": {
+    "tone": ["success", "warning", "error"] // first value is the default
+  },
+  "states": ["hover", "focus-visible"],
+  "slots": {
+    "default": "the message",
+    "icon": "optional leading icon"
+  },
+  "events": {
+    "dismiss": "fired when the user closes the notice"
+  }
+}
+</contract>
+
+<script>
+const visible = state(true)
+
+function close() {
+  visible.value = false
+  emit('dismiss')
+}
+</script>
+
+<template>
+  <div class="root" if="visible">
+    <span class="icon"><slot name="icon" /></span>
+    <div class="message"><slot /></div>
+    <button class="dismiss" type="button" aria-label="Dismiss" @click="close">&times;</button>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  align-items: flex-start;
+  gap: $space.3;
+  padding: $space.3 $space.4;
+  border: 1px solid $color.blue.600;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+  color: $color.text.default;
+
+  &[data-tone='warning'] {
+    border-color: $color.neutral.700;
+  }
+
+  &[data-tone='error'] {
+    border-color: $color.red.700;
+  }
+}
+
+.icon {
+  display: inline-flex;
+  color: $color.blue.600;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.root[data-tone='warning'] .icon {
+  color: $color.neutral.700;
+}
+
+.root[data-tone='error'] .icon {
+  color: $color.red.700;
+}
+
+.message {
+  flex: 1;
+}
+
+.dismiss {
+  padding: $space.1 $space.2;
+  border: 1px solid transparent;
+  border-radius: $radius.sm;
+  background: transparent;
+  color: $color.text.muted;
+  cursor: pointer;
+  transition-duration: $motion.duration.fast;
+
+  &:hover {
+    background: $color.surface.hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+}
+</style>

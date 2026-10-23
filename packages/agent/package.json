@@ -4,5 +4,14 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts"
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@tessera/compiler": "workspace:*"
+  },
+  "scripts": {
+    "score": "vite-node scripts/score-runs.ts"
+  },
+  "devDependencies": {
+    "vite-node": "^3.2.4"
+  }
 }

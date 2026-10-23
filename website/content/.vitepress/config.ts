@@ -14,6 +14,7 @@ const guide = [
   { text: 'Starter presets', link: '/guide/presets' },
   { text: 'The command line', link: '/guide/cli' },
   { text: 'Editor support', link: '/guide/editor' },
+  { text: 'AI coding tools', link: '/guide/agents' },
 ]
 
 const designSystems = [
@@ -118,6 +119,7 @@ export default defineConfig({
             { text: 'Overview', link: '/reference/' },
             { text: 'API', link: '/reference/api/' },
             { text: 'CLI', link: '/reference/cli' },
+            { text: 'MCP server', link: '/reference/mcp' },
             { text: 'tessera.config.ts', link: '/reference/config' },
             { text: 'Contract', link: '/reference/contract' },
             { text: 'Token format', link: '/reference/tokens' },

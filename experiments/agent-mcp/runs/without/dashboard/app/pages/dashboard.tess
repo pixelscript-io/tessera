@@ -1,0 +1,82 @@
+<page>
+{ "title": "Dashboard" }
+</page>
+
+<script>
+const stats = [
+  { id: 'users', label: 'Active users', value: '1,284' },
+  { id: 'orders', label: 'Orders today', value: '96' },
+  { id: 'revenue', label: 'Revenue', value: '$12,430' },
+  { id: 'errors', label: 'Open issues', value: '7' },
+]
+
+const activity = [
+  { id: 1, text: 'Maria Lopez placed order #4821', time: '2 min ago' },
+  { id: 2, text: 'New user signed up: dev@example.com', time: '14 min ago' },
+  { id: 3, text: 'Deploy v1.8.2 finished', time: '1 hour ago' },
+  { id: 4, text: 'Issue #212 was closed', time: '3 hours ago' },
+  { id: 5, text: 'Weekly report generated', time: 'Yesterday' },
+]
+</script>
+
+<template>
+  <main class="page">
+    <h1>Dashboard</h1>
+    <div class="tiles">
+      <StatTile each="stat in stats" key="stat.id" :value="stat.value">{stat.label}</StatTile>
+    </div>
+    <section class="activity" aria-labelledby="activity-title">
+      <h2 id="activity-title">Recent activity</h2>
+      <ul class="list">
+        <li class="item" each="item in activity" key="item.id">
+          <span class="text">{item.text}</span>
+          <span class="time">{item.time}</span>
+        </li>
+      </ul>
+    </section>
+  </main>
+</template>
+
+<style>
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space.6;
+  padding: $space.4;
+  background: $color.surface.default;
+  color: $color.text.default;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $space.4;
+}
+
+.activity {
+  padding: $space.4;
+  border-radius: $radius.lg;
+  background: $color.surface.raised;
+  color: $color.text.default;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: $space.4;
+  padding: $space.3 0;
+  border-bottom: 1px solid $color.surface.hover;
+}
+
+.time {
+  color: $color.text.muted;
+}
+</style>

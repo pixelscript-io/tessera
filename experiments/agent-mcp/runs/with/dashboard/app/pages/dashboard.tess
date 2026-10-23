@@ -1,0 +1,75 @@
+<page>
+{ "title": "Dashboard" }
+</page>
+
+<script>
+import StatTile from '../components/StatTile.tess'
+const stats = state([
+  { id: 1, label: 'Visitors', value: '12,480' },
+  { id: 2, label: 'Sign-ups', value: '342' },
+  { id: 3, label: 'Orders', value: '97' },
+  { id: 4, label: 'Revenue', value: '$8,120' },
+])
+const activity = state([
+  { id: 1, text: 'Ada Lovelace signed up', time: '2 min ago' },
+  { id: 2, text: 'Order #1042 was placed', time: '14 min ago' },
+  { id: 3, text: 'Grace Hopper upgraded her plan', time: '1 hour ago' },
+  { id: 4, text: 'Order #1041 was refunded', time: '3 hours ago' },
+])
+</script>
+
+<template>
+  <main class="page">
+    <h1>Dashboard</h1>
+    <section class="tiles">
+      <StatTile each="s in stats" key="s.id" label="{s.label}" value="{s.value}" />
+    </section>
+    <section class="activity">
+      <h2>Recent activity</h2>
+      <ul class="list">
+        <li each="a in activity" key="a.id" class="item">
+          <span>{a.text}</span>
+          <span class="time">{a.time}</span>
+        </li>
+      </ul>
+    </section>
+  </main>
+</template>
+
+<style>
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space.6;
+  padding: $space.4;
+  color: $color.text.default;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $space.4;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space.2;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  padding: $space.3 $space.4;
+  border-radius: $radius.sm;
+  background: $color.surface.raised;
+  color: $color.text.default;
+}
+
+.time {
+  color: $color.text.muted;
+}
+</style>

@@ -15,6 +15,7 @@
     "vitepress": "^1.6.0",
     "vite-node": "^3.2.4",
     "typescript": "^5.7.0",
+    "@tessera/agent": "workspace:*",
     "@tessera/compiler": "workspace:*",
     "@tessera/cli": "workspace:*",
     "@tessera/contract": "workspace:*",

@@ -1,0 +1,57 @@
+<page>
+{ "title": "Contact" }
+</page>
+
+<script>
+const name = state('')
+const email = state('')
+const message = state('')
+const sent = state(false)
+const incomplete = derived(() => name.value === '' || email.value === '' || message.value === '')
+
+function send() {
+  if (incomplete.value) return
+  sent.value = true
+}
+</script>
+
+<template>
+  <main class="page">
+    <h1>Contact</h1>
+    <form class="form" @submit.prevent="send">
+      <label class="field">Name
+        <input type="text" :value="name" @input="name.value = $event.target.value" />
+      </label>
+      <label class="field">Email
+        <input type="email" :value="email" @input="email.value = $event.target.value" />
+      </label>
+      <label class="field">Message
+        <textarea rows="5" :value="message" @input="message.value = $event.target.value"></textarea>
+      </label>
+      <Button size="md" :disabled="incomplete" @press="send">Send</Button>
+    </form>
+    <p if="sent">Thanks, your message was sent.</p>
+  </main>
+</template>
+
+<style>
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  padding: $space.4;
+  color: $color.text.default;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space.3;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+}
+</style>

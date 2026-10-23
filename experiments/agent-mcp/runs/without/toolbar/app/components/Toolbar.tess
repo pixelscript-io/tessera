@@ -1,0 +1,47 @@
+<contract>
+{
+  "name": "Toolbar",
+  "role": "toolbar",
+  "description": "A title on the left and a group of action buttons on the right.",
+  "parts": ["root", "title", "actions"],
+  "slots": { "default": "action buttons shown on the right" }
+}
+</contract>
+
+<script>
+const { title } = props({ title: '' })
+</script>
+
+<template>
+  <div class="root" role="toolbar" :aria-label="title">
+    <h2 class="title">{title}</h2>
+    <div class="actions">
+      <slot />
+    </div>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space.4;
+  padding: $space.2 $space.4;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+  color: $color.text.default;
+}
+
+.title {
+  margin: 0;
+  font-family: $font.family.sans;
+  font-weight: $font.weight.bold;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: $space.2;
+}
+</style>

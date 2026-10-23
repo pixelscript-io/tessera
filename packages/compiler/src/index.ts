@@ -65,3 +65,11 @@ export {
   type Explanation,
 } from './explanations'
 export { runExample, type ExampleEnv, type ExampleOutput } from './explain-run'
+export {
+  buildAgentManifest,
+  type AgentManifest,
+  type ManifestComponent,
+  type ManifestRoutes,
+  type ManifestRules,
+  type ManifestTokens,
+} from './agent-manifest'

@@ -17,6 +17,7 @@ import {
   type ExampleEnv,
 } from '@tessera/compiler'
 import { loadDesignTokens } from '@tessera/compiler/project'
+import { TOOLS } from '@tessera/agent'
 import { COMMANDS_DOC, GLOBAL_OPTIONS } from '@tessera/cli'
 import { contractSchema } from '@tessera/contract'
 import { buildTokens, SUPPORTED_TYPES } from '@tessera/tokens'
@@ -159,6 +160,30 @@ function cli() {
     'Exit codes: `0` on success, `1` on any error, with the message printed to standard error.',
   )
   write('cli.md', lines.join('\n'))
+}
+
+// --- MCP tools ------------------------------------------------------------------------------------------
+
+function mcpTools() {
+  const lines = [
+    '# MCP server reference',
+    '',
+    'The tools `tessera mcp` offers an AI client. All of them are read-only. See [AI coding tools](/guide/agents) for how to connect a client.',
+    '',
+  ]
+  for (const tool of TOOLS) {
+    lines.push(`## ${tool.name}`, '', safe(tool.description), '')
+    const props = Object.entries(tool.inputSchema.properties)
+    if (props.length) {
+      lines.push('| Argument | Type | |', '| --- | --- | --- |')
+      for (const [name, p] of props) {
+        const required = tool.inputSchema.required?.includes(name) ? ' Required.' : ''
+        lines.push(`| ${code(name)} | ${p.type} | ${cell(p.description)}${required} |`)
+      }
+      lines.push('')
+    } else lines.push('No arguments.', '')
+  }
+  write('mcp.md', lines.join('\n'))
 }
 
 // --- config ---------------------------------------------------------------------------------------------
@@ -383,6 +408,7 @@ function api() {
 themeTokens()
 errors()
 cli()
+mcpTools()
 config()
 contract()
 tokens()

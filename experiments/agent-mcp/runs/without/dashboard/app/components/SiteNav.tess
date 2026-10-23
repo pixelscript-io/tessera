@@ -1,0 +1,53 @@
+<contract>
+{
+  "name": "SiteNav",
+  "role": "navigation",
+  "description": "The main navigation of the kitchen-sink app, with the theme and density switches.",
+  "parts": ["root", "links", "switches"]
+}
+</contract>
+
+<script>
+import { setDensity, setTheme } from '@pixelscriptio/tessera/tokens'
+
+const light = () => setTheme(null)
+const dark = () => setTheme('dark')
+const comfortable = () => setDensity(null)
+const compact = () => setDensity('compact')
+</script>
+
+<template>
+  <nav class="root" aria-label="Main">
+    <div class="links">
+      <Link to="/">Home</Link>
+      <Link to="/about">About</Link>
+      <Link to="/blog">Blog</Link>
+      <Link to="/dashboard">Dashboard</Link>
+    </div>
+    <div class="switches">
+      <Button tone="neutral" emphasis="outline" size="sm" @press="light">Light</Button>
+      <Button tone="neutral" emphasis="outline" size="sm" @press="dark">Dark</Button>
+      <Button tone="neutral" emphasis="outline" size="sm" @press="comfortable">Comfortable</Button>
+      <Button tone="neutral" emphasis="outline" size="sm" @press="compact">Compact</Button>
+    </div>
+  </nav>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: $space.4;
+  padding: $space.2 $space.4;
+  background: $color.surface.raised;
+  color: $color.text.default;
+}
+
+.links,
+.switches {
+  display: flex;
+  align-items: center;
+  gap: $space.2;
+}
+</style>

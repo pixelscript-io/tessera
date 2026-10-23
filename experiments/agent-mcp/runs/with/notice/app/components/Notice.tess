@@ -1,0 +1,92 @@
+<contract>
+{
+  "name": "Notice",
+  "role": "group",
+  "description": "A success, warning or error message with an icon area and a dismiss button.",
+  "parts": ["root", "icon", "message", "dismiss"],
+  "variants": {
+    "tone": ["success", "warning", "error"] // first value is the default
+  },
+  "slots": {
+    "default": "the message",
+    "icon": "optional leading icon"
+  },
+  "events": {
+    "dismiss": "the user closed the notice"
+  }
+}
+</contract>
+
+<script>
+const open = state(true)
+
+function dismiss() {
+  open.value = false
+  emit('dismiss')
+}
+</script>
+
+<template>
+  <div class="root">
+    <div class="box" if="open">
+      <span class="icon" aria-hidden="true"><slot name="icon" /></span>
+      <div class="message"><slot /></div>
+      <button class="dismiss" type="button" aria-label="Dismiss" @click="dismiss">×</button>
+    </div>
+  </div>
+</template>
+
+<style>
+.root {
+  --notice-accent: $color.action.primary.text;
+
+  &[data-tone='warning'] {
+    --notice-accent: $color.text.muted;
+  }
+
+  &[data-tone='error'] {
+    --notice-accent: $color.action.danger.text;
+  }
+}
+
+.box {
+  display: flex;
+  align-items: center;
+  gap: $space.3;
+  padding: $space.3 $space.4;
+  border: 1px solid var(--notice-accent);
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+  color: $color.text.default;
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--notice-accent);
+}
+
+.icon:empty {
+  display: none;
+}
+
+.dismiss {
+  padding: $space.1 $space.2;
+  border-radius: $radius.sm;
+  background: transparent;
+  color: $color.text.default;
+  cursor: pointer;
+
+  &:hover {
+    background: $color.surface.hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+}
+
+.message {
+  flex: 1;
+}
+</style>

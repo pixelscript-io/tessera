@@ -84,6 +84,15 @@ export function tessera(options: TesseraOptions = {}): Plugin {
     writeFileSync(path, text)
   }
 
+  /** Write `.tessera/manifest.json`, the project's components, tokens, routes and rules, only when it changed. */
+  const writeManifest = () => {
+    const path = join(root, '.tessera', 'manifest.json')
+    const text = JSON.stringify(project.agentManifest(), null, 2) + String.fromCharCode(10)
+    if (existsSync(path) && readFileSync(path, 'utf8') === text) return
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, text)
+  }
+
   const loadRoutes = (): ProjectRoutes => project.routes()
 
   const pagesDisplay = () => relative(root, loadRoutes().dir).replaceAll('\\', '/')
@@ -131,6 +140,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       project.resetRoutes()
       writeComponentTypes()
       writeRouteTypes()
+      writeManifest()
       // A build fails on a route conflict even if nothing imports the routes; the dev server shows it on load.
       if (!serving && routeErrors()) this.error(routeErrors())
     },
@@ -158,6 +168,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
         project.resetRoutes()
         if (snapshot() === before) return
         writeRouteTypes()
+        writeManifest()
         const virtual = server.moduleGraph.getModuleById(RESOLVED_ROUTES_ID)
         if (virtual) server.moduleGraph.invalidateModule(virtual)
         for (const module of server.moduleGraph.idToModuleMap.values()) {
@@ -180,6 +191,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
         const after = signature(loadComponents())
         if (before === after) return
         writeComponentTypes()
+        writeManifest()
         for (const module of server.moduleGraph.idToModuleMap.values()) {
           if (module.file?.endsWith('.tess') && !module.id?.includes('type=style')) {
             // Drop the cached compile first: the next request must see the new registry, hot updates or not.
@@ -200,6 +212,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       server.watcher.on('change', (file) => {
         if (file.endsWith('.tokens.json')) {
           project.resetTokens()
+          writeManifest()
           const module = server.moduleGraph.getModuleById(RESOLVED_TOKENS_ID)
           if (module) void server.reloadModule(module)
         } else if (inComponents(file)) refreshComponents()

@@ -1,4 +1,5 @@
 import { parseArgs, type Args } from './args'
+import { agentFiles, manifest, mcp } from './commands/agent'
 import { baseline } from './commands/baseline'
 import { check } from './commands/check'
 import { eject } from './commands/eject'
@@ -25,6 +26,9 @@ const COMMANDS: Record<string, Command> = {
   new: newCommand,
   eject,
   explain,
+  manifest,
+  mcp,
+  'agent-files': agentFiles,
 }
 
 export { COMMANDS_DOC, GLOBAL_OPTIONS, helpText, type CommandDoc } from './commands-doc'

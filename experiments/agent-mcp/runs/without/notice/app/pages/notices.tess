@@ -1,0 +1,22 @@
+<page>
+{ "title": "Notices" }
+</page>
+
+<template>
+  <main>
+    <h1>Notices</h1>
+    <Notice tone="success">
+      <span slot="icon">&#10003;</span>
+      Your changes were saved.
+    </Notice>
+    <Notice tone="warning">
+      <span slot="icon">!</span>
+      Your session will expire in five minutes.
+    </Notice>
+    <Notice tone="error">
+      <span slot="icon">&#10007;</span>
+      The upload failed. Try again.
+    </Notice>
+    <Link to="/">Home</Link>
+  </main>
+</template>

@@ -1,0 +1,99 @@
+<page>
+{ "title": "Settings" }
+</page>
+
+<script>
+const name = state('')
+const email = state('')
+const saved = state(false)
+const confirming = state(false)
+const deleted = state(false)
+
+function save() {
+  saved.value = true
+}
+
+function askDelete() {
+  confirming.value = true
+}
+
+function cancelDelete() {
+  confirming.value = false
+}
+
+function confirmDelete() {
+  confirming.value = false
+  deleted.value = true
+}
+</script>
+
+<template>
+  <main class="root">
+    <h1>Settings</h1>
+
+    <section class="section" aria-labelledby="profile-heading">
+      <h2 id="profile-heading">Profile</h2>
+      <label class="field">
+        <span>Name</span>
+        <input type="text" :value="name" @input="name.value = $event.target.value" />
+      </label>
+      <label class="field">
+        <span>Email</span>
+        <input type="email" :value="email" @input="email.value = $event.target.value" />
+      </label>
+      <div>
+        <Button tone="primary" size="md" @press="save">Save</Button>
+      </div>
+      <p if="saved" role="status">Profile saved.</p>
+    </section>
+
+    <section class="danger" aria-labelledby="danger-heading">
+      <h2 id="danger-heading">Danger zone</h2>
+      <p>Deleting your account is permanent and cannot be undone.</p>
+      <div if="confirming" role="alertdialog" aria-label="Confirm account deletion" class="confirm">
+        <p>Are you sure you want to delete your account?</p>
+        <ConfirmBar @confirm="confirmDelete" @cancel="cancelDelete" />
+      </div>
+      <div else>
+        <Button tone="danger" emphasis="outline" size="md" @press="askDelete">Delete account</Button>
+      </div>
+      <p if="deleted" role="status">Account deleted.</p>
+    </section>
+  </main>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.6;
+  padding: $space.4;
+  color: $color.text.default;
+}
+
+.section,
+.danger {
+  display: flex;
+  flex-direction: column;
+  gap: $space.3;
+  padding: $space.4;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+}
+
+.danger {
+  border: 1px solid $color.action.danger.text;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: $space.2;
+}
+</style>

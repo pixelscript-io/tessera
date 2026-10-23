@@ -1,0 +1,13 @@
+<page>
+{ "title": "Notices", "layout": false }
+</page>
+
+<template>
+  <main>
+    <h1>Notices</h1>
+    <Notice tone="success"><span slot="icon">✓</span>Your changes were saved.</Notice>
+    <Notice tone="warning"><span slot="icon">!</span>Your session expires in five minutes.</Notice>
+    <Notice tone="error"><span slot="icon">✕</span>The payment could not be processed.</Notice>
+    <Link to="/">Home</Link>
+  </main>
+</template>

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { applyBaseline, applySeverity, type Baseline, type BaselineResult } from './accountability'
+import { buildAgentManifest, type AgentManifest } from './agent-manifest'
 import { compile, kindFromPath, type CompileResult, type FileKind } from './compile'
 import type { TesseraConfig } from './config'
 import type { CompilerDiagnostic } from './diagnostics'
@@ -101,6 +102,23 @@ export class Project {
   layoutNames(): string[] | undefined {
     const routes = this.routes()
     return existsSync(routes.dir) ? routes.layouts : undefined
+  }
+
+  /** The project's components, tokens, routes and rules as one JSON-able object, for tools that read it. */
+  agentManifest(): AgentManifest {
+    const tokens = this.tokens()
+    const routes = this.routes()
+    return buildAgentManifest({
+      components: [...this.components().registry.entries.values()].map((e) => ({
+        name: e.name,
+        file: this.display(e.file),
+        contract: e.contract,
+      })),
+      tokens: tokens?.ok ? tokens.manifest : undefined,
+      routes: existsSync(routes.dir) ? routes.manifest : undefined,
+      layouts: routes.layouts,
+      config: this.options.config,
+    })
   }
 
   baselinePath(): string {

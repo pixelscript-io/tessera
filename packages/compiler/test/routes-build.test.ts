@@ -103,6 +103,22 @@ describe('typed links', () => {
     expect(dts).toContain('"/blog/:slug": { slug: string }')
     expect(dts).not.toContain('404')
   })
+
+  it('write .tessera/manifest.json with the routes and components', async () => {
+    const root = app({
+      'app/pages/index.tess': page('Home', ''),
+      'app/pages/blog/[slug].tess': page('Post', ''),
+    })
+    await bundle(root)
+    const manifest = JSON.parse(readFileSync(`${root}/.tessera/manifest.json`, 'utf8'))
+    expect(manifest.generator).toBe('tessera')
+    expect(manifest.routes.routes.map((r: { path: string }) => r.path)).toEqual([
+      '/',
+      '/about',
+      '/blog/:slug',
+    ])
+    expect(manifest.components.map((c: { name: string }) => c.name)).toContain('Link')
+  })
 })
 
 describe('the virtual routes module', () => {

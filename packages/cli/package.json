@@ -19,6 +19,7 @@
     "generate:tailwind": "vite-node scripts/generate-tailwind.ts"
   },
   "dependencies": {
+    "@tessera/agent": "workspace:*",
     "@tessera/compiler": "workspace:*",
     "@tessera/contract": "workspace:*",
     "@tessera/router": "workspace:*",

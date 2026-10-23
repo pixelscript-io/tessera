@@ -1,0 +1,95 @@
+<contract>
+{
+  "name": "ContactForm",
+  "role": "form",
+  "description": "A contact form with name, email and message. Send stays disabled until all three have content.",
+  "parts": ["root", "field", "label", "input", "message", "actions"],
+  "events": { "send": "fired with { name, email, message } when the form is sent" }
+}
+</contract>
+
+<script>
+const name = state('')
+const email = state('')
+const message = state('')
+
+const canSend = derived(
+  () => name.value.trim() !== '' && email.value.trim() !== '' && message.value.trim() !== '',
+)
+const disabled = derived(() => !canSend.value)
+
+function setName(event) {
+  name.value = event.target.value
+}
+
+function setEmail(event) {
+  email.value = event.target.value
+}
+
+function setMessage(event) {
+  message.value = event.target.value
+}
+
+function send() {
+  if (!canSend.value) return
+  emit('send', { name: name.value, email: email.value, message: message.value })
+}
+</script>
+
+<template>
+  <form class="root" @submit.prevent="send">
+    <div class="field">
+      <label class="label" for="contact-name">Name</label>
+      <input class="input" id="contact-name" type="text" name="name" :value="name" @input="setName" />
+    </div>
+    <div class="field">
+      <label class="label" for="contact-email">Email</label>
+      <input class="input" id="contact-email" type="email" name="email" :value="email" @input="setEmail" />
+    </div>
+    <div class="field">
+      <label class="label" for="contact-message">Message</label>
+      <textarea class="message" id="contact-message" name="message" rows="6" :value="message" @input="setMessage"></textarea>
+    </div>
+    <div class="actions">
+      <Button tone="primary" :disabled="disabled" @press="send">Send</Button>
+    </div>
+  </form>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  padding: $space.4;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+  color: $color.text.default;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+}
+
+.input,
+.message {
+  padding: $space.2;
+  border: 1px solid currentColor;
+  border-radius: $radius.sm;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font: inherit;
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+</style>

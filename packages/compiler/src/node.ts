@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
 import { buildRouteManifest, type RouteManifest } from '@tessera/router/manifest'
-import { buildTokens, type TokenDiagnostic } from '@tessera/tokens'
+import { buildTokens, type TokenDiagnostic, type TokenManifest } from '@tessera/tokens'
 import { loadTokenDir } from '@tessera/tokens/node'
 import type { ComponentInfo, ComponentResolver } from './codegen'
 import { extractContract, listImports } from './compile'
@@ -57,7 +57,7 @@ export function findUp(start: string, relativePath: string): string | undefined 
 }
 
 export type DesignTokens =
-  | { ok: true; dir: string; tokens: StyleTokens; css: string }
+  | { ok: true; dir: string; tokens: StyleTokens; css: string; manifest: TokenManifest }
   | { ok: false; dir: string; diagnostics: TokenDiagnostic[] }
 
 /**
@@ -67,7 +67,13 @@ export type DesignTokens =
 export function loadDesignTokens(dir: string): DesignTokens {
   const result = buildTokens(loadTokenDir(dir))
   return result.ok
-    ? { ok: true, dir, tokens: StyleTokens.fromManifest(result.manifest!), css: result.css }
+    ? {
+        ok: true,
+        dir,
+        tokens: StyleTokens.fromManifest(result.manifest!),
+        css: result.css,
+        manifest: result.manifest!,
+      }
     : { ok: false, dir, diagnostics: result.diagnostics }
 }
 

@@ -106,7 +106,15 @@ importers:
         specifier: ^4.10.0
         version: 4.14.0
 
-  packages/agent: {}
+  packages/agent:
+    dependencies:
+      '@tessera/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+    devDependencies:
+      vite-node:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@26.6.5)
 
   packages/behavior:
     devDependencies:
@@ -116,6 +124,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@tessera/agent':
+        specifier: workspace:*
+        version: link:../agent
       '@tessera/compiler':
         specifier: workspace:*
         version: link:../compiler
@@ -235,6 +246,9 @@ importers:
 
   website:
     devDependencies:
+      '@tessera/agent':
+        specifier: workspace:*
+        version: link:../packages/agent
       '@tessera/cli':
         specifier: workspace:*
         version: link:../packages/cli

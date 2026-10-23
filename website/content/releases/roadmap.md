@@ -4,7 +4,6 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 ## Next
 
-- **Agent-readable exports.** A manifest generator, a read-only MCP server over it, and `AGENTS.md` and `llms.txt` output for your own design system (this site already has `llms.txt`).
 - **The design-system docs app** (`@tessera/docs`): generated from your contracts and tokens, with live previews, token pages and the coverage overview, and a static export.
 - **Interchange.** `tessera tokens import` and `export` for strict DTCG, and adapters for Tokens Studio and Penpot.
 - **Versioning tools.** `tessera diff`, codemods for renames, and a deprecation window.

@@ -5,6 +5,7 @@ This page records what each milestone of v0.1 delivered, newest first. A generat
 ## v0.1 (in progress)
 
 - **Published:** `@pixelscriptio/tessera` and `@pixelscriptio/create-tessera` 0.1.0 are on npm.
+- **Milestone 13: agent-readable exports.** `.tessera/manifest.json` (components, tokens in every theme, routes, rules), `tessera mcp` (a read-only MCP server that lists and searches components, returns contracts, resolves a raw value to a token and validates a snippet with the compiler), `tessera agent-files` (AGENTS.md and llms.txt) and a `custom-elements.json` export. See [AI coding tools](/guide/agents).
 - **Milestone 12b: one package and starter presets.** The framework is one package, `@pixelscriptio/tessera` (plus `@pixelscriptio/create-tessera` for `npm create`). `tessera dev`, `build` and `preview` need no config files. `tessera init` works beside an existing `package.json`, asks for a preset, and never overwrites a file: `tailwind` writes a full design system built from Tailwind's default theme with a styled index page, `none` writes no tokens and commented examples. Tested by installing the packed tarball into a clean folder and running both presets in a browser.
 
 - **Milestone 12: documentation site.** This site: error reference with one page per code and `tessera explain`, generated references (API, CLI, config, contract, tokens), docs checked in CI (samples compiled, links resolved), tokens-driven theme, accessibility checks.
