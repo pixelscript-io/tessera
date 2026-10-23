@@ -107,6 +107,7 @@ function pnpmAdd(file: string, cwd: string, env: NodeJS.ProcessEnv): void {
     const e = error as { stdout?: string; stderr?: string; message: string }
     throw new Error(
       `pnpm add failed in ${cwd}:\n${e.stdout ?? ''}\n${e.stderr ?? ''}\n${e.message}`,
+      { cause: error },
     )
   }
 }

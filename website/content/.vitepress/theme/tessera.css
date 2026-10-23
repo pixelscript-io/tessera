@@ -50,3 +50,12 @@
 .vp-doc div[class*='language-'] pre {
   outline-offset: -2px;
 }
+
+/*
+ * Inline code inside a tip, warning or other custom block: VitePress colors it with the brand color on a tinted
+ * background, which is under 4.5:1. Use the text token on a light wash of itself instead.
+ */
+.vp-doc .custom-block code {
+  color: var(--t-color-text-default);
+  background: color-mix(in srgb, var(--t-color-text-default) 12%, transparent);
+}
