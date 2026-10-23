@@ -14,6 +14,8 @@ export interface DocsData {
   /** `tessera report` as it would print with `--json`, when the host provides it. */
   report?: unknown
   hasTokens: boolean
+  /** Whether the system manager (write mode) is on. Set by the plugin, not by the builder. */
+  edit?: boolean
 }
 
 export interface DocsComponent {

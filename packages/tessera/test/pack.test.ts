@@ -153,6 +153,7 @@ describe('the packed package', () => {
       'package/dist/components/Link.tess',
       'package/dist/docs-client/main.ts',
       'package/dist/docs-client/style.ts',
+      'package/dist/docs-client/editor.ts',
       'package/dist/types/packages/tessera/src/core.d.ts',
       'package/dist/types/packages/tessera/src/router.d.ts',
     ]) {

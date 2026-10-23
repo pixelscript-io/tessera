@@ -12,5 +12,5 @@ website/content/reference/contract.md
 website/content/reference/tokens.md
 website/content/.vitepress/theme/tokens.css
 experiments/agent-mcp/work
-.docs-test
+.docs-test*
 .format-test

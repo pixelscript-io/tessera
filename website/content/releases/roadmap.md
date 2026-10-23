@@ -4,7 +4,6 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 ## Next
 
-- **A system manager.** The design system docs app gaining an editing mode, so that people who do not write code can change tokens and contract fields through a UI, with every change checked by the compiler first and shown as breaking or not before it is saved. Proposed; its open questions are being decided.
 - **A deprecation window** that the tooling enforces (`tessera diff` and the codemods exist; the window does not).
 
 ## Later

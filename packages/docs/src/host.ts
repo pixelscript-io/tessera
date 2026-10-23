@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tessera } from '@tessera/compiler/vite'
 import { build, createServer, type InlineConfig, type ViteDevServer } from 'vite'
+import { newSecret } from './api'
 import { DOCS_DIR, docsHtml, docsPlugin, type DocsOptions } from './plugin'
 
 /** Vite's config for the docs app. It does not use the project's own `vite.config`: the docs are not the app. */
@@ -22,14 +23,22 @@ function projectName(root: string): string {
 export async function serveDocs(
   root: string,
   options: DocsOptions & { port?: number } = {},
-): Promise<ViteDevServer> {
-  const base = config(root, options)
+): Promise<ViteDevServer & { editUrl?: string }> {
+  // Write mode gets a fresh secret and is bound to the loopback address only, never to the network.
+  const secret = options.edit ? (options.secret ?? newSecret()) : undefined
+  const base = config(root, { ...options, ...(secret ? { secret } : {}) })
   const server = await createServer({
     ...base,
-    ...(options.port !== undefined ? { server: { port: options.port } } : {}),
+    server: {
+      ...(options.edit ? { host: '127.0.0.1' } : {}),
+      ...(options.port !== undefined ? { port: options.port } : {}),
+    },
   })
   await server.listen()
-  return server
+  const result = server as ViteDevServer & { editUrl?: string }
+  const local = server.resolvedUrls?.local[0]
+  if (secret && local) result.editUrl = `${local}?key=${secret}`
+  return result
 }
 
 /**

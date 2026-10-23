@@ -27,8 +27,19 @@ export async function docs(args: Args, io: Io): Promise<number> {
   if (port !== undefined && (typeof port !== 'string' || !/^\d+$/.test(port))) {
     throw new CliError(`"--port" needs a number, got ${String(port)}.`)
   }
-  const server = await serveDocs(root, { report, ...(port ? { port: Number(port) } : {}) })
-  server.printUrls()
+  const edit = has(args, 'edit')
+  const server = await serveDocs(root, {
+    report,
+    edit,
+    ...(port ? { port: Number(port) } : {}),
+  })
+  if (edit && server.editUrl) {
+    io.out('Editing is on. Open this address (it carries a key that is new each run):')
+    io.out(`  ${server.editUrl}`)
+    io.out(
+      'Anyone who can open it on this computer can change the project files. The docs listen on this computer only.',
+    )
+  } else server.printUrls()
   await new Promise<void>((done) => server.httpServer?.on('close', done))
   return 0
 }

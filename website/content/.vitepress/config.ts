@@ -15,6 +15,7 @@ const guide = [
   { text: 'The command line', link: '/guide/cli' },
   { text: 'Importing and exporting tokens', link: '/guide/interchange' },
   { text: 'The design system docs', link: '/guide/docs-app' },
+  { text: 'The system manager', link: '/guide/system-manager' },
   { text: 'Editor support', link: '/guide/editor' },
   { text: 'AI coding tools', link: '/guide/agents' },
 ]

@@ -19,4 +19,4 @@ export {
   type ContractCode,
   type ContractDiagnostic,
 } from './diagnostics'
-export { parseJsonc, JsonSyntaxError, lineTable, type JsonNode } from './jsonc'
+export { parseJsonc, JsonSyntaxError, lineTable, type JsonNode, type JsonProp } from './jsonc'

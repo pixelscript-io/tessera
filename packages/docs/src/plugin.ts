@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadConfigFile, Project } from '@tessera/compiler/project'
 import { searchForWorkspaceRoot, type HmrContext, type Plugin, type ViteDevServer } from 'vite'
+import { API_PREFIX, Editor } from './api'
 import { buildDocsData, type DocsData } from './data'
 
 const DATA_ID = 'virtual:tessera-docs/data'
@@ -14,9 +15,16 @@ const VIRTUAL_IDS = [DATA_ID, COMPONENTS_ID, RUNTIME_ID]
 /** The folder the docs app writes its generated files into, inside the project's own `.tessera`. */
 export const DOCS_DIR = ['.tessera', 'docs']
 
+/** The most the write interface reads from one request: a token export is the largest thing sent. */
+const MAX_BODY = 8 * 1024 * 1024
+
 export interface DocsOptions {
   /** `tessera report` as JSON; the host passes it in because the report lives with the CLI. */
   report?: (project: Project) => unknown
+  /** Turn on the system manager (the write interface). Off, every write route answers 404. */
+  edit?: boolean
+  /** The per-run secret the write interface requires. Make one with `newSecret()`. */
+  secret?: string
 }
 
 /** Where the client source is: next to this file when running from source, in `docs-client/` once packaged. */
@@ -67,6 +75,7 @@ export function docsPlugin(options: DocsOptions = {}): Plugin {
   let project: Project
   let data: DocsData | undefined
   let hasTokens = false
+  let editor: Editor | undefined
 
   const docsDir = () => join(root, ...DOCS_DIR)
   const liveModule = (component: string, index: number) =>
@@ -154,6 +163,7 @@ export function docsPlugin(options: DocsOptions = {}): Plugin {
       root = config.root
       const fromFile = await loadConfigFile(root)
       project = new Project(root, { ...fromFile?.options })
+      editor = new Editor(project, { edit: !!options.edit, secret: options.secret ?? '' })
       refresh()
     },
 
@@ -162,7 +172,9 @@ export function docsPlugin(options: DocsOptions = {}): Plugin {
     },
 
     load(id) {
-      if (id === RESOLVED(DATA_ID)) return `export default ${JSON.stringify(data ?? refresh())}`
+      if (id === RESOLVED(DATA_ID)) {
+        return `export default ${JSON.stringify({ ...(data ?? refresh()), edit: !!options.edit })}`
+      }
       if (id === RESOLVED(COMPONENTS_ID)) return components()
       if (id === RESOLVED(RUNTIME_ID)) {
         return "export { state, createRoot, getRenderer } from '@pixelscriptio/tessera/core'\n"
@@ -197,6 +209,38 @@ export function docsPlugin(options: DocsOptions = {}): Plugin {
       server.watcher.on('add', changed)
       server.watcher.on('unlink', changed)
       server.watcher.on('change', changed)
+
+      // The write interface. It answers every request itself, including with a 404 when editing is off.
+      server.middlewares.use((req, res, next) => {
+        const url = req.url ?? '/'
+        if (!url.startsWith(API_PREFIX) || !editor) return next()
+        const chunks: Buffer[] = []
+        let size = 0
+        let refused = false
+        req.on('data', (chunk: Buffer) => {
+          size += chunk.length
+          if (size > MAX_BODY) refused = true
+          else chunks.push(chunk)
+        })
+        req.on('end', () => {
+          const headers: Record<string, string | undefined> = {}
+          for (const [name, value] of Object.entries(req.headers)) {
+            headers[name] = Array.isArray(value) ? value[0] : value
+          }
+          const out = refused
+            ? { status: 413, body: { error: 'That is too large for the editor.' } }
+            : editor!.handle({
+                method: req.method ?? 'GET',
+                url,
+                headers,
+                body: Buffer.concat(chunks).toString('utf8'),
+              })
+          res.statusCode = out.status
+          res.setHeader('Content-Type', 'application/json')
+          res.setHeader('Cache-Control', 'no-store')
+          res.end(JSON.stringify(out.body))
+        })
+      })
 
       // Before Vite's own middleware: every page request gets the docs page.
       server.middlewares.use((req, res, next) => {

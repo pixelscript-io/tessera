@@ -52,6 +52,10 @@ npx tessera docs --static
 
 writes `docs-dist` (change it with `--out <folder>`): an `index.html`, one JavaScript module with the components it previews in chunks beside it, a stylesheet, all with relative URLs, and routing by `#` so no server rewrite rule is needed. Any file server can host it. It is the same app with the data compiled in, so the coverage report is a snapshot of the day you exported.
 
+## Editing
+
+The docs are read-only. `tessera docs --edit` turns them into a [system manager](/guide/system-manager): forms to change component contracts, and a way to bring in a token export, with every change checked by the compiler before it is saved.
+
 ## What it does not do yet
 
 - It does not run the accessibility suites. That is the test runner's job, and a result in the docs would be a copy of one run.

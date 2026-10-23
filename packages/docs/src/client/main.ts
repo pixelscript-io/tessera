@@ -2,6 +2,7 @@ import raw from 'virtual:tessera-docs/data'
 import { components, live } from 'virtual:tessera-docs/components'
 import { createRoot, state } from 'virtual:tessera-docs/runtime'
 import type { DocsComponent, DocsData } from '../data'
+import { componentEditor, editBar, gitPanel, importPage, newComponentForm, readKey } from './editor'
 import { STYLE } from './style'
 
 const data = raw as DocsData
@@ -45,6 +46,27 @@ style.textContent = STYLE
 document.head.append(style)
 const root = document.getElementById('docs')!
 
+/** Write mode is on (the server says so) and this tab has the key. Everything below that edits is gated on it. */
+const editing = data.edit === true && readKey() !== null
+
+/** After a save the page reloads, so it shows the saved state; the server remembers what was saved. */
+const afterSave = {
+  saved: () => setTimeout(() => location.reload(), 600),
+  discarded: () => {},
+}
+
+/** A place on the page for the change panel, and the function that fills it. */
+function planRegion(): { region: HTMLElement; show: (panel: HTMLElement | null) => void } {
+  const region = h('div', { class: 'docs-plan-region', 'aria-live': 'polite' })
+  return {
+    region,
+    show: (panel) => {
+      region.replaceChildren(...(panel ? [panel] : []))
+      panel?.scrollIntoView({ block: 'nearest' })
+    },
+  }
+}
+
 const tokenGroups = [...new Set(data.tokens.entries.map((t) => t.path.split('.')[0]!))]
 
 function nav(current: string): HTMLElement {
@@ -83,6 +105,14 @@ function nav(current: string): HTMLElement {
             ...tokenGroups.map((g) => link(`/tokens/${g}`, g)),
             link('/tokens/contrast', 'Contrast'),
           ),
+        )
+      : null,
+    editing
+      ? h(
+          'div',
+          null,
+          h('h2', null, 'Manage'),
+          h('ul', null, link('/import', 'Bring in tokens'), link('/changes', 'Changes')),
         )
       : null,
   )
@@ -188,6 +218,15 @@ const card = (value: string, label: string) =>
   h('div', { class: 'docs-card' }, h('b', null, value), h('span', null, label))
 
 function overview(): HTMLElement {
+  const page = overviewPage()
+  if (editing) {
+    const { region, show } = planRegion()
+    page.append(h('h2', null, 'Add a component'), region, newComponentForm(show, afterSave))
+  }
+  return page
+}
+
+function overviewPage(): HTMLElement {
   const report = data.report as ReportLike | undefined
   const main = h(
     'div',
@@ -545,6 +584,10 @@ function componentPage(name: string): HTMLElement {
     h('h2', null, 'Preview'),
     preview(m),
   )
+  if (editing) {
+    const { region, show } = planRegion()
+    main.append(h('h2', null, 'Edit this component'), region, componentEditor(m, show, afterSave))
+  }
 
   if (c.prose) {
     const prose = h('div', { class: 'docs-prose' })
@@ -782,8 +825,12 @@ function render() {
   let page: HTMLElement
   const component = /^\/components\/(.+)$/.exec(route)
   const tokens = /^\/tokens\/(.+)$/.exec(route)
+  const pageName =
+    route === '/import' ? 'Bring in tokens' : route === '/changes' ? 'Changes' : undefined
   try {
-    if (component) page = componentPage(component[1]!)
+    if (editing && route === '/import') page = importPage(afterSave)
+    else if (editing && route === '/changes') page = changesPage()
+    else if (component) page = componentPage(component[1]!)
     else if (tokens) page = tokenPage(tokens[1]!)
     else page = overview()
   } catch (error) {
@@ -793,16 +840,28 @@ function render() {
       error instanceof Error ? error.message : String(error),
     )
   }
+  const main = h('main', { class: 'docs-main', id: 'main' }, page)
   root.replaceChildren(
     h('header', { class: 'docs-top' }, h('h1', null, `${data.project.name} docs`), switchers()),
-    h(
-      'div',
-      { class: 'docs-shell' },
-      nav(route),
-      h('main', { class: 'docs-main', id: 'main' }, page),
-    ),
+    h('div', { class: 'docs-shell' }, nav(route), main),
   )
-  document.title = `${component ? component[1] : tokens ? tokens[1] : 'Overview'} – ${data.project.name} docs`
+  if (editing) {
+    editBar(() => setTimeout(() => location.reload(), 300)).then(
+      (bar) => main.prepend(bar),
+      () => {},
+    )
+  }
+  document.title = `${pageName ?? (component ? component[1] : tokens ? tokens[1] : 'Overview')} – ${data.project.name} docs`
+}
+
+/** The changes page: what git says, and the button that proposes the manager's changes. */
+function changesPage(): HTMLElement {
+  const holder = h('div', null, h('h1', null, 'Changes'))
+  gitPanel({ proposed: () => {} }).then(
+    (panel) => holder.append(panel),
+    (error) => holder.append(h('p', { class: 'docs-error-line', role: 'alert' }, String(error))),
+  )
+  return holder
 }
 
 window.addEventListener('hashchange', render)

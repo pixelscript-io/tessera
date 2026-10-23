@@ -20,5 +20,5 @@ website/content/.vitepress/theme/tokens.css
 packages/cli/tailwind
 packages/cli/templates/tailwind/system/tokens
 experiments/agent-mcp/work
-.docs-test
+.docs-test*
 .format-test

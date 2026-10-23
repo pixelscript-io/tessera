@@ -199,6 +199,9 @@ importers:
       '@tessera/compiler':
         specifier: workspace:*
         version: link:../compiler
+      '@tessera/contract':
+        specifier: workspace:*
+        version: link:../contract
       '@tessera/tokens':
         specifier: workspace:*
         version: link:../tokens
