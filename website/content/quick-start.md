@@ -36,6 +36,10 @@ npm run dev
 
 `npx tessera init` asks which starting point you want (see below) and writes the project into the folder you are in. `npm run dev` starts the dev server and prints its address. Open it and you have a page.
 
+::: tip Using pnpm?
+pnpm 11 stops an install when a dependency has an install script nobody has approved, and Vite depends on esbuild, which has one. If `pnpm add @pixelscriptio/tessera` ends with `ERR_PNPM_IGNORED_BUILDS`, run `pnpm approve-builds`, allow `esbuild`, and run the install again. npm only prints a warning about it, and the project works either way: esbuild runs from a prebuilt binary.
+:::
+
 If you would rather not install first, `npm create @pixelscriptio/tessera my-app` starts a project in a new folder in one step.
 
 ### Until the package is published

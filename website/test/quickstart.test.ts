@@ -109,11 +109,16 @@ describe('the Quick start', () => {
       // The commands, exactly as the page writes them.
       const work = join(dir, 'work')
       mkdirSync(work)
-      const script = [...setup, serve].join('\n')
-      const child = spawn('bash', ['-c', script], {
-        cwd: work,
-        env: { ...env, TESSERA_TARBALL: tarball },
-      })
+      // Run line by line in the platform's own shell (cmd.exe, sh), so it needs no bash. `cd` moves where the
+      // next line runs, and `$TESSERA_TARBALL` is filled in, as a person would set it.
+      let cwd = work
+      const filled = (line: string) => line.replaceAll('$TESSERA_TARBALL', tarball)
+      for (const line of setup.flatMap((block) => block.split('\n')).filter((l) => l.trim())) {
+        const cd = /^cd\s+(.+)$/.exec(line.trim())
+        if (cd) cwd = join(cwd, cd[1]!)
+        else execSync(filled(line), { cwd, env, stdio: 'pipe' })
+      }
+      const child = spawn(serve, { cwd, env, shell: true })
       let output = ''
       child.stdout.on('data', (d) => (output += d))
       child.stderr.on('data', (d) => (output += d))

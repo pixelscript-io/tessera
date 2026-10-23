@@ -37,14 +37,19 @@ afterAll(() => made.forEach((d) => rmSync(d, { recursive: true, force: true })))
 
 /** `pnpm` if it is installed, else a shim that runs the pinned version through npx. */
 function pnpmEnv(dir: string): NodeJS.ProcessEnv {
+  // TESSERA_TEST_PNPM=11 runs the suite against another pnpm major without installing it globally.
+  const pinned = process.env.TESSERA_TEST_PNPM ?? '10'
   try {
+    if (process.env.TESSERA_TEST_PNPM) throw new Error('use the pinned version')
     execSync('pnpm --version', { stdio: 'ignore' })
     return process.env
   } catch {
     const bin = join(dir, 'bin')
     mkdirSync(bin, { recursive: true })
-    writeFileSync(join(bin, 'pnpm'), '#!/bin/sh\nexec npx --yes pnpm@10 "$@"\n', { mode: 0o755 })
-    writeFileSync(join(bin, 'pnpm.cmd'), '@echo off\r\nnpx --yes pnpm@10 %*\r\n')
+    writeFileSync(join(bin, 'pnpm'), `#!/bin/sh\nexec npx --yes pnpm@${pinned} "$@"\n`, {
+      mode: 0o755,
+    })
+    writeFileSync(join(bin, 'pnpm.cmd'), `@echo off\r\nnpx --yes pnpm@${pinned} %*\r\n`)
     return { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` }
   }
 }
@@ -79,6 +84,33 @@ beforeAll(() => {
   )
 }, 120_000)
 
+/**
+ * Add a tarball to a project with pnpm. It prefers pnpm's local cache, so a machine that has Vite and Acorn
+ * cached needs no network, and one that does not fetches them. A failure carries pnpm's own message.
+ */
+function pnpmAdd(file: string, cwd: string, env: NodeJS.ProcessEnv): void {
+  try {
+    // pnpm 11 fails an install whose dependencies have build scripts nobody approved (esbuild's); the project
+    // under test is not asking for that, so turn the check off here.
+    execSync(`pnpm add "${file}" --prefer-offline`, {
+      cwd,
+      // pnpm 11 reads `pnpm_config_*` (pnpm 10 read `npm_config_*`); set both.
+      env: {
+        ...env,
+        npm_config_strict_dep_builds: 'false',
+        pnpm_config_strict_dep_builds: 'false',
+      },
+      stdio: 'pipe',
+      encoding: 'utf8',
+    })
+  } catch (error) {
+    const e = error as { stdout?: string; stderr?: string; message: string }
+    throw new Error(
+      `pnpm add failed in ${cwd}:\n${e.stdout ?? ''}\n${e.stderr ?? ''}\n${e.message}`,
+    )
+  }
+}
+
 /** A fresh project folder with this package installed from the tarball. */
 function install(): string {
   const dir = scratch()
@@ -86,7 +118,7 @@ function install(): string {
     join(dir, 'package.json'),
     JSON.stringify({ name: 'my-app', private: true, type: 'module' }),
   )
-  execSync(`pnpm add "${tarball}" --offline`, { cwd: dir, env: env(), stdio: 'pipe' })
+  pnpmAdd(tarball, dir, env())
   return dir
 }
 
@@ -411,7 +443,14 @@ describe('@pixelscriptio/create-tessera, as `npm create @pixelscriptio/tessera` 
         pnpm: { overrides: { '@pixelscriptio/tessera': `file:${tarball.replaceAll('\\', '/')}` } },
       }),
     )
-    execSync(`pnpm add "${create}" --offline`, { cwd: dir, env: pnpmEnv(dir), stdio: 'pipe' })
+    // pnpm 11 reads settings from pnpm-workspace.yaml, not the "pnpm" field; pnpm 10 reads either. Write both.
+    writeFileSync(
+      join(dir, 'pnpm-workspace.yaml'),
+      `overrides:
+  "@pixelscriptio/tessera": "file:${tarball.replaceAll('\\', '/')}"
+`,
+    )
+    pnpmAdd(create, dir, pnpmEnv(dir))
 
     // Like `npm create @pixelscriptio/tessera my-site`: the bin runs `tessera init my-site`.
     const bin = join(
