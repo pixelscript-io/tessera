@@ -99,6 +99,36 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'tokens import',
+    usage:
+      'tessera tokens import <file or folder...> [--format dtcg|tokens-studio] [--out <folder>] [--force]',
+    summary: 'Bring in tokens from DTCG, a Resolver document, Tokens Studio or Penpot',
+    details:
+      'Reads tokens another tool wrote and writes Tessera token files: strict DTCG 2025.10 files, a DTCG Resolver document (its default context becomes the base, its other contexts become themes, and the files it names are read for you), or a Tokens Studio or Penpot export (a single file, or the multi-file layout with `$themes.json`). The format is detected unless `--format` says. Values from earlier drafts and from tools that write strings (`"#ff0000"`, `"16px"`) become the strict forms. Aliases are kept as aliases. What Tessera cannot represent (a gradient, a typography composite, a math expression) is skipped, reported as T1016 and kept under `$extensions.tessera.skipped`, so `export` puts it back. The result is built before anything is written, and nothing is written if it has errors. It never overwrites a file: use `--out` for a new folder, or `--force`.',
+    options: [
+      { flag: '--format <name>', description: 'dtcg or tokens-studio. Detected when left out.' },
+      {
+        flag: '--out <folder>',
+        description: "Where to write. Default: the project's tokens folder (`system/tokens`).",
+      },
+      { flag: '--force', description: 'Replace token files that already exist.' },
+    ],
+  },
+  {
+    name: 'tokens export',
+    usage: 'tessera tokens export [--format dtcg|tokens-studio] [--out <folder>]',
+    summary: 'Write the tokens as strict DTCG or as Tokens Studio sets',
+    details:
+      'Writes the project tokens for other tools. `dtcg` (the default) writes strict DTCG 2025.10 token files and `tessera.resolver.json`, a Resolver document with the base as a set and each attribute (`theme`, `density`) as a modifier with a context per theme. `tokens-studio` writes one file per set, `$themes.json` and `$metadata.json`, with colors and dimensions as the strings that plugin reads. Aliases are never flattened.',
+    options: [
+      { flag: '--format <name>', description: 'dtcg (default) or tokens-studio.' },
+      {
+        flag: '--out <folder>',
+        description: 'Where to write. Default `.tessera/export/<format>`.',
+      },
+    ],
+  },
+  {
     name: 'new component',
     usage: 'tessera new component <Name>',
     summary: 'Scaffold a component with a starter contract',

@@ -1,4 +1,8 @@
-import { buildTokens, formatDiagnostic as formatTokenDiagnostic } from '@tessera/tokens'
+import {
+  buildTokens,
+  formatDiagnostic as formatTokenDiagnostic,
+  importTokens,
+} from '@tessera/tokens'
 import { buildRouteManifest } from '@tessera/router/manifest'
 import { formatDiagnostic } from '@tessera/contract'
 import { compile, extractContract, kindFromPath } from './compile'
@@ -66,6 +70,13 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
         base: example.base.map(([file, content]) => ({ file, content })),
         themes: (example.themes ?? []).map(([file, content]) => ({ file, content })),
       })
+      return out(result.diagnostics.map((d) => ({ code: d.code, text: formatTokenDiagnostic(d) })))
+    }
+    case 'import': {
+      const result = importTokens(
+        example.files.map(([path, content]) => ({ path, content: JSON.stringify(content) })),
+        'dtcg',
+      )
       return out(result.diagnostics.map((d) => ({ code: d.code, text: formatTokenDiagnostic(d) })))
     }
     case 'routes': {

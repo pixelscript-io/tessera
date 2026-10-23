@@ -13,6 +13,7 @@ const guide = [
   { text: 'Testing', link: '/guide/testing' },
   { text: 'Starter presets', link: '/guide/presets' },
   { text: 'The command line', link: '/guide/cli' },
+  { text: 'Importing and exporting tokens', link: '/guide/interchange' },
   { text: 'Editor support', link: '/guide/editor' },
   { text: 'AI coding tools', link: '/guide/agents' },
 ]

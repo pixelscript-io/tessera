@@ -23,6 +23,7 @@ export type Example =
       }
     }
   | { kind: 'tokens'; base: Array<[string, unknown]>; themes?: Array<[string, unknown]> }
+  | { kind: 'import'; files: Array<[string, unknown]> }
   | { kind: 'routes'; files: string[] }
   | { kind: 'ts'; file: string; source: string }
   | { kind: 'config'; config: Record<string, unknown> }
@@ -224,6 +225,44 @@ export const EXPLANATIONS: Record<string, Explanation> = {
       themes: [
         ['a/dark.tokens.json', { $extends: 'base' }],
         ['b/dark.tokens.json', { $extends: 'base' }],
+      ],
+    },
+  },
+
+  T1016: {
+    cause:
+      'An import (`tessera tokens import`) left something out or changed it, so that what it wrote builds. A type Tessera does not support (a gradient, a typography composite) is skipped and kept under `$extensions.tessera.skipped`; a unitless number is read as pixels; a name with spaces is rewritten. It is a warning: nothing is lost silently, and `tessera tokens export` puts skipped tokens back.',
+    fix: 'Read the note and, if the token matters, express it in a type Tessera supports (for a typography composite, separate font family, size and weight tokens).',
+    example: {
+      kind: 'import',
+      files: [
+        [
+          'brand.json',
+          {
+            fancy: {
+              $type: 'gradient',
+              $value: [{ color: { colorSpace: 'srgb', components: [0, 0, 0] }, position: 0 }],
+            },
+          },
+        ],
+      ],
+    },
+  },
+  T1017: {
+    cause:
+      'An import could not read what it was given: a file that is not JSON, or a DTCG Resolver document that names a file that was not provided or a set or modifier it does not have.',
+    fix: 'Check the path. `tessera tokens import` reads the files a Resolver names from beside it, so keep them together.',
+    example: {
+      kind: 'import',
+      files: [
+        [
+          'tokens.resolver.json',
+          {
+            version: '2025.10',
+            sets: { base: { sources: [{ $ref: 'colors.json' }] } },
+            resolutionOrder: [{ $ref: '#/sets/base' }],
+          },
+        ],
       ],
     },
   },
@@ -701,6 +740,10 @@ export function exampleSource(example: Example): string {
       return example.source
     case 'tokens':
       return [...example.base, ...(example.themes ?? [])]
+        .map(([file, content]) => `// ${file}\n${JSON.stringify(content, null, 2)}`)
+        .join('\n\n')
+    case 'import':
+      return example.files
         .map(([file, content]) => `// ${file}\n${JSON.stringify(content, null, 2)}`)
         .join('\n\n')
     case 'routes':

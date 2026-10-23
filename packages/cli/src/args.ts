@@ -4,7 +4,7 @@ export interface Args {
 }
 
 /** Flags that take a value; every other `--flag` is a switch. */
-const WITH_VALUE = new Set(['out', 'root', 'link', 'port', 'preset'])
+const WITH_VALUE = new Set(['out', 'root', 'link', 'port', 'preset', 'format'])
 
 /** `tessera check --fix --root app` becomes positional `[]` and flags `fix`, `root=app`. */
 export function parseArgs(argv: string[]): Args {

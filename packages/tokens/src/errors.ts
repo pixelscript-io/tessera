@@ -14,6 +14,8 @@ export const TOKEN_CODES = {
   T1013: 'Duplicate token',
   T1014: 'Invalid theme file',
   T1015: 'Duplicate theme',
+  T1016: 'Import skipped or adjusted something',
+  T1017: 'Cannot read the import',
 } as const
 
 export type TokenCode = keyof typeof TOKEN_CODES
