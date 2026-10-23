@@ -8,11 +8,11 @@ Either way the project is yours: `init` writes ordinary files, never overwrites 
 
 ## `tessera`
 
-A small design system of Tessera's own, in `system/`: warm neutrals and near-black text, sharp corners, medium-weight type, light and dark themes. It is the default, and the look the generated docs were designed with.
+A small design system of Tessera's own, in `system/`: warm paper neutrals, near-black text, one green accent, soft rounded corners, medium-weight type, light and dark themes. It is the default, and the look the generated docs were designed with.
 
 ```text
 system/tokens/
-  colors.tokens.json     the palette: stone (warm neutrals), red, green, white (primitives)
+  colors.tokens.json     the palette: stone (warm neutrals), green (the accent), red, white (primitives)
   scale.tokens.json      spacing, radii, font families, sizes and weights
   effects.tokens.json    shadows, opacity, durations and easing
   semantic.tokens.json   surface, text, border, action, status and focus colors (light)

@@ -9,10 +9,10 @@
     "$type": "color",
     "surface": {
       "default": {
-        "$value": "{color.stone.100}"
+        "$value": "{color.stone.50}"
       },
       "raised": {
-        "$value": "{color.stone.50}"
+        "$value": "{color.stone.100}"
       },
       "hover": {
         "$value": "{color.stone.200}"
@@ -29,7 +29,7 @@
         "$value": "{color.stone.600}"
       },
       "inverse": {
-        "$value": "{color.stone.100}"
+        "$value": "{color.stone.50}"
       }
     },
     "border": {
@@ -46,10 +46,10 @@
           "$value": "{color.stone.950}"
         },
         "bg-hover": {
-          "$value": "{color.stone.800}"
+          "$value": "{color.stone.700}"
         },
         "fg": {
-          "$value": "{color.white}"
+          "$value": "{color.stone.50}"
         },
         "text": {
           "$value": "{color.stone.950}"
@@ -68,6 +68,17 @@
         "text": {
           "$value": "{color.red.700}"
         }
+      }
+    },
+    "accent": {
+      "default": {
+        "$value": "{color.green.600}"
+      },
+      "soft": {
+        "$value": "{color.green.100}"
+      },
+      "text": {
+        "$value": "{color.green.700}"
       }
     },
     "status": {

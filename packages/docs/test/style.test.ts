@@ -54,7 +54,7 @@ const colors = (page: Page) =>
     return {
       page: css('body', 'backgroundColor'),
       text: css('body', 'color'),
-      nav: css('.docs-nav a[aria-current=page]', 'backgroundColor'),
+      nav: css('.docs-nav', 'backgroundColor'),
       font: css('body', 'fontFamily'),
     }
   })
@@ -86,18 +86,18 @@ describe('the docs are styled by the project’s tokens', () => {
     const root = project('tessera')
     const light = await open(root, 'light', '#/components/Button')
     expect(await colors(light)).toMatchObject({
-      page: rgb('#f0f2ed'), // color.surface.default
-      text: rgb('#0a0a0a'), // color.text.default
-      nav: rgb('#e7eae1'), // color.surface.hover
+      page: rgb('#faf9f6'), // color.surface.default
+      text: rgb('#17160f'), // color.text.default
+      nav: rgb('#f2f0ea'), // the sidebar is color.surface.raised
     })
     // The font is the token's, not the docs' own.
     expect((await colors(light)).font).toContain('ui-sans-serif')
 
     const dark = await open(root, 'dark', '#/components/Button')
     expect(await colors(dark)).toMatchObject({
-      page: rgb('#0a0a0a'),
-      text: rgb('#f0f2ed'),
-      nav: rgb('#2a2c28'),
+      page: rgb('#13120e'),
+      text: rgb('#edeae2'),
+      nav: rgb('#1b1a15'),
     })
   }, 120_000)
 
@@ -108,19 +108,19 @@ describe('the docs are styled by the project’s tokens', () => {
     writeFileSync(
       file,
       readFileSync(file, 'utf8').replace(
-        '"surface": {\n      "default": {\n        "$value": "{color.stone.100}"',
+        '"surface": {\n      "default": {\n        "$value": "{color.stone.50}"',
         '"surface": {\n      "default": {\n        "$value": "{color.white}"',
       ),
     )
     const page = await open(root, 'light')
     expect((await colors(page)).page).toBe(rgb('#ffffff'))
     await page.locator('#switch-theme').selectOption('dark')
-    expect((await colors(page)).page).toBe(rgb('#0a0a0a'))
+    expect((await colors(page)).page).toBe(rgb('#13120e'))
   }, 120_000)
 
   it('falls back to its own look for a project without tokens', async () => {
     const page = await open(project('none'), 'light')
-    expect(await colors(page)).toMatchObject({ page: rgb('#f0f2ed'), text: rgb('#0a0a0a') })
+    expect(await colors(page)).toMatchObject({ page: rgb('#faf9f6'), text: rgb('#17160f') })
   }, 120_000)
 
   for (const preset of ['tessera', 'tailwind', 'none'] as const) {

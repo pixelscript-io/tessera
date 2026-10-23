@@ -112,7 +112,7 @@ export async function init(args: Args, io: Io): Promise<number> {
       {
         value: 'tessera',
         label:
-          'tessera: a small design system of our own (warm neutrals, sharp corners), with a styled page; the docs use it too',
+          'tessera: a small design system of our own (warm paper neutrals, one green accent), with a styled page; the docs use it too',
       },
       {
         value: 'tailwind',

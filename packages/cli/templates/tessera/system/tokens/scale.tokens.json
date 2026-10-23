@@ -113,25 +113,25 @@
     },
     "sm": {
       "$value": {
-        "value": 0.125,
+        "value": 0.25,
         "unit": "rem"
       }
     },
     "md": {
       "$value": {
-        "value": 0.25,
+        "value": 0.4375,
         "unit": "rem"
       }
     },
     "lg": {
       "$value": {
-        "value": 0.375,
+        "value": 0.625,
         "unit": "rem"
       }
     },
     "xl": {
       "$value": {
-        "value": 0.5,
+        "value": 0.75,
         "unit": "rem"
       }
     },
@@ -152,6 +152,7 @@
       "$type": "fontFamily",
       "sans": {
         "$value": [
+          "Instrument Sans",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",
@@ -160,7 +161,14 @@
         ]
       },
       "mono": {
-        "$value": ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"]
+        "$value": [
+          "JetBrains Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          "monospace"
+        ]
       }
     },
     "size": {

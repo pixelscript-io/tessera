@@ -4,21 +4,21 @@
   "color": {
     "surface": {
       "default": {
-        "$value": "{color.stone.950}"
+        "$value": "{color.stone.975}"
       },
       "raised": {
         "$value": "{color.stone.900}"
       },
       "hover": {
-        "$value": "{color.stone.800}"
+        "$value": "{color.stone.850}"
       },
       "inverse": {
-        "$value": "{color.stone.100}"
+        "$value": "{color.stone.150}"
       }
     },
     "text": {
       "default": {
-        "$value": "{color.stone.100}"
+        "$value": "{color.stone.150}"
       },
       "muted": {
         "$value": "{color.stone.400}"
@@ -38,16 +38,16 @@
     "action": {
       "primary": {
         "bg": {
-          "$value": "{color.stone.100}"
+          "$value": "{color.stone.150}"
         },
         "bg-hover": {
-          "$value": "{color.stone.200}"
+          "$value": "{color.stone.50}"
         },
         "fg": {
           "$value": "{color.stone.950}"
         },
         "text": {
-          "$value": "{color.stone.100}"
+          "$value": "{color.stone.150}"
         }
       },
       "danger": {
@@ -65,6 +65,17 @@
         }
       }
     },
+    "accent": {
+      "default": {
+        "$value": "{color.green.400}"
+      },
+      "soft": {
+        "$value": "{color.green.900}"
+      },
+      "text": {
+        "$value": "{color.green.300}"
+      }
+    },
     "status": {
       "success": {
         "$value": "{color.green.300}"
@@ -75,7 +86,7 @@
     },
     "focus": {
       "ring": {
-        "$value": "{color.stone.100}"
+        "$value": "{color.stone.150}"
       }
     }
   }

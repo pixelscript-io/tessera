@@ -46,7 +46,7 @@ If you would rather not install first, `npm create @pixelscriptio/tessera my-app
 
 | Preset     | What you get                                                                                                                                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tessera`  | A small design system of its own: warm neutrals, sharp corners, light and dark themes, three components and a styled index page. The docs (`npx tessera docs`) are styled by the same token files.               |
+| `tessera`  | A small design system of its own: warm paper neutrals, one green accent, light and dark themes, three components and a styled index page. The docs (`npx tessera docs`) are styled by the same token files.      |
 | `tailwind` | A complete design system in `system/`, built from Tailwind's default theme: every color, the spacing scale, radii, type, shadows and more, with light and dark themes and three components. A styled index page. |
 | `none`     | No tokens, themes or components, so nothing is checked against a design system yet. An index page and example files with the examples commented out.                                                             |
 

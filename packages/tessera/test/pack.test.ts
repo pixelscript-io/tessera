@@ -385,7 +385,7 @@ describe.each(['tessera', 'tailwind', 'none'] as const)(
           })
           expect(light.margin).toBe('0px')
           expect(light.background).toBe(
-            preset === 'tessera' ? 'rgb(240, 242, 237)' : 'rgb(255, 255, 255)',
+            preset === 'tessera' ? 'rgb(250, 249, 246)' : 'rgb(255, 255, 255)',
           )
           const button = page.getByRole('button', { name: /Clicked/ })
           expect(await button.textContent()).toContain('Clicked 0 times')

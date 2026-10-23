@@ -825,7 +825,24 @@ function render() {
   }
   const main = h('main', { class: 'docs-main', id: 'main' }, page)
   root.replaceChildren(
-    h('header', { class: 'docs-top' }, h('h1', null, `${data.project.name} docs`), switchers()),
+    h(
+      'header',
+      { class: 'docs-top' },
+      h(
+        'h1',
+        null,
+        h(
+          'span',
+          { class: 'docs-mark', 'aria-hidden': 'true' },
+          h('span', null),
+          h('span', null),
+          h('span', null),
+          h('span', null),
+        ),
+        `${data.project.name} docs`,
+      ),
+      switchers(),
+    ),
     h('div', { class: 'docs-shell' }, nav(route), main),
   )
   if (editing) {
