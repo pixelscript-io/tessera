@@ -274,6 +274,23 @@ describe('the packed package', () => {
     expect(js).not.toMatch(/from ["']@pixelscriptio/)
   }, 180_000)
 
+  it('prerenders an app from the installed package, with no framework source to bundle', async () => {
+    const dir = install()
+    run(dir, 'init', '--preset', 'tessera')
+    const { stdout } = await execAsync(
+      `node "${join(dir, 'node_modules', '@pixelscriptio', 'tessera', 'bin', 'tessera.js')}" build --prerender`,
+      { cwd: dir },
+    )
+    expect(stdout).toContain('Prerendered 2 pages: /, 404.html')
+    const home = readFileSync(join(dir, 'dist', 'index.html'), 'utf8')
+    expect(home).toContain('<div id="app" data-prerendered>')
+    expect(home).toContain('Build interfaces from a system you can trust')
+    expect(home).toContain('<title>Welcome to Tessera</title>')
+    // The page and layout styles are linked, so it is styled without JavaScript, and the build's manifest is gone.
+    expect(home).toMatch(/<link rel="stylesheet"[^>]*href="\/assets\/[^"]+\.css"/)
+    expect(existsSync(join(dir, 'dist', '.vite'))).toBe(false)
+  }, 180_000)
+
   it('formats .tess files through Prettier, from an editor or from the command line', () => {
     const dir = install()
     run(dir, 'init', '--preset', 'none')

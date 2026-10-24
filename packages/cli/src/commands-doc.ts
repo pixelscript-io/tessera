@@ -40,10 +40,16 @@ export const COMMANDS_DOC: CommandDoc[] = [
   },
   {
     name: 'build',
-    usage: 'tessera build',
+    usage: 'tessera build [--prerender]',
     summary: 'Build the app for production into dist/',
     details:
-      'Builds with the same zero-configuration setup as `tessera dev`. Each page is its own chunk.',
+      'Builds with the same zero-configuration setup as `tessera dev`. Each page is its own chunk. With `--prerender`, every page that has no parameters is also rendered to HTML after the build: `/` is `index.html`, `/about` is `about/index.html`, and the not-found page is `404.html`, each with its content, styles and title, so it shows at once and a search engine reads it. There is no hydration: when the script loads it replaces the content with the live page, which is the same page. A route with a parameter (`/blog/[slug]`) is skipped, and so is a page that cannot be rendered outside a browser (its script reads `window`); each is named with the reason and still works as before.',
+    options: [
+      {
+        flag: '--prerender',
+        description: 'Render the pages that have no parameters to HTML after the build.',
+      },
+    ],
   },
   {
     name: 'preview',

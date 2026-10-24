@@ -1,12 +1,13 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tessera } from '@tessera/compiler/vite'
 import { build as viteBuild, createServer, preview as vitePreview } from 'vite'
 import type { InlineConfig, Plugin } from 'vite'
 import type { Args } from '../args'
-import { flag } from '../args'
+import { flag, has } from '../args'
 import type { Io } from '../io'
-import { findProjectRoot } from '../project'
+import { prerender } from '../prerender'
+import { findProjectRoot, openProject } from '../project'
 
 const VITE_CONFIGS = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs', 'vite.config.mts']
 
@@ -100,9 +101,55 @@ export async function dev(args: Args, io: Io): Promise<number> {
   return 0
 }
 
-/** `tessera build`: a production build into `dist/`. */
+/**
+ * `tessera build`: a production build into `dist/`. With `--prerender`, every page that has no parameters is also
+ * rendered to HTML, so it shows at once and a search engine reads it.
+ */
 export async function build(args: Args, io: Io): Promise<number> {
-  await viteBuild(projectConfig(findProjectRoot(io.cwd, args), args))
+  const root = findProjectRoot(io.cwd, args)
+  const config = projectConfig(root, args)
+  const prerendering = has(args, 'prerender')
+  // The manifest says which stylesheets each page needs; the prerendered HTML links them.
+  const hadManifest = !!config.build?.manifest
+  await viteBuild(prerendering ? { ...config, build: { ...config.build, manifest: true } } : config)
+  if (!prerendering) return 0
+
+  const project = await openProject(io.cwd, args)
+  const manifest = project.routes().manifest
+  const outDir = resolve(root, config.build?.outDir ?? 'dist')
+  const result = await prerender(
+    root,
+    outDir,
+    manifest.routes.map((r) => ({ path: r.path, file: r.file, params: r.params })),
+  )
+  // The manifest was only for this step, unless the project asked for it.
+  if (!hadManifest) rmSync(join(outDir, '.vite'), { recursive: true, force: true })
+  const ui = io.ui
+  const list = (files: string[]) =>
+    files
+      .map((f) =>
+        f === 'index.html' ? '/' : f.endsWith('/index.html') ? `/${f.slice(0, -11)}` : f,
+      )
+      .join(', ')
+  if (ui) {
+    io.out(
+      result.written.length
+        ? ui.ok(
+            ui.bold(
+              `Prerendered ${result.written.length} ${result.written.length === 1 ? 'page' : 'pages'}`,
+            ),
+          ) + ui.dim(`  ${list(result.written)}`)
+        : ui.warn('No pages were prerendered.'),
+    )
+    for (const s of result.skipped) io.out(ui.warn(`${s.path} was not prerendered: ${s.reason}.`))
+  } else {
+    io.out(
+      result.written.length
+        ? `Prerendered ${result.written.length} ${result.written.length === 1 ? 'page' : 'pages'}: ${list(result.written)}`
+        : 'No pages were prerendered.',
+    )
+    for (const s of result.skipped) io.out(`${s.path} was not prerendered: ${s.reason}.`)
+  }
   return 0
 }
 

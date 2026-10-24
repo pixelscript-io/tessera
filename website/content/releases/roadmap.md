@@ -15,7 +15,7 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 ## Not planned for v0.x
 
-Server rendering, hydration and islands; a backend framework; native mobile targets; a visual editor or Figma plugin; nested routes, route guards and data loaders. See [What is Tessera?](/introduction/).
+Server rendering with hydration, and islands (prerendering to static HTML is built); a backend framework; native mobile targets; a visual editor or Figma plugin; nested routes, route guards and data loaders. See [What is Tessera?](/introduction/).
 
 ## What is deferred, and what that means for the docs
 

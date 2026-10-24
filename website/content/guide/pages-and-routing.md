@@ -111,6 +111,20 @@ If a page is slow to load and the user navigates again, the newest navigation wi
 
 The plugin writes `.tessera/routes.d.ts` (add `.tessera` to `.gitignore`), which gives TypeScript the list of routes and their parameters. `RoutePattern` from `@pixelscriptio/tessera/router` is then the union of the real patterns.
 
+## Prerendering
+
+```bash
+npx tessera build --prerender
+```
+
+builds the app as usual and then renders every page that has no parameters to HTML: `/` is `index.html`, `/about` is `about/index.html`, and the not-found page is `404.html`. Each has the page's content, its layout and components, its `<title>` and the stylesheets it needs, so it shows at once, with or without JavaScript, and a search engine reads the content. The scripts and the stylesheets of the build are linked as before. Static hosts (GitHub Pages, Netlify, Cloudflare Pages, S3) serve `about/index.html` for `/about` and `404.html` for a missing page.
+
+- **There is no hydration.** When the script loads, the router replaces the prerendered content with the live page, which is the same page. A link, a form or a focus ring that the visitor used before the script loaded is not carried over.
+- **A route with a parameter** (`/blog/[slug]`) is not rendered: there is no one page for it. It is named in the output and works as it always did.
+- **A page that needs a browser** is skipped. It is rendered in Node with no browser behind it, so a page script that reads `window` or `document` at its top (not inside an effect, a handler or `onMount`) cannot be: the output says which page and why (`/wide was not prerendered: window is not defined`), and it still works in the browser.
+- The page's `<title>` is the `<page>` block's. A page with none keeps the one in `index.html`.
+- It needs an empty `<div id="app"></div>` in `index.html`, which the project's default shell has.
+
 ## Route errors
 
 Two files that map to the same route are an error that names both, and neither is routed, so nothing silently picks one:

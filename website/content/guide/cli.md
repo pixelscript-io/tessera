@@ -25,6 +25,8 @@ It works in an empty folder or beside an existing `package.json`: it adds the sc
 
 ## `tessera dev`, `build` and `preview`
 
+`tessera build --prerender` also renders the pages that have no parameters to HTML after the build. See [Prerendering](/guide/pages-and-routing#prerendering).
+
 ```bash
 npx tessera dev
 npx tessera build

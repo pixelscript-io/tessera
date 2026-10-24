@@ -198,6 +198,14 @@ export class Router {
   /** Show the page for the current address and start handling navigation. Resolves once the first page is up. */
   async mount(container: Element): Promise<() => void> {
     activate(this)
+    // A page prerendered at build time is already in the container. The live page replaces it: it is the same page.
+    if (
+      typeof container.hasAttribute === 'function' &&
+      container.hasAttribute('data-prerendered')
+    ) {
+      container.replaceChildren()
+      container.removeAttribute('data-prerendered')
+    }
     const history = this.win.history
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
     history.replaceState({ key: this.historyKey }, '')

@@ -31,3 +31,10 @@ export {
   type ComponentInput,
 } from './component'
 export { defineElement, type ElementSpec } from './element'
+export {
+  createStringAdapter,
+  createStringNode,
+  serializeChildren,
+  serializeNode,
+  type StringNode,
+} from './string-adapter'
