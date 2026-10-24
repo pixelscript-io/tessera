@@ -7,7 +7,7 @@ const GROUPS: Array<{ title: string; commands: string[] }> = [
   { title: 'Start', commands: ['init', 'dev', 'build', 'preview'] },
   {
     title: 'Check',
-    commands: ['check', 'a11y', 'baseline', 'report', 'explain', 'diff', 'codemod'],
+    commands: ['check', 'lint', 'a11y', 'baseline', 'report', 'explain', 'diff', 'codemod'],
   },
   {
     title: 'Tokens and components',

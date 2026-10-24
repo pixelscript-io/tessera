@@ -54,6 +54,13 @@ export interface StyleInput {
   prefix: string
   /** ISO date, for `raw()` expiry. */
   today: string
+  /**
+   * `tess` (the default) is a `<style>` block of a `.tess` file: tokens are `$space.4` and `raw()` leaves the system.
+   * `css` is plain CSS from any project: tokens are `var(--t-space-4)` and a violation is fixed or exempted, not escaped.
+   */
+  syntax?: 'tess' | 'css'
+  /** For `css`: the prefix of the custom properties that are tokens. Default `--t-`. */
+  varPrefix?: string
 }
 
 export interface StyleResult {
@@ -85,7 +92,6 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 /** Colors closer than this in OKLab are the same 8-bit color. */
 const EXACT_COLOR = 0.0015
 const q = (s: string) => JSON.stringify(s)
-const dollar = (path: string) => '$' + path
 
 const describe = (accepts: Accept[]) =>
   accepts
@@ -96,6 +102,12 @@ const describe = (accepts: Accept[]) =>
 
 export function processStyle(input: StyleInput): StyleResult {
   const { css, base, tokens, config, contract, prefix, today } = input
+  const plainCss = input.syntax === 'css'
+  const varPrefix = input.varPrefix ?? '--t-'
+  /** A token as it is written in this syntax: `$space.4`, or `var(--t-space-4)`. */
+  const dollar = (path: string) => (plainCss ? `var(${cssVarOf(path)})` : '$' + path)
+  /** What to add after a suggestion: in `.tess`, the way out is `raw()`; in plain CSS there is none, only the config. */
+  const orRaw = (text: string) => (plainCss ? '' : ` Or write raw(${text}, "reason") to keep it.`)
   const issues: StyleIssue[] = []
   const edits: Fix[] = []
   const stats: StyleStats = { declarations: 0, tokenized: 0, rawValues: 0, escapes: [] }
@@ -129,10 +141,19 @@ export function processStyle(input: StyleInput): StyleResult {
 
   const cssVarOf = (path: string) =>
     tokens?.get(path)?.cssVar ??
-    `--t-${path
+    `${plainCss ? varPrefix : '--t-'}${path
       .split('.')
       .filter((s) => s !== '$root')
       .join('-')}`
+
+  /** For plain CSS: the token path of a custom property (known, or one that looks like a token), else undefined. */
+  const resolveVar = (name: string): string | undefined => {
+    const known = tokens?.byCssVar(name)
+    if (known) return known.path
+    return name.startsWith(varPrefix)
+      ? name.slice(varPrefix.length).replaceAll('-', '.')
+      : undefined
+  }
 
   /** The base-theme value of a token as a number in px or ms. */
   const numeric = (t: StyleToken) =>
@@ -145,6 +166,26 @@ export function processStyle(input: StyleInput): StyleResult {
   ): void {
     if (!tokens) return
     const token = tokens.get(atom.path)
+    if (!token && plainCss) {
+      // Plain CSS names a custom property, so a typo is found among the custom properties.
+      const name = atom.cssVar ?? cssVarOf(atom.path)
+      const names = tokens.all().map((t) => t.cssVar)
+      const ranked = names.map((p) => ({ p, d: levenshtein(name, p) })).sort((x, y) => x.d - y.d)
+      const first = ranked[0]
+      const target =
+        first && first.d <= 2 && (ranked[1] === undefined || ranked[1].d > first.d)
+          ? first.p
+          : undefined
+      issue(
+        'T2104',
+        'error',
+        atom.start,
+        `Unknown token "var(${name})"`,
+        first && first.d <= 4 ? `Did you mean "var(${first.p})"?` : undefined,
+        target ? { start: atom.start, end: atom.end, text: `var(${target})` } : undefined,
+      )
+      return
+    }
     if (!token) {
       const close = nearest(atom.path, tokens.paths())
       const ranked = tokens
@@ -194,7 +235,7 @@ export function processStyle(input: StyleInput): StyleResult {
         'T2105',
         config.primitives === 'error' ? 'error' : 'warning',
         atom.start,
-        `"${dollar(atom.path)}" is a primitive token. Components should use semantic or component tokens.`,
+        `"${dollar(atom.path)}" is a primitive token. ${plainCss ? 'Styles' : 'Components'} should use semantic${plainCss ? '' : ' or component'} tokens.`,
         'Reference a semantic token instead, or add one that aliases this primitive.',
       )
     }
@@ -309,7 +350,7 @@ export function processStyle(input: StyleInput): StyleResult {
           'error',
           atom.start,
           `Raw ${label} "${atom.text}" in "${prop}" is off the scale.`,
-          `Did you mean "${dollar(best.t.path)}" (${best.t.resolved.base})? Or write raw(${atom.text}, "reason") to keep it.`,
+          `Did you mean "${dollar(best.t.path)}" (${best.t.resolved.base})?${orRaw(atom.text)}`,
         )
         return
       }
@@ -325,8 +366,8 @@ export function processStyle(input: StyleInput): StyleResult {
               .flatMap((a) => a.groups ?? [])
               .map(q)
               .join(' or ') || 'the design system'
-          }, or write raw(${atom.text}, "reason").`
-        : `No matching tokens exist. Add one, or write raw(${atom.text}, "reason").`,
+          }${plainCss ? '.' : `, or write raw(${atom.text}, "reason").`}`
+        : `No matching tokens exist. Add one${plainCss ? '.' : `, or write raw(${atom.text}, "reason").`}`,
     )
   }
 
@@ -349,7 +390,11 @@ export function processStyle(input: StyleInput): StyleResult {
     if (semantic.length) pool = semantic
 
     const message = `Raw color "${text}" in "${prop}" is not a token.`
-    let hint = tokens ? `Add a color token, or write raw(${text}, "reason").` : undefined
+    let hint = tokens
+      ? plainCss
+        ? 'Add a color token.'
+        : `Add a color token, or write raw(${text}, "reason").`
+      : undefined
     let fix: Fix | undefined
     if (color && pool.length) {
       const scored = pool
@@ -366,7 +411,7 @@ export function processStyle(input: StyleInput): StyleResult {
         } else if (exact.length > 1) {
           hint = `Use one of: ${exact.map((s) => `"${dollar(s.t.path)}"`).join(', ')}.`
         } else {
-          hint = `The closest token is "${dollar(best.t.path)}" (${toHex(best.c)}). Or write raw(${text}, "reason") to keep it.`
+          hint = `The closest token is "${dollar(best.t.path)}" (${toHex(best.c)}).${orRaw(text)}`
         }
       }
     }
@@ -377,7 +422,7 @@ export function processStyle(input: StyleInput): StyleResult {
     const prop = decl.prop.toLowerCase()
     const accepts = config.governed[prop]
     const colorProp = accepts?.some((a) => a.type === 'color') || COLOR_BEARING.has(prop)
-    const atoms = tokenizeValue(decl.value, decl.valueStart)
+    const atoms = tokenizeValue(decl.value, decl.valueStart, plainCss ? { resolveVar } : {})
     stats.declarations++
     let hasToken = false
     let hasRawValue = false
@@ -386,7 +431,8 @@ export function processStyle(input: StyleInput): StyleResult {
       switch (atom.kind) {
         case 'token':
           hasToken = true
-          edits.push({ start: atom.start, end: atom.end, text: `var(${cssVarOf(atom.path)})` })
+          if (!plainCss)
+            edits.push({ start: atom.start, end: atom.end, text: `var(${cssVarOf(atom.path)})` })
           checkToken(atom, prop, accepts)
           break
         case 'raw':

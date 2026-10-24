@@ -11,6 +11,8 @@ const WITH_VALUE = new Set([
   'port',
   'preset',
   'prefix',
+  'tokens',
+  'var-prefix',
   'format',
   'to',
   'version',

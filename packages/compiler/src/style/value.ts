@@ -2,7 +2,7 @@ import { isColorFunction } from '@tessera/tokens'
 
 /** A piece of a declaration value that style enforcement cares about. Offsets are absolute in the file. */
 export type Atom =
-  | { kind: 'token'; path: string; start: number; end: number }
+  | { kind: 'token'; path: string; start: number; end: number; cssVar?: string }
   | { kind: 'raw'; start: number; end: number; args: RawArg[] }
   | { kind: 'length'; value: number; unit: string; text: string; start: number; end: number }
   | { kind: 'duration'; value: number; unit: string; text: string; start: number; end: number }
@@ -99,7 +99,15 @@ function splitArgs(inner: string, base: number): RawArg[] {
  * and `raw()` are single atoms; `url()` and `var()` are skipped; other functions (`calc`, `translate`,
  * gradients) are entered, so a raw length inside `calc()` is still seen.
  */
-export function tokenizeValue(value: string, base: number): Atom[] {
+export interface TokenizeOptions {
+  /**
+   * Plain CSS: a `var(--name)` that names a design token is a token atom, and `$path` is not one. Given the name of a
+   * custom property, return the token's path (known or not), or undefined for a custom property that is not a token.
+   */
+  resolveVar?: (name: string) => string | undefined
+}
+
+export function tokenizeValue(value: string, base: number, options: TokenizeOptions = {}): Atom[] {
   const atoms: Atom[] = []
   const scan = (from: number, to: number) => {
     let i = from
@@ -109,7 +117,7 @@ export function tokenizeValue(value: string, base: number): Atom[] {
         i++
         while (i < to && value[i] !== c) i += value[i] === '\\' ? 2 : 1
         i++
-      } else if (c === '$') {
+      } else if (c === '$' && !options.resolveVar) {
         const m = /^\$([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+)/.exec(value.slice(i, to))
         if (m) {
           atoms.push({ kind: 'token', path: m[1]!, start: base + i, end: base + i + m[0].length })
@@ -143,6 +151,22 @@ export function tokenizeValue(value: string, base: number): Atom[] {
               start: base + i,
               end: base + stop + 1,
             })
+          } else if (lower === 'var' && options.resolveVar) {
+            const name = /^\s*(--[\w-]+)/.exec(value.slice(end + 1, stop))?.[1]
+            const path = name === undefined ? undefined : options.resolveVar(name)
+            if (name !== undefined && path !== undefined) {
+              atoms.push({
+                kind: 'token',
+                path,
+                cssVar: name,
+                start: base + i,
+                end: base + stop + 1,
+              })
+            } else if (name !== undefined) {
+              // A custom property that is not a token: its fallback, if any, is still a value to check.
+              const comma = value.indexOf(',', end + 1)
+              if (comma > -1 && comma < stop) scan(comma + 1, stop)
+            }
           } else if (lower !== 'url' && lower !== 'var') {
             scan(end + 1, stop)
           }

@@ -22,6 +22,10 @@ interface Entry {
 }
 
 export interface ContrastInput {
+  /** Plain CSS: tokens are `var(--name)`; this says which custom property is which token. */
+  resolveVar?: (name: string) => string | undefined
+  /** Name tokens as `var(--t-space-4)`, the way plain CSS writes them, not `$space.4`. */
+  showVar?: boolean
   nodes: CssNode[]
   tokens: StyleTokens
   contract?: Contract
@@ -69,8 +73,11 @@ const SIMPLE = /\[[^\]]*\]|::?[\w-]+(?:\([^)]*\))?|\.[\w-]+/g
 const simpleSelectors = (qualifier: string) =>
   [...qualifier.matchAll(SIMPLE)].map((m) => m[0].replace(/\s+/g, ''))
 
-function slotOf(decl: CssDecl): Slot | undefined {
-  const atoms = tokenizeValue(decl.value, decl.valueStart)
+function slotOf(
+  decl: CssDecl,
+  resolveVar?: (name: string) => string | undefined,
+): Slot | undefined {
+  const atoms = tokenizeValue(decl.value, decl.valueStart, resolveVar ? { resolveVar } : {})
   const only = atoms.length === 1 ? atoms[0] : undefined
   return only?.kind === 'token' ? { path: only.path, offset: decl.valueStart } : undefined
 }
@@ -79,6 +86,7 @@ function collect(
   nodes: CssNode[],
   parent: { subject?: string; parts: string[] } | undefined,
   out: Entry[],
+  resolveVar?: (name: string) => string | undefined,
 ): void {
   for (const node of nodes) {
     if (node.type === 'rule') {
@@ -104,9 +112,9 @@ function collect(
           for (const child of node.children) {
             if (child.type !== 'decl') continue
             const prop = child.prop.toLowerCase()
-            if (prop === 'color') entry.fg = slotOf(child) ?? null
+            if (prop === 'color') entry.fg = slotOf(child, resolveVar) ?? null
             else if (prop === 'background' || prop === 'background-color') {
-              entry.bg = slotOf(child) ?? null
+              entry.bg = slotOf(child, resolveVar) ?? null
             }
           }
           out.push(entry)
@@ -115,10 +123,11 @@ function collect(
           node.children.filter((c) => c.type !== 'decl'),
           { subject, parts },
           out,
+          resolveVar,
         )
       }
     } else if (node.type === 'at' && node.children) {
-      collect(node.children, parent, out)
+      collect(node.children, parent, out, resolveVar)
     }
   }
 }
@@ -163,8 +172,10 @@ function combinations(alphabet: string[]): string[][] {
 export function checkContrast(input: ContrastInput): StyleIssue[] {
   const { tokens, minimum } = input
   const entries: Entry[] = []
-  collect(input.nodes, undefined, entries)
+  collect(input.nodes, undefined, entries, input.resolveVar)
   const issues: StyleIssue[] = []
+  const show = (path: string) =>
+    input.showVar ? `var(${tokens.get(path)?.cssVar ?? path})` : `$${path}`
 
   const evaluate = (fg: Slot, bg: Slot, where: string, offset: number, context?: string): void => {
     const failures: string[] = []
@@ -185,7 +196,7 @@ export function checkContrast(input: ContrastInput): StyleIssue[] {
       code: 'T2107',
       severity: 'error',
       offset,
-      message: `Contrast between "$${fg.path}" and "$${bg.path}" is too low: ${failures.join(', ')} (needs ${minimum}:1).`,
+      message: `Contrast between "${show(fg.path)}" and "${show(bg.path)}" is too low: ${failures.join(', ')} (needs ${minimum}:1).`,
       hint: `${context ? `${context}. ` : ''}Set in "${where}". Pick tokens that are at least ${minimum}:1 apart in every theme.`,
     })
   }

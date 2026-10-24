@@ -74,6 +74,28 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'lint',
+    usage: 'tessera lint [paths...] [--tokens <folder>] [--fix] [--json]',
+    summary: 'Check the CSS of any project against your design tokens',
+    details:
+      "The style rules of `tessera check`, on the CSS of any project, with or without Tessera components. It reads `.css` files and the `<style>` of `.vue`, `.svelte`, `.astro` and `.html` files (not Sass, Less or Stylus), with design tokens as custom properties such as `var(--t-space-4)`, and reports raw values that are off the token scale (with the nearest token), colors that are not tokens, `var()` names that are not tokens (with the one meant), tokens of the wrong kind for a property, primitive tokens used directly, deprecated tokens, and text and background token pairs that fail contrast in any theme. Tokens come from DTCG files: `--tokens <folder>`, the `tokens` of `tessera.config.ts`, or `system/tokens`. The config's `governed`, `contrast`, `primitives` and per-path `severity` (with a reason and an expiry) apply, `--fix` applies the unambiguous fixes, and `--baseline` records today's violations in `tessera.lint-baseline.json` so existing code can adopt the rules and only new violations fail. With no paths it lints the project folder, skipping `node_modules`, build output and dot folders. Exits 1 if there is any error.",
+    options: [
+      { flag: '--tokens <folder>', description: 'The DTCG token files to check against.' },
+      {
+        flag: '--var-prefix <prefix>',
+        description:
+          'The prefix of the custom properties that are tokens, if your build names them differently. Default `--t-`.',
+      },
+      { flag: '--fix', description: 'Apply the fixes that are unambiguous.' },
+      { flag: '--baseline', description: "Record today's violations, so only new ones fail." },
+      {
+        flag: '--prune',
+        description: 'Lower the baseline to what files have now. Never raises it.',
+      },
+      { flag: '--json', description: 'Print the result as JSON.' },
+    ],
+  },
+  {
     name: 'a11y',
     usage: 'tessera a11y',
     summary: 'Set up the generated accessibility tests',

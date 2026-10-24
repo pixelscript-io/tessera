@@ -80,10 +80,10 @@ function toJson(report: ProjectReport, fixed: number) {
   }
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /** The line a diagnostic is on, with the line before it and a caret under the column. */
-function frame(ui: Ui, source: string | undefined, line: number, column: number): string[] {
+export function frame(ui: Ui, source: string | undefined, line: number, column: number): string[] {
   if (source === undefined || line < 1) return []
   const lines = source.split(/\r?\n/)
   if (lines[line - 1] === undefined) return []

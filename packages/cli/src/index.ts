@@ -11,6 +11,7 @@ import { eject } from './commands/eject'
 import { format } from './commands/format'
 import { explain } from './commands/explain'
 import { init } from './commands/init'
+import { lint } from './commands/lint'
 import { newCommand } from './commands/new'
 import { report } from './commands/report'
 import { build, dev, preview } from './commands/serve'
@@ -28,6 +29,7 @@ const COMMANDS: Record<string, Command> = {
   build,
   preview,
   check,
+  lint,
   a11y,
   baseline,
   report,

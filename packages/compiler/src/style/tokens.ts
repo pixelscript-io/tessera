@@ -18,6 +18,7 @@ export interface StyleToken {
 /** The design tokens that style checks look things up in. */
 export class StyleTokens {
   private readonly byPath = new Map<string, StyleToken>()
+  private byVar: Map<string, StyleToken> | undefined
 
   constructor(
     tokens: StyleToken[],
@@ -64,6 +65,26 @@ export class StyleTokens {
   renamedTo(path: string): string | undefined {
     for (const t of this.byPath.values()) if (t.renamedFrom === path) return t.path
     return undefined
+  }
+
+  /** The token a custom property such as `--t-space-4` names. */
+  byCssVar(name: string): StyleToken | undefined {
+    this.byVar ??= new Map([...this.byPath.values()].map((t) => [t.cssVar, t]))
+    return this.byVar.get(name)
+  }
+
+  /** The same tokens with their custom properties named `<prefix><path with dashes>`, for a project that names them so. */
+  withVarPrefix(prefix: string): StyleTokens {
+    return new StyleTokens(
+      this.all().map((t) => ({
+        ...t,
+        cssVar: `${prefix}${t.path
+          .split('.')
+          .filter((s) => s !== '$root')
+          .join('-')}`,
+      })),
+      this.scopes,
+    )
   }
 
   has(path: string): boolean {

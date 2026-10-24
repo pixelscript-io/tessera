@@ -12,6 +12,14 @@ export { COMPILER_CODES, type CompilerCode, type CompilerDiagnostic } from './di
 export { formatDiagnostic } from '@tessera/contract'
 export { analyzeScript } from './script'
 export { componentProps, type PropInfo } from './props'
+export {
+  lintKind,
+  lintSource,
+  styleBlocks,
+  type LintOptions,
+  type LintResult,
+  type StyleBlock,
+} from './lint'
 export { parseSfc } from './sfc'
 export { parseTemplate, type ElementNode, type TemplateNode, type TextNode } from './template'
 export { Reporter } from './diagnostics'
