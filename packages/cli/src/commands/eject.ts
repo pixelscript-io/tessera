@@ -113,12 +113,12 @@ export async function eject(args: Args, io: Io): Promise<number> {
   mkdirSync(dirname(target), { recursive: true })
   writeFileSync(target, forkContract(source, to, { component: from, version }))
 
-  io.out(`Created ${project.display(target)}, forked from ${from}@${version}.`)
+  const made = `Created ${project.display(target)}, forked from ${from}@${version}.`
+  io.out(io.ui ? io.ui.ok(made) : made)
   const relative = listImports(source).filter((i) => i.source.startsWith('.'))
   if (relative.length) {
-    io.out(
-      `Note: it imports ${relative.map((i) => `"${i.source}"`).join(', ')}, which are relative to the original. Check those paths.`,
-    )
+    const note = `Note: it imports ${relative.map((i) => `"${i.source}"`).join(', ')}, which are relative to the original. Check those paths.`
+    io.out(io.ui ? io.ui.warn(note) : note)
   }
   return 0
 }

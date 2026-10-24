@@ -18,9 +18,8 @@ export async function docs(args: Args, io: Io): Promise<number> {
     const out = typeof given === 'string' ? given : 'docs-dist'
     await openProject(io.cwd, args)
     const { files } = await exportDocs(root, out, { report })
-    io.out(
-      `Exported the docs to ${out}: ${files.join(', ')}. Serve the folder with any file server.`,
-    )
+    const message = `Exported the docs to ${out}: ${files.join(', ')}. Serve the folder with any file server.`
+    io.out(io.ui ? io.ui.ok(message) : message)
     return 0
   }
   const port = flag(args, 'port')
@@ -33,12 +32,24 @@ export async function docs(args: Args, io: Io): Promise<number> {
     edit,
     ...(port ? { port: Number(port) } : {}),
   })
-  if (edit && server.editUrl) {
-    io.out('Editing is on. Open this address (it carries a key that is new each run):')
-    io.out(`  ${server.editUrl}`)
+  if (io.ui)
     io.out(
-      'Anyone who can open it on this computer can change the project files. The docs listen on this computer only.',
+      io.ui.banner(
+        'Tessera docs',
+        edit ? 'Token import is on' : 'Generated from your contracts and tokens',
+      ) + '\n',
     )
+  if (edit && server.editUrl) {
+    const ui = io.ui
+    io.out(
+      ui
+        ? ui.bold('Editing is on. Open this address (it carries a key that is new each run):')
+        : 'Editing is on. Open this address (it carries a key that is new each run):',
+    )
+    io.out(ui ? `  ${ui.accent(ui.underline(server.editUrl))}` : `  ${server.editUrl}`)
+    const warning =
+      'Anyone who can open it on this computer can change the project files. The docs listen on this computer only.'
+    io.out(ui ? ui.warn(warning) : warning)
   } else server.printUrls()
   await new Promise<void>((done) => server.httpServer?.on('close', done))
   return 0

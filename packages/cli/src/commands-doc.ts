@@ -251,6 +251,13 @@ export const GLOBAL_OPTIONS = [
     flag: '--root <folder>',
     description: 'Run in this project instead of the nearest one above the current folder.',
   },
+  {
+    flag: '--no-color',
+    description:
+      'Print without color. The color is off anyway when the output is not a terminal, and when NO_COLOR is set.',
+  },
+  { flag: '--help, -h', description: 'Say what a command does and what its options are.' },
+  { flag: '--version, -v', description: 'Print the version.' },
 ]
 
 /** The text `tessera help` prints. */

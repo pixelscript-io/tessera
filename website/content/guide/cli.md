@@ -125,6 +125,15 @@ tessera eject Button FancyButton
 
 You own the copy, and the record keeps the drift visible. The copy is scoped under its own name, so it and the original do not share styles. Ejecting one of your own components is refused: copy the file by hand.
 
+## How it looks
+
+In a terminal the command line has a look: the commands are grouped in `tessera help`, `tessera check` shows each problem with the line it is on and a caret under the column, `tessera init` asks its question with the arrow keys, and results are marked with a check or a cross. Everything else is the same text as before, and a pipe, a file or CI gets exactly that plain text, with no color and no symbols.
+
+- `tessera <command> --help` (or `tessera help <command>`) says what a command does and lists its options. `tessera --version` prints the version.
+- `--no-color` or the `NO_COLOR` environment variable keeps the layout and drops the color. `FORCE_COLOR=1` turns the look on where there is no terminal.
+- Terminals that cannot draw the symbols (an old Windows console) get ASCII ones.
+- Mistyped commands are met with a suggestion: `tessera chek` asks if you meant `check`.
+
 ## `tessera.config.ts`
 
 ```ts

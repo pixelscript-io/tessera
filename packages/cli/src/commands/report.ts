@@ -6,6 +6,7 @@ import type { Project } from '@tessera/compiler/project'
 import type { Args } from '../args'
 import { has } from '../args'
 import type { Io } from '../io'
+import type { Ui } from '../ui'
 import { openProject } from '../project'
 
 interface DirectoryStats {
@@ -414,10 +415,66 @@ export function formatReport(r: Report): string {
   return lines.join('\n') + '\n'
 }
 
+/**
+ * The same report with a banner, a mark by each section (green where there is nothing to do, yellow where there is),
+ * and a bar where the number is a share of something.
+ */
+export function prettyReport(r: Report, ui: Ui): string {
+  const out: string[] = [ui.banner('Tessera report', r.today), '']
+  let section = ''
+  for (const line of formatReport(r).split('\n').slice(2)) {
+    if (line === '') {
+      out.push('')
+      continue
+    }
+    if (!line.startsWith(' ')) {
+      section = line
+      const count = /: (\d+)\b/.exec(line)
+      const clean = count ? Number(count[1]) === 0 : undefined
+      const mark =
+        clean === undefined
+          ? ui.accent(ui.sym.bullet)
+          : clean
+            ? ui.green(ui.sym.ok)
+            : ui.yellow(ui.sym.warn)
+      out.push(`${mark} ${ui.bold(line)}`)
+      if (line.startsWith('Contract coverage') && r.contracts.coverage !== null) {
+        out.push(`  ${ui.bar(r.contracts.coverage, 24)}`)
+      }
+      continue
+    }
+    if (section.startsWith('Styles')) {
+      const dir = /^ {2}(\S+)\s+\d+\/\d+ tokenized/.exec(line)?.[1]
+      const stats = dir ? r.styles.byDirectory[dir] : undefined
+      if (stats && stats.ratio !== null) {
+        out.push(`${line}  ${ui.bar(stats.ratio, 12)}`)
+        continue
+      }
+      if (line.includes('declarations:') && r.styles.ratio !== null) {
+        out.push(line)
+        out.push(`  ${ui.bar(r.styles.ratio, 24)}`)
+        continue
+      }
+    }
+    out.push(
+      line
+        .replace(/\(EXPIRED\)/g, ui.red('(EXPIRED)'))
+        .replace(/^( {2}no contract:| {2}none:)/, (m) => ui.yellow(m)),
+    )
+  }
+  return out.join('\n')
+}
+
 /** `tessera report`: a summary for people, and `--json` for CI. */
 export async function report(args: Args, io: Io): Promise<number> {
   const project = await openProject(io.cwd, args)
   const result = buildReport(project)
-  io.out(has(args, 'json') ? JSON.stringify(result, null, 2) : formatReport(result))
+  io.out(
+    has(args, 'json')
+      ? JSON.stringify(result, null, 2)
+      : io.ui
+        ? prettyReport(result, io.ui)
+        : formatReport(result),
+  )
   return 0
 }

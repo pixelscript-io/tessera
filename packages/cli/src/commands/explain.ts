@@ -3,6 +3,7 @@ import { nearest } from '@tessera/contract'
 import type { Args } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
+import type { Ui } from '../ui'
 
 /** `tessera explain <code>`: the cause, an example and the fix for an error or warning code. Works offline. */
 export async function explain(args: Args, io: Io): Promise<number> {
@@ -18,6 +19,27 @@ export async function explain(args: Args, io: Io): Promise<number> {
       close ? `Did you mean ${close}?` : 'Codes look like T2102 or W4101.',
     )
   }
-  io.out(text)
+  io.out(io.ui ? render(io.ui, text) : text)
   return 0
+}
+
+/** An explanation as a person reads it: the code and title first, then each section under a heading. */
+function render(ui: Ui, text: string): string {
+  const lines = text.split('\n')
+  let section = ''
+  return lines
+    .map((line, i) => {
+      if (i === 0) {
+        const [code, ...title] = line.split(/\s{2,}/)
+        return `${ui.accent(ui.bold(code!))}  ${ui.bold(title.join('  '))}`
+      }
+      if (/^[A-Z][a-z]+$/.test(line)) {
+        section = line
+        return ui.heading(line)
+      }
+      if (section === 'Example') return ui.dim(line)
+      if (section === 'Fixed') return ui.green(line)
+      return line
+    })
+    .join('\n')
 }

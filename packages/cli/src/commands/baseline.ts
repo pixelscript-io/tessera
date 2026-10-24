@@ -46,20 +46,18 @@ export async function baseline(args: Args, io: Io): Promise<number> {
     const before = JSON.parse(readFileSync(path, 'utf8')) as Baseline
     const pruned = pruneBaseline(before, results)
     write(path, pruned)
-    io.out(
-      `Pruned the baseline from ${totalViolations(before)} to ${totalViolations(pruned)} violations.`,
-    )
+    const message = `Pruned the baseline from ${totalViolations(before)} to ${totalViolations(pruned)} violations.`
+    io.out(io.ui ? io.ui.ok(message) : message)
     return 0
   }
 
   const created = createBaseline(results)
   write(path, created)
   const count = totalViolations(created)
-  io.out(
-    `Recorded ${count} existing ${count === 1 ? 'violation' : 'violations'} in ${Object.keys(created.files).length} files in ${project.display(path)}.`,
-  )
-  io.out(
-    'Commit it. From now on `tessera check` and builds fail only on violations beyond these counts.',
-  )
+  const recorded = `Recorded ${count} existing ${count === 1 ? 'violation' : 'violations'} in ${Object.keys(created.files).length} files in ${project.display(path)}.`
+  const advice =
+    'Commit it. From now on `tessera check` and builds fail only on violations beyond these counts.'
+  io.out(io.ui ? io.ui.ok(recorded) : recorded)
+  io.out(io.ui ? io.ui.dim(advice) : advice)
   return 0
 }

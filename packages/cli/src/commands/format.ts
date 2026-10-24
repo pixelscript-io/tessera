@@ -93,19 +93,18 @@ export async function format(args: Args, io: Io): Promise<number> {
     if (!check) writeFileSync(file, formatted)
   }
 
-  for (const file of unformatted) io.out(file)
+  const ui = io.ui
+  for (const file of unformatted) io.out(ui ? `  ${ui.yellow(ui.sym.warn)} ${file}` : file)
   if (check) {
-    io.out(
-      unformatted.length
-        ? `\n${unformatted.length} ${unformatted.length === 1 ? 'file is' : 'files are'} not formatted. Run tessera format.`
-        : `All ${files.length} files are formatted.`,
-    )
+    const message = unformatted.length
+      ? `\n${unformatted.length} ${unformatted.length === 1 ? 'file is' : 'files are'} not formatted. Run tessera format.`
+      : `All ${files.length} files are formatted.`
+    io.out(ui ? (unformatted.length ? ui.fail(message.trim()) : ui.ok(message)) : message)
     return unformatted.length ? 1 : 0
   }
-  io.out(
-    unformatted.length
-      ? `\nFormatted ${unformatted.length} of ${files.length} files.`
-      : `All ${files.length} files were already formatted.`,
-  )
+  const message = unformatted.length
+    ? `\nFormatted ${unformatted.length} of ${files.length} files.`
+    : `All ${files.length} files were already formatted.`
+  io.out(ui ? ui.ok(message.trim()) : message)
   return 0
 }

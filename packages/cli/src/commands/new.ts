@@ -87,9 +87,8 @@ export async function newCommand(args: Args, io: Io): Promise<number> {
     if (existsSync(path)) throw new CliError(`${project.display(path)} already exists.`)
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(path, componentTemplate(target))
-    io.out(
-      `Created ${project.display(path)}. Use it as <${target}> in any template; no import needed.`,
-    )
+    const message = `Created ${project.display(path)}. Use it as <${target}> in any template; no import needed.`
+    io.out(io.ui ? io.ui.ok(message) : message)
     return 0
   }
 
@@ -109,6 +108,7 @@ export async function newCommand(args: Args, io: Io): Promise<number> {
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, pageTemplate(page))
   const route = trial.routes.find((r) => r.file === file)?.path ?? '(the not-found page)'
-  io.out(`Created ${project.display(path)} for ${route}.`)
+  const made = `Created ${project.display(path)} for ${route}.`
+  io.out(io.ui ? io.ui.ok(made) : made)
   return 0
 }

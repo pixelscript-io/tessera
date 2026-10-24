@@ -4,6 +4,7 @@ import type { Args } from '../args'
 import { flag } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
+import type { Ui } from '../ui'
 import { VERSION } from '../version'
 
 export const PRESETS = ['tessera', 'tailwind', 'none'] as const
@@ -111,6 +112,7 @@ export interface InitResult {
  */
 export async function init(args: Args, io: Io): Promise<number> {
   const target = resolve(io.cwd, args.positional[0] ?? '.')
+  if (io.ui) io.out(io.ui.banner(`Tessera ${VERSION}`, 'A new project') + '\n')
   const given = flag(args, 'preset')
   let preset: Preset
   if (typeof given === 'string') {
@@ -240,6 +242,10 @@ export async function init(args: Args, io: Io): Promise<number> {
   } else put('.gitignore', GITIGNORE_LINES.join('\n') + '\n')
 
   const where = args.positional[0]
+  if (io.ui) {
+    printSummary(io, io.ui, { preset, where, written, skipped, install: !hasDependency })
+    return 0
+  }
   io.out(`Started a Tessera project (${preset} preset) in ${where ?? 'the current folder'}.`)
   if (written.length) io.out(`Wrote: ${written.join(', ')}`)
   if (skipped.length) io.out(`Left alone (already there): ${skipped.join(', ')}`)
@@ -251,4 +257,46 @@ export async function init(args: Args, io: Io): Promise<number> {
   io.out('')
   io.out('To format .tess files, add Prettier as a dev dependency, then run npm run format.')
   return 0
+}
+
+/** What init did, for a person: the folders it filled, then the three commands to run. */
+function printSummary(
+  io: Io,
+  ui: Ui,
+  info: { preset: string; where?: string; written: string[]; skipped: string[]; install: boolean },
+): void {
+  const place = info.where ?? 'the current folder'
+  io.out(
+    ui.ok(ui.bold(`Started a Tessera project in ${place}`)) + ui.dim(` (${info.preset} preset)`),
+  )
+  // Files by their first folder, so twenty-eight lines become a few.
+  const folders = new Map<string, number>()
+  for (const file of info.written) {
+    const top = file.includes('/') ? file.split('/')[0] + '/' : file.replace(/ \(.*$/, '')
+    folders.set(top, (folders.get(top) ?? 0) + 1)
+  }
+  io.out('')
+  io.out(
+    ui.columns(
+      [...folders].map(([name, count]) => [
+        ui.accent(name),
+        ui.dim(`${count} ${count === 1 ? 'file' : 'files'}`),
+      ]),
+      { indent: 2 },
+    ),
+  )
+  if (info.skipped.length)
+    io.out('\n' + ui.warn(`Left alone (already there): ${info.skipped.join(', ')}`))
+  io.out('')
+  io.out(ui.heading('Next'))
+  const steps = [
+    ...(info.where ? [`cd ${info.where}`] : []),
+    ...(info.install ? ['npm install'] : []),
+    'npm run dev',
+  ]
+  io.out(steps.map((step, i) => `  ${ui.dim(String(i + 1))}  ${ui.bold(step)}`).join('\n'))
+  io.out('')
+  io.out(
+    ui.dim('Then: npx tessera docs for the design system docs, npx tessera check to validate.'),
+  )
 }
