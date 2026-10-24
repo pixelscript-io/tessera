@@ -41,7 +41,7 @@ A Vue/Svelte-simple framework where tokens, accessibility, variants, docs, and v
 ## 3. Non-goals (v0.x)
 
 - Competing with React/Vue/Svelte on renderer performance or ecosystem.
-- SSR, hydration, streaming, and islands (design for them; do not build them).
+- Server rendering, hydration, streaming, and islands. Static prerendering of pages at build time is built (Milestone 23); the rest is designed for and not built.
 - A full-stack or backend framework. This is frontend only.
 - Native mobile targets.
 - A visual editor or Figma plugin (tokens import/export via files only).
@@ -454,8 +454,7 @@ Headless interaction logic, framework-agnostic, attached to a part via the contr
 
 A behavior provides: keyboard handling, focus management, ARIA attributes, and normalized events. Each behavior declares which `parts`, `states`, and `events` it requires, and the compiler verifies the contract satisfies them.
 
-**v0.1 behaviors:** `press` (click/Enter/Space, `aria-pressed` optional), `toggle`, `disclosure`.
-**Next (Milestone 18):** `dialog` (focus trap, scroll lock) and `combobox`, the two behaviors teams most often hit the limits of other headless libraries on.
+**Built:** `press` (click/Enter/Space, `aria-pressed` optional), `toggle`, `disclosure`, `dialog` (focus trap, scroll lock, native `<dialog>`) and `combobox` (the two behaviors teams most often hit the limits of other headless libraries on). Each has a conformance suite in `@tessera/behavior/conformance`.
 **Later:** `menu` (roving tabindex), `tabs`, `listbox`, `tooltip`, date and date-range inputs.
 
 Rules:
@@ -549,13 +548,16 @@ Great errors are only useful where developers see them, and a new file format is
 | Command                                                  | Purpose                                                                                                                                                              |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tessera init [folder] [--preset tessera\|tailwind\|none]` | Scaffold a project, in an empty folder or an existing `package.json`. Asks which preset when run in a terminal; the default is `tessera` (Milestone 20). `tailwind`: a full `system/` built from Tailwind's default theme, with light and dark themes, three components and a styled index page. `none`: no tokens or themes, and example files with the examples commented out (12b) |
-| `tessera dev` / `build` / `preview`                      | Run the app with no config files: the CLI supplies the Vite config and HTML shell. A project's own `vite.config.ts` or `index.html` overrides them (12b)                |
+| `tessera dev` / `build` / `preview`                      | Run the app with no config files: the CLI supplies the Vite config and HTML shell. A project's own `vite.config.ts` or `index.html` overrides them (12b). `build --prerender` also writes static HTML for each page (Milestone 23) |
 | `tessera tokens build`                                   | Resolve tokens, emit CSS, `.d.ts`, manifest                                                                                                                          |
 | `tessera tokens import <file>` / `tessera tokens export` | Strict DTCG 2025.10 in and out, with Tokens Studio/Penpot adapters (8.6)                                                                                             |
 | `tessera check`                                          | Run all validations without bundling (CI-friendly, non-zero exit on error). Respects the baseline and per-path severity (8.5); `--fix` applies unambiguous autofixes |
 | `tessera baseline [--prune]`                             | Record or prune per-file violation counts so existing code can adopt Tessera with errors on (8.5)                                                                    |
 | `tessera report`                                         | Tokenized/raw ratio, `raw()` uses, exemptions, baseline debt, contract and a11y coverage, deprecated usage (8.5); JSON output for CI                                 |
 | `tessera explain <code>`                                 | Print the cause, example, and fixes for an error or warning code, from the error registry                                                                            |
+| `tessera lint [paths...] [--tokens <folder>]`            | The style rules of `check` on the plain CSS of any project, with or without Tessera: `.css` and the `<style>` of Vue, Svelte, Astro and HTML files, tokens as `var(--t-…)`. `--fix`, `--baseline`/`--prune` (its own `tessera.lint-baseline.json`), `--json`, per-path severity from the config (Milestone 25) |
+| `tessera a11y`                                           | Set a project up to run the generated accessibility tests: test files, Vitest browser config, dev dependencies and a `test:a11y` script; never overwrites (Milestone 21) |
+| `tessera elements`                                       | Build the design system as custom elements with React wrappers, types and a custom-elements manifest, usable without Tessera (Milestone 22) |
 | `tessera docs`                                           | Build/serve the generated docs; `--static` exports a hostable site; `--edit` adds token import (14.3)                                                                                      |
 | `tessera diff <ref>`                                     | Contract/token change report (section 12)                                                                                                                            |
 | `tessera new component <Name>`                           | Scaffold a `.tess` file with a valid starter contract                                                                                                                |
@@ -869,6 +871,47 @@ Added after Milestone 19, at the author's request: the generated docs need a def
 - A third preset, `tessera`, next to `tailwind` and `none` (`tessera init --preset tessera|tailwind|none`). It is a small design system of Tessera's own: a warm-neutral palette (stone), a green accent and red, spacing, radii, type, shadows, opacity and motion, a semantic layer (surface, text, border, action, status, focus) with the same names the `tailwind` preset uses, a dark theme (`$auto`), the design system's own `Button`, and `Card` and `Badge`, a layout with a theme switch and a styled index page. It is the default when there is no terminal and no flag.
 - The docs app styles its chrome from the project's semantic tokens (the page and panel colors, text, border, primary action, status colors, sans and mono families, `radius.sm`), each with a built-in fallback, so a project with the `tessera` or `tailwind` preset has docs styled by the same files as its app, and a project without tokens (`none`) gets the built-in look. When the tokens define a theme with `$auto` the docs start on it, and the docs' theme switcher moves the whole page.
 - **Done when:** (a) `init --preset tessera` writes the system, components, layout and page, `tessera check` passes with no contrast failure in either theme, the tokens the docs read exist, and the Button is the design system's own; (b) with no terminal and no flag `init` uses `tessera` and says so, and the prompt lists the three presets; (c) in a real browser the docs' page, text and panel colors are the project's tokens in light and in dark, a change to a token file changes the docs, and a project without tokens gets the fallback; (d) axe finds no serious violation on the docs overview, the Button page and the contrast page for each of the three presets in light and dark; (e) the packed-install test serves the `tessera` preset's page in a real browser, styled by its tokens, light and dark, accessible.
+
+### Milestone 21 — The accessibility suite ships to users
+
+Added after Milestone 20. The generated axe suites and the behavior conformance suites existed only inside this repository; a team using the framework should get them too.
+
+- `@pixelscriptio/tessera/a11y` exports the generated suite (states: hover, focus-visible, pressed, checked, expanded, open, disabled; per-behavior harnesses; `fixtures` for components that need props). `tessera a11y` sets a project up: a test file for each components folder, a Vitest browser-mode config, the dev dependencies and a `test:a11y` script. Vitest, `@vitest/browser` and `axe-core` are optional peers, so a project that does not test does not install them.
+- **Done when:** a project made by `init` with the packed tarball installed runs the suite in a real browser (478 tests for the `tessera` preset), the suite fails when a component is mutated to break its contract, and `tessera a11y` never overwrites a file.
+- **Found by it:** the presets' `Card` declared the role `group` without setting it; now `generic`.
+
+### Milestone 22 — Custom elements and React
+
+For teams that do not write `.tess`: the design system as standard custom elements.
+
+- `tessera elements` builds `system/components` into `dist-elements` with no dependency on Tessera: `elements.js` and `elements.css` (light DOM; variants and props as attributes and properties; events as `CustomEvent`s; slots as children), React wrappers with types, `elements.d.ts`, `custom-elements.json` and a README. Options: tag prefix, props, module name.
+- **Done when:** the built elements render and behave in a real browser with the same tokens, themes and accessibility as the components, and the React wrappers type-check.
+- **Not built:** Vue and Svelte wrappers; watching slot content for changes.
+
+### Milestone 23 — Static prerendering
+
+`tessera build --prerender` renders pages to HTML at build time so the first paint and search engines see content.
+
+- Writes `index.html`, `<route>/index.html` and `404.html`, linking each page's and layout's CSS. Pages with parameters and pages that need a browser are skipped and say so. There is no hydration: the router replaces the prerendered content when the app starts.
+- **Done when:** a built app served as plain files shows its pages with scripting disabled, and with scripting enabled it behaves as before.
+- **Not built:** hydration, streaming, islands, server rendering.
+
+### Milestone 24 — The command line, made to look good
+
+The CLI has a look of its own, with no dependency: color and symbols on a terminal, arrow-key menus for choices, grouped help, per-command `--help`, `--version` and "did you mean" for a mistyped command. When output is not a terminal, with `NO_COLOR` or `--no-color`, it is plain text; old Windows consoles get ASCII symbols. **Done when:** the formatting is tested in both modes.
+
+### Milestone 25 — The standalone linter
+
+`tessera lint` runs the style rules on the plain CSS of any project, so a team on React, Vue, Svelte or Astro gets token enforcement without `.tess`.
+
+- Reads `.css` and the `<style>` of `.vue`, `.svelte`, `.astro` and `.html`; reports raw colors and values off the scale (T2101, T2102), tokens of the wrong kind (T2103), unknown token names with the one meant (T2104), primitives used directly (T2105), and text and background pairs that fail contrast in any theme (T2107).
+- `--fix`, a separate baseline, per-path severity with a reason and an expiry, `--json`. There is no `raw()` in CSS, so configuration is the way out.
+- **Done when:** the same rules give the same findings on `.tess` and CSS, positions are exact in markup files, and the packed command finds problems in a project with no Tessera in it.
+- **Not built:** Sass, Less and Stylus; CSS-in-JS; Tailwind classes; a Stylelint plugin (`lintSource` is exported for one).
+
+### Security hardening
+
+After Milestone 20 a review of the docs write API, token import, CLI and MCP server found nothing serious and four things to tighten, each fixed with a test: an empty edit secret refuses every request; the key, host and origin are checked before any of the request body is read; a Resolver's `$ref` is followed only inside its own folder; and `tessera diff` passes git commit ids, never the text of a ref. See the Decisions log.
 
  until the above ships)
 
