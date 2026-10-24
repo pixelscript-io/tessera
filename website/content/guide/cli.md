@@ -70,6 +70,10 @@ records today's violations per file and per rule in `tessera.baseline.json`. Com
 
 Sets up the [generated accessibility tests](/tutorial/08-accessibility): a test file in `system/components` and `app/components`, a Vitest browser-mode configuration if there is none, the dev dependencies and a `test:a11y` script. It installs nothing: it ends with the three commands to run. It never overwrites a file, and with an existing Vitest configuration it says what to add instead of changing it.
 
+## `tessera elements`
+
+Builds the design system as custom elements, with React wrappers and types, so teams that do not use Tessera can use it. See [The design system as custom elements](/guide/elements).
+
 ## `tessera report`
 
 ```text

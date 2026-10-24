@@ -126,6 +126,21 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'elements',
+    usage: 'tessera elements [--out <folder>] [--prefix <p>] [--all]',
+    summary: 'Build the design system as custom elements, with React wrappers',
+    details:
+      "Builds the design system's components (the ones in `system/components`) as standard custom elements, so teams that do not use Tessera can use the system from any framework or from plain HTML. The folder is self-contained: `elements.js` has the elements and the runtime they need, `elements.css` has the design tokens (with their themes) and the components' styles, `react.js` and `react.d.ts` wrap each element as a React component (no JSX, no build step), `elements.d.ts` has the types, `custom-elements.json` is the manifest editors and docs tools read, and `README.md` says how to use it. Variants and props are attributes and properties, what a component emits is a DOM event with its payload in `detail`, and slots are children. Tags are `<t-button>`, `<t-accordion-item>`: the prefix, a hyphen and the name in kebab case.",
+    options: [
+      { flag: '--out <folder>', description: 'Where to write. Default `dist-elements`.' },
+      {
+        flag: '--prefix <p>',
+        description: 'The tag prefix: lowercase letters and digits. Default `t`, so `<t-button>`.',
+      },
+      { flag: '--all', description: 'Build the components in app/components too.' },
+    ],
+  },
+  {
     name: 'format',
     usage: 'tessera format [files...] [--check] [--stdin-filepath <file>]',
     summary: 'Format .tess files with Prettier, in any editor or in CI',

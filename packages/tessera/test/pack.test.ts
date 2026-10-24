@@ -250,6 +250,30 @@ describe('the packed package', () => {
     expect(report.numPassedTests).toBeGreaterThan(400)
   }, 600_000)
 
+  it('builds the design system as custom elements from the installed package', async () => {
+    const dir = install()
+    run(dir, 'init', '--preset', 'tessera')
+    const { stdout } = await execAsync(
+      `node "${join(dir, 'node_modules', '@pixelscriptio', 'tessera', 'bin', 'tessera.js')}" elements`,
+      { cwd: dir },
+    )
+    expect(stdout).toContain('Built 11 custom elements into dist-elements')
+    for (const file of [
+      'elements.js',
+      'elements.css',
+      'react.js',
+      'react.d.ts',
+      'elements.d.ts',
+      'custom-elements.json',
+    ]) {
+      expect(existsSync(join(dir, 'dist-elements', file)), file).toBe(true)
+    }
+    const js = readFileSync(join(dir, 'dist-elements', 'elements.js'), 'utf8')
+    // Self-contained: the runtime is inside, and nothing imports Tessera.
+    expect(js).toContain('customElements.define')
+    expect(js).not.toMatch(/from ["']@pixelscriptio/)
+  }, 180_000)
+
   it('formats .tess files through Prettier, from an editor or from the command line', () => {
     const dir = install()
     run(dir, 'init', '--preset', 'none')

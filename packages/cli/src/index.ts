@@ -6,6 +6,7 @@ import { check } from './commands/check'
 import { codemod } from './commands/codemod'
 import { diff } from './commands/diff'
 import { docs } from './commands/docs'
+import { elements } from './commands/elements'
 import { eject } from './commands/eject'
 import { format } from './commands/format'
 import { explain } from './commands/explain'
@@ -35,6 +36,7 @@ const COMMANDS: Record<string, Command> = {
   eject,
   explain,
   docs,
+  elements,
   diff,
   codemod,
   format,

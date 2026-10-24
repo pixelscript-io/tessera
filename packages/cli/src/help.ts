@@ -21,7 +21,7 @@ const GROUPS: Array<{ title: string; commands: string[] }> = [
       'format',
     ],
   },
-  { title: 'Docs and AI tools', commands: ['docs', 'manifest', 'mcp', 'agent-files'] },
+  { title: 'Docs and AI tools', commands: ['docs', 'elements', 'manifest', 'mcp', 'agent-files'] },
 ]
 
 const nameOf = (c: CommandDoc) => c.usage.replace(/^tessera /, '')

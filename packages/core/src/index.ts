@@ -30,3 +30,4 @@ export {
   type ComponentContext,
   type ComponentInput,
 } from './component'
+export { defineElement, type ElementSpec } from './element'
