@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { request } from 'node:http'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -156,6 +157,32 @@ describe('the system manager', () => {
     const withKey = await open(p, '#/import')
     expect(withKey.url()).not.toContain('key=')
     expect(await withKey.locator('text=Bring in a token export').count()).toBe(1)
+  }, 120_000)
+
+  it('refuses a request with no key without waiting for its body', async () => {
+    const p = await start()
+    const url = new URL(p.url)
+    // A client that announces a large body and never sends it: a server that reads first would wait for it forever.
+    const status = await new Promise<number>((resolve, reject) => {
+      const req = request(
+        {
+          host: url.hostname,
+          port: url.port,
+          path: '/__tessera/plan',
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'content-length': '9000000' },
+        },
+        (res) => {
+          res.resume()
+          resolve(res.statusCode ?? 0)
+          req.destroy()
+        },
+      )
+      req.on('error', (e) => (e.message.includes('hang up') ? undefined : reject(e)))
+      req.write('{"kind":')
+      setTimeout(() => reject(new Error('no answer: the server is waiting for the body')), 5_000)
+    })
+    expect(status).toBe(401)
   }, 120_000)
 
   it('offers token import and export and nothing else to change: no component editor, no new-component form', async () => {

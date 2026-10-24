@@ -104,21 +104,25 @@ export async function diff(args: Args, io: Io): Promise<number> {
   const project = await openProject(io.cwd, args)
   const gitRoot = resolve(git(project.root, ['rev-parse', '--show-toplevel']))
   const toRef = flag(args, 'to')
-  for (const ref of [from, ...(typeof toRef === 'string' ? [toRef] : [])]) {
+  // Refs are resolved to commit ids first, and only the ids are handed to the commands that follow, so the text of a
+  // ref (which a person typed) is never an argument to them.
+  const commitOf = (ref: string): string => {
     try {
-      git(gitRoot, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`])
+      return git(gitRoot, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`])
     } catch {
       throw new CliError(`Git does not know the ref "${ref}".`, 'Use a branch, a tag or a commit.')
     }
   }
+  const fromCommit = commitOf(from)
+  const toCommit = typeof toRef === 'string' ? commitOf(toRef) : undefined
 
   const cleanups: Array<() => void> = []
   try {
-    const old = projectAt(project, gitRoot, from)
+    const old = projectAt(project, gitRoot, fromCommit)
     cleanups.push(old.cleanup)
     let current: Project = project
-    if (typeof toRef === 'string') {
-      const next = projectAt(project, gitRoot, toRef)
+    if (toCommit) {
+      const next = projectAt(project, gitRoot, toCommit)
       cleanups.push(next.cleanup)
       current = next.project
     }

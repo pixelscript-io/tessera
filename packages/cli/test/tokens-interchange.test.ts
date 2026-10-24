@@ -129,3 +129,41 @@ describe('tessera tokens import', () => {
     )
   })
 })
+
+describe('tessera tokens import: which files a Resolver may pull in', () => {
+  const token = (r: number) =>
+    JSON.stringify({
+      color: { $type: 'color', x: { $value: { colorSpace: 'srgb', components: [r, 0, 0] } } },
+    })
+
+  it('reads the files a Resolver names inside its own folder', async () => {
+    const root = project({
+      'app/pages/index.tess': '<template><main>Hi</main></template>\n',
+      'in/r.json': JSON.stringify({
+        version: '2025.10',
+        sets: { base: { sources: [{ $ref: 'sets/base.json' }] } },
+        resolutionOrder: [{ $ref: '#/sets/base' }],
+      }),
+      'in/sets/base.json': token(1),
+    })
+    const { code } = await run(root, 'tokens', 'import', 'in/r.json', '--out', 'out')
+    expect(code).toBe(0)
+    expect(read(root, 'out/base.tokens.json')).toContain('"x"')
+  })
+
+  it('does not read a file outside it, even when the Resolver points there', async () => {
+    const root = project({
+      'app/pages/index.tess': '<template><main>Hi</main></template>\n',
+      'in/r.json': JSON.stringify({
+        version: '2025.10',
+        sets: { base: { sources: [{ $ref: '../secret/other.json' }] } },
+        resolutionOrder: [{ $ref: '#/sets/base' }],
+      }),
+      'secret/other.json': token(0.5),
+    })
+    const { code, err } = await run(root, 'tokens', 'import', 'in/r.json', '--out', 'out')
+    expect(code).toBe(1)
+    expect(err).toContain('which was not provided')
+    expect(existsSync(join(root, 'out'))).toBe(false)
+  })
+})

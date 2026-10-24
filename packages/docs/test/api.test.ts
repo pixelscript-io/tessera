@@ -172,6 +172,12 @@ describe('who may use the write interface', () => {
     expect(authorize(request(good, 'POST'), options)).toBeUndefined()
   })
 
+  it('never lets an empty key in, even if the secret was left empty', () => {
+    const open = { edit: true, secret: '' }
+    expect(authorize(request({ ...good, 'x-tessera-key': '' }), open)?.status).toBe(401)
+    expect(authorize(request({ ...good, 'x-tessera-key': undefined }), open)?.status).toBe(401)
+  })
+
   it('gives each run its own secret', () => {
     expect(newSecret()).not.toBe(newSecret())
     expect(newSecret().length).toBeGreaterThanOrEqual(30)

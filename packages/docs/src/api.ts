@@ -67,7 +67,8 @@ export function authorize(req: ApiRequest, options: ApiOptions): ApiResponse | u
   }
   const given = Buffer.from(req.headers['x-tessera-key'] ?? '')
   const wanted = Buffer.from(options.secret)
-  if (given.length !== wanted.length || !timingSafeEqual(given, wanted)) {
+  // A missing secret is a mistake in whoever set this up, never a way in: an empty key would match an empty secret.
+  if (!wanted.length || given.length !== wanted.length || !timingSafeEqual(given, wanted)) {
     return {
       status: 401,
       body: { error: 'The editor key is missing or wrong. Open the address the command printed.' },

@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import {
   buildTokens,
   detectFormat,
@@ -47,6 +47,10 @@ function readInputs(io: Io, inputs: string[]): InterchangeFile[] {
     // A Resolver document names the files it combines: read those too.
     for (const ref of resolverRefs(out[out.length - 1]!.content)) {
       const target = resolve(dirname(abs), ref)
+      // Only files in the Resolver's own folder (or below it): a downloaded export must not be able to read others.
+      // A reference that points elsewhere is left out, and the importer reports the file as missing (T1017).
+      const inside = relative(dirname(abs), target)
+      if (/^\.\.([\\/]|$)/.test(inside) || isAbsolute(inside)) continue
       if (existsSync(target) && !out.some((f) => resolve(io.cwd, f.path) === target)) add(target)
     }
   }

@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadConfigFile, Project } from '@tessera/compiler/project'
 import { searchForWorkspaceRoot, type HmrContext, type Plugin, type ViteDevServer } from 'vite'
-import { API_PREFIX, Editor } from './api'
+import { API_PREFIX, authorize, Editor } from './api'
 import { buildDocsData, type DocsData } from './data'
 
 const DATA_ID = 'virtual:tessera-docs/data'
@@ -214,6 +214,21 @@ export function docsPlugin(options: DocsOptions = {}): Plugin {
       server.middlewares.use((req, res, next) => {
         const url = req.url ?? '/'
         if (!url.startsWith(API_PREFIX) || !editor) return next()
+        const headers: Record<string, string | undefined> = {}
+        for (const [name, value] of Object.entries(req.headers)) {
+          headers[name] = Array.isArray(value) ? value[0] : value
+        }
+        // Refuse before reading a byte of the body: a client with no key must not make the server buffer anything.
+        const denied = authorize({ method: req.method ?? 'GET', url, headers }, editor.options)
+        if (denied) {
+          req.resume()
+          res.statusCode = denied.status
+          res.setHeader('Content-Type', 'application/json')
+          res.setHeader('Cache-Control', 'no-store')
+          res.setHeader('Connection', 'close')
+          res.end(JSON.stringify(denied.body))
+          return
+        }
         const chunks: Buffer[] = []
         let size = 0
         let refused = false
@@ -223,10 +238,6 @@ export function docsPlugin(options: DocsOptions = {}): Plugin {
           else chunks.push(chunk)
         })
         req.on('end', () => {
-          const headers: Record<string, string | undefined> = {}
-          for (const [name, value] of Object.entries(req.headers)) {
-            headers[name] = Array.isArray(value) ? value[0] : value
-          }
           const out = refused
             ? { status: 413, body: { error: 'That is too large for the editor.' } }
             : editor!.handle({
