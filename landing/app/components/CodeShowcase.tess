@@ -11,6 +11,10 @@
 }
 </contract>
 
+<script>
+import { CODE_TABS, PANES } from '../data/code'
+</script>
+
 <template>
   <section class="root">
     <div class="inner">
@@ -18,7 +22,7 @@
         <span class="eyebrow">How it reads</span>
         <span class="title">One file declares it. The compiler holds you to it.</span>
       </div>
-      <CodeTabs />
+      <CodeTabs :tabs="CODE_TABS" :panes="PANES" label="How it reads" name="reads" />
     </div>
   </section>
 </template>

@@ -16,5 +16,5 @@ design system yet. Nothing here is required. When you want one:
 
 `npx tessera check` validates everything. `npx tessera explain <code>` explains any error it prints.
 
-Want a full starting system instead? Start a new project with `npx @pixelscriptio/tessera init --preset tailwind`,
+Want a full starting system instead? Start a new project with `npx @pixelscriptio/tessera@latest init --preset tailwind`,
 which writes a complete system built from Tailwind's default theme.

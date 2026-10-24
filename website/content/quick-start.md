@@ -17,7 +17,7 @@ mkdir my-app
 cd my-app
 git init
 npm init -y
-npm install @pixelscriptio/tessera
+npm install @pixelscriptio/tessera@latest
 npx tessera init
 npm run dev
 ```
@@ -27,7 +27,7 @@ mkdir my-app
 cd my-app
 git init
 npm init -y
-npm install @pixelscriptio/tessera
+npm install @pixelscriptio/tessera@latest
 npx tessera init
 npm run dev
 ```
@@ -40,7 +40,7 @@ npm run dev
 pnpm 11 stops an install when a dependency has an install script nobody has approved, and Vite depends on esbuild, which has one. If `pnpm add @pixelscriptio/tessera` ends with `ERR_PNPM_IGNORED_BUILDS`, run `pnpm approve-builds`, allow `esbuild`, and run the install again. npm only prints a warning about it, and the project works either way: esbuild runs from a prebuilt binary.
 :::
 
-If you would rather not install first, `npm create @pixelscriptio/tessera my-app` starts a project in a new folder in one step. It asks the same question, then writes the project into `my-app`; run `cd my-app`, `npm install` and `npm run dev` after it.
+If you would rather not install first, `npm create @pixelscriptio/tessera@latest my-app` starts a project in a new folder in one step. Keep the `@latest`: without it npm can reuse an older copy it has cached. It asks the same question, then writes the project into `my-app`; run `cd my-app`, `npm install` and `npm run dev` after it.
 
 ## Choose a starting point
 

@@ -167,6 +167,68 @@
         "$value": "{color.green.300}"
       }
     },
+    "logo": {
+      "1": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.65098039, 0.78431373, 1]
+        }
+      },
+      "2": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.50980392, 0.81176471, 1]
+        }
+      },
+      "3": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.47058824, 0.6627451, 1]
+        }
+      },
+      "4": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.27058824, 0.5372549, 1]
+        }
+      },
+      "5": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2, 0.69411765, 1]
+        }
+      },
+      "6": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.06666667, 0.57254902, 0.90980392]
+        }
+      },
+      "7": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.05882353, 0.38431373, 0.99607843]
+        }
+      },
+      "8": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0, 0.44705882, 0.76470588]
+        }
+      },
+      "9": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0, 0.3254902, 0.60392157]
+        }
+      },
+      "10": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0, 0.2627451, 0.80784314]
+        }
+      }
+    },
     "demo": {
       "stage": {
         "$value": "{color.neutral.100}"

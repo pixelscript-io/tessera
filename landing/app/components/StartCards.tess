@@ -8,7 +8,7 @@
 </contract>
 
 <script>
-import { ADOPT_COMMAND, QUICK_COMMAND } from '../data/code'
+import { DOCS_COMMAND, QUICK_COMMAND } from '../data/code'
 </script>
 
 <template>
@@ -21,9 +21,9 @@ import { ADOPT_COMMAND, QUICK_COMMAND } from '../data/code'
         />
       <CommandCard
         tone="light"
-        title="Adopt in an existing app"
-        body="Record today's violations as a baseline. Enforcement fails only on new ones, and the count can only go down."
-        :commands="ADOPT_COMMAND"
+        title="Generate your docs"
+        body="One command builds a documentation app from your contracts and tokens: a page for every component and token, styled by the same tokens as your app. Nothing in it is written by hand."
+        :commands="DOCS_COMMAND"
         />
     </div>
   </section>

@@ -1,7 +1,7 @@
 # @pixelscriptio/create-tessera
 
 ```bash
-npm create @pixelscriptio/tessera my-app
+npm create @pixelscriptio/tessera@latest my-app
 cd my-app
 npm install
 npm run dev

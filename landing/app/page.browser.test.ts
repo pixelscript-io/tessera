@@ -78,10 +78,10 @@ describe('the install command', () => {
     const writeText = vi.fn(() => Promise.resolve())
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     const copy = root.querySelector<HTMLButtonElement>('section button[type="button"]')!
-    expect(copy.textContent).toContain('npm install @pixelscriptio/tessera')
+    expect(copy.textContent).toContain('npm install @pixelscriptio/tessera@latest')
     expect(copy.textContent).toContain('Copy')
     await userEvent.click(copy)
-    expect(writeText).toHaveBeenCalledWith('npm install @pixelscriptio/tessera')
+    expect(writeText).toHaveBeenCalledWith('npm install @pixelscriptio/tessera@latest')
     expect(copy.textContent).toContain('Copied')
     await settle(1700)
     expect(copy.textContent).not.toContain('Copied')
@@ -89,23 +89,84 @@ describe('the install command', () => {
 })
 
 describe('the code window', () => {
+  const windowOf = (label: string) => {
+    const list = root.querySelector<HTMLElement>(`[role="tablist"][aria-label="${label}"]`)!
+    const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')]
+    const panels = () => [...list.parentElement!.querySelectorAll<HTMLElement>('[role="tabpanel"]')]
+    return {
+      tabs,
+      shown: () => panels().map((p) => !p.hidden),
+      visible: () => panels().find((p) => !p.hidden)!,
+    }
+  }
+
   it('shows the panel of the tab that is chosen, with the keyboard or the pointer', async () => {
-    const tabs = [...root.querySelectorAll<HTMLElement>('[role="tab"]')]
-    const panels = () =>
-      [...root.querySelectorAll<HTMLElement>('[role="tabpanel"]')].map((p) => !p.hidden)
-    expect(panels()).toEqual([true, false, false])
+    const { tabs, shown, visible } = windowOf('How it reads')
+    expect(shown()).toEqual([true, false, false])
     await userEvent.click(tabs[1]!)
-    expect(panels()).toEqual([false, true, false])
+    expect(shown()).toEqual([false, true, false])
     expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false'])
     tabs[1]!.focus()
     await userEvent.keyboard('{ArrowRight}')
-    expect(panels()).toEqual([false, false, true])
+    expect(shown()).toEqual([false, false, true])
     expect(document.activeElement).toBe(tabs[2])
-    expect(panels().filter(Boolean)).toHaveLength(1)
+    expect(shown().filter(Boolean)).toHaveLength(1)
     // The text of the last tab is what asks the compiler.
-    expect(root.querySelector('[role="tabpanel"]:not([hidden])')!.textContent).toContain(
-      'validate_snippet',
-    )
+    expect(visible().textContent).toContain('validate_snippet')
+  })
+
+  it('says how to use the elements in each framework, in tabs of their own', async () => {
+    const { tabs, shown, visible } = windowOf('Use the elements in your framework')
+    expect(tabs.map((t) => t.textContent!.trim())).toEqual([
+      'HTML',
+      'React',
+      'Vue',
+      'Svelte',
+      'Angular',
+    ])
+    expect(visible().textContent).toContain('elements.css')
+    await userEvent.click(tabs[2]!)
+    expect(shown()).toEqual([false, false, true, false, false])
+    expect(visible().textContent).toContain('isCustomElement')
+    await userEvent.click(tabs[4]!)
+    expect(visible().textContent).toContain('CUSTOM_ELEMENTS_SCHEMA')
+    await userEvent.click(tabs[1]!)
+    expect(visible().textContent).toContain('./dist-elements/react.js')
+  })
+
+  it('keeps the ids of the two windows apart', () => {
+    const ids = [...root.querySelectorAll('[id]')].map((e) => e.id)
+    expect(ids.length).toBeGreaterThan(10)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+})
+
+describe('the two ways in', () => {
+  it('starts a project with the command that always gets the latest release, and generates the docs', () => {
+    const cards = [...root.querySelectorAll('section')[1]!.children[0]!.children]
+    expect(cards[0]!.textContent).toContain('npm create @pixelscriptio/tessera@latest my-app')
+    expect(cards[1]!.textContent).toContain('Generate your docs')
+    expect(cards[1]!.textContent).toContain('npx tessera docs --static')
+    expect(root.textContent).not.toContain('Adopt in an existing app')
+  })
+
+  it('gives every npm install and create command @latest', () => {
+    const text = root.textContent!
+    for (const m of text.matchAll(/npm (?:install|create) @pixelscriptio\/[\w-]+\S*/g))
+      expect(m[0], m[0]).toContain('@latest')
+  })
+})
+
+describe('the footer', () => {
+  it('says whose project it is, with the mark, and links to their site', () => {
+    const credit = root.querySelector<HTMLAnchorElement>('footer a[href="https://pixelscript.io"]')!
+    expect(credit.textContent).toContain('A PixelScript project')
+    const logo = credit.querySelector('svg')!
+    expect(logo.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(logo.getAttribute('aria-hidden')).toBe('true')
+    expect(logo.querySelectorAll('path')).toHaveLength(10)
+    const fills = new Set([...logo.querySelectorAll('path')].map((p) => getComputedStyle(p).fill))
+    expect(fills.size).toBe(10)
   })
 })
 

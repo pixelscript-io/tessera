@@ -16,7 +16,7 @@ export interface Example {
 export const LINT: Example = {
   label: 'tessera lint',
   title: "Lint any project's CSS against your tokens.",
-  body: 'CSS files and the style blocks of .vue, .svelte, .astro and .html. Raw colors, off-scale values, wrong token kinds and failing contrast, in every theme. --fix applies the unambiguous ones; --baseline lets an existing project start at zero.',
+  body: "Run it in any project's folder, with your design tokens as DTCG files. It reads CSS files and the style blocks of .vue, .svelte, .astro and .html, and finds raw colors, off-scale values, wrong token kinds and failing contrast, in every theme. --fix applies the unambiguous ones; --baseline lets an existing project start at zero.",
   lines: [
     line(['$ ', 'com'], 'npx tessera lint --tokens design/tokens'),
     line(),

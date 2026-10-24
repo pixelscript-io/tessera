@@ -114,6 +114,9 @@ export const PANES: Record<TabId, CodePane[]> = Object.fromEntries(
   ]),
 ) as Record<TabId, CodePane[]>
 
-export const QUICK_COMMAND =
-  '$ npm install @pixelscriptio/tessera\n$ npx tessera init\n$ npm run dev'
-export const ADOPT_COMMAND = '$ npx tessera init --preset none\n$ npx tessera baseline'
+export const QUICK_COMMAND = [
+  '$ npm create @pixelscriptio/tessera@latest my-app',
+  '$ cd my-app && npm install',
+  '$ npm run dev',
+].join('\n')
+export const DOCS_COMMAND = ['$ npx tessera docs', '$ npx tessera docs --static'].join('\n')

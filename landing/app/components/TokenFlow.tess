@@ -22,6 +22,7 @@
     "centerNote",
     "detail",
     "card",
+    "caveat",
     "dir",
     "label",
     "point",
@@ -186,6 +187,10 @@ function choose(id) {
         </div>
         <div class="command" tabindex="0">{io.cmd}</div>
       </div>
+      <p class="caveat">
+        The importers are tested against files written to each format's documentation. Real exports from Figma, Tokens Studio and
+        Penpot are next on the roadmap.
+      </p>
     </div>
   </section>
 </template>
@@ -374,6 +379,12 @@ function choose(id) {
   max-width: 1080px;
   margin: 0 auto;
   padding: 0 $space.24 $space.80;
+}
+
+.caveat {
+  margin: $space.12 0 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
 }
 
 .card {

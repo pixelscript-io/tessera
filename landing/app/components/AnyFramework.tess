@@ -3,13 +3,26 @@
   "name": "AnyFramework",
   "role": "generic",
   "description": "The section for teams that do not write .tess: the linter and the custom elements, and two commands that help anywhere.",
-  "parts": ["root", "inner", "cards", "notes", "note", "command"],
+  "parts": [
+    "root",
+    "inner",
+    "cards",
+    "how",
+    "steps",
+    "stepsTitle",
+    "stepsBody",
+    "stepsCommand",
+    "notes",
+    "note",
+    "command"
+  ],
   "contrast": [{ "foreground": "note", "background": "root" }]
 }
 </contract>
 
 <script>
 import { ELEMENTS, LINT } from '../data/examples'
+import { FRAMEWORK_PANES, FRAMEWORK_TABS } from '../data/frameworks'
 </script>
 
 <template>
@@ -18,12 +31,23 @@ import { ELEMENTS, LINT } from '../data/examples'
       <SectionHeader>
         <span slot="eyebrow">Outside .tess</span>
         <span slot="title">The same system in any framework.</span>
-        Not every team will write .tess files. The token checks and the components work in React, Vue, Svelte, Angular or
-        plain HTML.
+        Not every team will write .tess files. Two commands bring the system to a project that does not: one checks its CSS
+        against your tokens, the other builds your components as custom elements that any framework can use.
       </SectionHeader>
       <div class="cards">
         <ExampleCard :label="LINT.label" :title="LINT.title" :body="LINT.body" :lines="LINT.lines" />
         <ExampleCard :label="ELEMENTS.label" :title="ELEMENTS.title" :body="ELEMENTS.body" :lines="ELEMENTS.lines" />
+      </div>
+      <div class="how">
+        <div class="steps">
+          <span class="stepsTitle">Using the elements in your framework</span>
+          <p class="stepsBody">
+            Build them once in your design system's project, then load the folder in the app. They are plain HTML tags (React also gets wrappers),
+            so each framework only needs to be told those tags are not its own.
+          </p>
+          <div class="stepsCommand" tabindex="0">$ npx tessera elements</div>
+        </div>
+        <CodeTabs :tabs="FRAMEWORK_TABS" :panes="FRAMEWORK_PANES" label="Use the elements in your framework" name="frameworks" />
       </div>
       <div class="notes">
         <span class="note"><span class="command">tessera build --prerender</span> writes static HTML for pages.</span>
@@ -53,6 +77,50 @@ import { ELEMENTS, LINT } from '../data/examples'
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   gap: $space.12;
   align-items: stretch;
+}
+
+.how {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: $space.24;
+  align-items: start;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: $space.10;
+}
+
+.stepsTitle {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.stepsBody {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+}
+
+.stepsCommand {
+  align-self: flex-start;
+  padding: $space.10 $space.14;
+  overflow: auto;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.sm;
+  background: $color.surface.raised;
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  white-space: pre;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.default;
+    outline-offset: 2px;
+  }
 }
 
 .notes {

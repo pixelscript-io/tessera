@@ -2,7 +2,7 @@
 {
   "name": "CodeTabs",
   "role": "generic",
-  "description": "A dark window with tabs: a component file, the check that reads it, and the MCP server that asks the same compiler.",
+  "description": "A dark window with tabs. Each tab shows one or more columns of highlighted code or output. It is given its tabs and what they show.",
   "since": "0.5.0",
   "parts": ["root", "list", "tab", "panel", "pane", "line"],
   "behavior": "tabs",
@@ -17,10 +17,16 @@
 </contract>
 
 <script>
-import { CODE_TABS, PANES } from '../data/code'
-
-const { initial } = props({ initial: 'contract' })
-const selected = state(initial.value)
+// `tabs` is a list of { id, label }; `panes` maps each id to its columns of highlighted lines (see data/code.ts).
+// `name` keeps the ids of two windows on one page apart, and `label` names the tab list for a screen reader.
+const { tabs, panes, label, name, initial } = props({
+  tabs: [],
+  panes: {},
+  label: 'Code examples',
+  name: 'code',
+  initial: '',
+})
+const selected = state(initial.value || (tabs.value[0] ? tabs.value[0].id : ''))
 
 function pick(detail) {
   selected.value = detail.value
@@ -30,16 +36,16 @@ function pick(detail) {
 
 <template>
   <div class="root">
-    <div class="list" role="tablist" aria-label="How it reads" @activate="pick($event)">
+    <div class="list" role="tablist" :aria-label="label" @activate="pick($event)">
       <button
-        each="t in CODE_TABS"
+        each="t in tabs"
         key="t.id"
         class="tab"
         type="button"
         role="tab"
-        :id="'tab-' + t.id"
+        :id="name + '-tab-' + t.id"
         :data-value="t.id"
-        :aria-controls="'panel-' + t.id"
+        :aria-controls="name + '-panel-' + t.id"
         :aria-selected="selected === t.id ? 'true' : 'false'"
         :tabindex="selected === t.id ? 0 : -1"
         >
@@ -47,15 +53,15 @@ function pick(detail) {
       </button>
     </div>
     <div
-      each="t in CODE_TABS"
+      each="t in tabs"
       key="t.id"
       class="panel"
       role="tabpanel"
-      :id="'panel-' + t.id"
-      :aria-labelledby="'tab-' + t.id"
+      :id="name + '-panel-' + t.id"
+      :aria-labelledby="name + '-tab-' + t.id"
       :hidden="selected !== t.id"
       >
-      <div class="pane" each="pane in PANES[t.id]" key="pane" tabindex="0">
+      <div class="pane" each="pane in panes[t.id]" key="pane" tabindex="0">
         <div class="line" each="ln in pane.lines" key="ln">
           <span each="s in ln.segs" key="s" :data-kind="s.kind">{s.text}</span>
         </div>

@@ -12,7 +12,7 @@ Every command runs in the nearest folder above the current one that looks like a
 mkdir my-app
 cd my-app
 npm init -y
-npm install @pixelscriptio/tessera
+npm install @pixelscriptio/tessera@latest
 npx tessera init
 npm run dev
 ```
@@ -21,7 +21,7 @@ npm run dev
 
 It works in an empty folder or beside an existing `package.json`: it adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency, never overwrites a file, and lists what it left alone. Run it twice and the second run changes nothing.
 
-`npm create @pixelscriptio/tessera my-app` does the same thing in a new folder, through the `@pixelscriptio/create-tessera` package, with no prior install.
+`npm create @pixelscriptio/tessera@latest my-app` does the same thing in a new folder, through the `@pixelscriptio/create-tessera` package, with no prior install.
 
 ## `tessera dev`, `build` and `preview`
 

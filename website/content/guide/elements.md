@@ -71,11 +71,13 @@ The wrappers set variants and props as properties (so a list or a boolean arrive
 
 ## Vue, Svelte, Angular
 
-Custom elements work in them directly. In Vue, tell the compiler the tags are not Vue components:
+Custom elements work in them directly: load `elements.js` and `elements.css` once (in your entry file, and in `angular.json` for the stylesheet), then write the tags. In Vue, tell the compiler the tags are not Vue components:
 
 ```ts
 app.config.compilerOptions.isCustomElement = (tag) => tag.startsWith('t-')
 ```
+
+Svelte needs nothing. In Angular, add `CUSTOM_ELEMENTS_SCHEMA` to the `schemas` of the module or standalone component that uses the tags, and listen to events with the usual `(press)="save()"`; in Vue it is `@press="save"`.
 
 `elements.d.ts` has an element type for each tag and adds them to `HTMLElementTagNameMap`, so `document.querySelector('t-button')` is typed. Listen to a component's own events with `addEventListener`, which has an overload for each of them.
 

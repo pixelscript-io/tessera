@@ -27,7 +27,7 @@ import { AGENT_ITEMS } from '../data/copy'
           Tools guess: a button that does not exist, a padding of 13px. Tessera rejects those at compile time and lets the tool ask
           first.
         </SectionHeader>
-        <span class="note">Smoke test, six prompts: 2 errors in 15 files without the tools, 0 in 9 with them.</span>
+        <span class="note">A small test, six prompts and one attempt each: 2 errors in 15 files without the tools, 0 in 9 with them. A smoke test, not proof.</span>
       </div>
       <div class="cards">
         <div class="card" each="a in AGENT_ITEMS" key="a.title">

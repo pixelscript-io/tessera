@@ -10,4 +10,5 @@ export const links = {
   roadmap: `${DOCS}/releases/roadmap`,
   contributing: `${DOCS}/community/contributing`,
   github: GITHUB,
+  pixelscript: 'https://pixelscript.io',
 }

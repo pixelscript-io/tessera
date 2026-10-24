@@ -31,7 +31,7 @@ export const PACKAGES: Pkg[] = [
       'Subpath exports: /core, /router, /behavior, /tokens, /vite, /cli, /prettier, /a11y.',
       'Ships the tessera binary. Node.js 20 or newer.',
     ],
-    snippet: 'npm install @pixelscriptio/tessera',
+    snippet: 'npm install @pixelscriptio/tessera@latest',
     deps: ['core', 'router', 'behavior', 'tokens', 'compiler', 'cli'],
   },
   {
@@ -42,7 +42,7 @@ export const PACKAGES: Pkg[] = [
     summary:
       'Creates a project folder, asks which starting point you want, and writes the project into it.',
     points: ['Presets: tessera (the default), tailwind or none.'],
-    snippet: 'npm create @pixelscriptio/tessera my-app',
+    snippet: 'npm create @pixelscriptio/tessera@latest my-app',
     deps: ['tessera'],
   },
   {
@@ -163,7 +163,7 @@ export const PACKAGES: Pkg[] = [
     short: 'behavior',
     layer: 'run',
     summary:
-      'Interaction logic separate from how a component looks: press, toggle, disclosure, dialog and combobox.',
+      'Interaction logic separate from how a component looks: press, toggle, disclosure, dialog, combobox and tabs.',
     points: [
       'Declared in the contract, checked by the compiler.',
       'Each ships a conformance suite: keys, pointer, focus, and for a dialog the focus trap and scroll lock.',

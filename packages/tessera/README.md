@@ -5,7 +5,7 @@ A design-system-first frontend framework: tokens, accessibility, variants and do
 ```bash
 mkdir my-app && cd my-app
 npm init -y
-npm install @pixelscriptio/tessera
+npm install @pixelscriptio/tessera@latest
 npx tessera init
 npm run dev
 ```

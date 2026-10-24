@@ -13,7 +13,7 @@
 </contract>
 
 <script>
-const COMMAND = 'npm install @pixelscriptio/tessera'
+const COMMAND = 'npm install @pixelscriptio/tessera@latest'
 
 const copied = state(false)
 let timer

@@ -36,7 +36,7 @@ const commands = blocks
 const setup = commands.slice(0, -1)
 const serve = commands[commands.length - 1]!
 /** The one line this test changes: the install reads the package from the checkout's tarball, so a run tests the code under change and not whatever was last published. */
-const INSTALL = 'npm install @pixelscriptio/tessera'
+const INSTALL = 'npm install @pixelscriptio/tessera@latest'
 
 const made: string[] = []
 // `git init` leaves read-only files on Windows, and a just-stopped server can still hold a handle for a moment:

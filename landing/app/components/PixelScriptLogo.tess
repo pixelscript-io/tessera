@@ -1,0 +1,66 @@
+<contract>
+{
+  "name": "PixelScriptLogo",
+  "role": "generic",
+  "description": "The PixelScript mark, drawn from the ten blues of its ramp. It is decoration: the link around it carries the name.",
+  "since": "0.5.1",
+  "parts": ["root", "diamond"]
+}
+</contract>
+
+<script>
+import { LOGO_DIAMONDS } from '../data/logo'
+</script>
+
+<template>
+  <svg class="root" width="33" height="24" viewBox="0 0 33 24" aria-hidden="true">
+    <path class="diamond" each="p in LOGO_DIAMONDS" key="p.tone" :d="p.d" :data-tone="p.tone" fill-rule="evenodd" clip-rule="evenodd" />
+  </svg>
+</template>
+
+<style>
+.root {
+  display: block;
+  flex: none;
+}
+
+.diamond[data-tone='1'] {
+  fill: $color.logo.1;
+}
+
+.diamond[data-tone='2'] {
+  fill: $color.logo.2;
+}
+
+.diamond[data-tone='3'] {
+  fill: $color.logo.3;
+}
+
+.diamond[data-tone='4'] {
+  fill: $color.logo.4;
+}
+
+.diamond[data-tone='5'] {
+  fill: $color.logo.5;
+}
+
+.diamond[data-tone='6'] {
+  fill: $color.logo.6;
+}
+
+.diamond[data-tone='7'] {
+  fill: $color.logo.7;
+}
+
+.diamond[data-tone='8'] {
+  fill: $color.logo.8;
+}
+
+.diamond[data-tone='9'] {
+  fill: $color.logo.9;
+}
+
+.diamond[data-tone='10'] {
+  fill: $color.logo.10;
+}
+</style>
