@@ -22,6 +22,7 @@ export default defineConfig({
         router: 'src/router.ts',
         'router-app': 'src/router-app.ts',
         behavior: 'src/behavior.ts',
+        a11y: 'src/a11y.ts',
         tokens: 'src/tokens.ts',
         vite: 'src/vite.ts',
         cli: 'src/cli.ts',
@@ -36,7 +37,19 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       // Prettier is the user's own: the plugin is loaded by it, and `tessera format` finds it in the project.
-      external: ['vite', 'acorn', 'prettier', /^prettier\//, /^node:/, /^virtual:/],
+      // The test tools of the generated accessibility tests are the project's own, installed by `tessera a11y`.
+      external: [
+        'vite',
+        'acorn',
+        'prettier',
+        /^prettier\//,
+        'vitest',
+        /^vitest\//,
+        /^@vitest\//,
+        'axe-core',
+        /^node:/,
+        /^virtual:/,
+      ],
     },
   },
 })

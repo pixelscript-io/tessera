@@ -68,6 +68,13 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'a11y',
+    usage: 'tessera a11y',
+    summary: 'Set up the generated accessibility tests',
+    details:
+      'Sets up the accessibility tests Tessera generates from your contracts: a test file in each components folder (`system/components`, `app/components`) that asks for them, a Vitest browser-mode configuration if the project has none, the dev dependencies (`vitest`, `@vitest/browser`, `playwright`, `axe-core`) and a `test:a11y` script in `package.json`. Components that need data to be shown, such as a combobox, get example options. It never overwrites a file, and it does not install anything: it ends with the commands to run. The tests run in a real browser. Set `TESSERA_A11Y_CHANNEL=msedge` (or `chrome`) to use one that is already installed.',
+  },
+  {
     name: 'baseline',
     usage: 'tessera baseline [--prune]',
     summary: 'Record (or lower) existing violations so old code can adopt Tessera',

@@ -42,7 +42,7 @@ function walk(dir) {
 
 for (const file of walk(out)) {
   const text = readFileSync(file, 'utf8')
-  const next = text.replace(/(['"])(@tessera\/[a-z]+(?:\/[a-z/-]+)?)\1/g, (_, q, spec) => {
+  const next = text.replace(/(['"])(@tessera\/[a-z0-9]+(?:\/[a-z/-]+)?)\1/g, (_, q, spec) => {
     let rel = relative(dirname(file), target(spec)).replaceAll('\\', '/')
     if (!rel.startsWith('.')) rel = `./${rel}`
     return `${q}${rel}${q}`

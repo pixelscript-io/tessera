@@ -1,4 +1,5 @@
 import { parseArgs, type Args } from './args'
+import { a11y } from './commands/a11y'
 import { agentFiles, manifest, mcp } from './commands/agent'
 import { baseline } from './commands/baseline'
 import { check } from './commands/check'
@@ -26,6 +27,7 @@ const COMMANDS: Record<string, Command> = {
   build,
   preview,
   check,
+  a11y,
   baseline,
   report,
   tokens,

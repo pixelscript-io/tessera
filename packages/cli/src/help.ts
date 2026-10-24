@@ -5,7 +5,10 @@ import { VERSION } from './version'
 /** The commands, in the order a person meets them. */
 const GROUPS: Array<{ title: string; commands: string[] }> = [
   { title: 'Start', commands: ['init', 'dev', 'build', 'preview'] },
-  { title: 'Check', commands: ['check', 'baseline', 'report', 'explain', 'diff', 'codemod'] },
+  {
+    title: 'Check',
+    commands: ['check', 'a11y', 'baseline', 'report', 'explain', 'diff', 'codemod'],
+  },
   {
     title: 'Tokens and components',
     commands: [

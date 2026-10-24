@@ -216,4 +216,4 @@ Automation covers only what a machine can check. These need a person:
 - Real states for components whose contracts name states the test cannot create (for example drag).
 - Combinations of a component with others, and content an app puts in its slots.
 
-This list is exported as `NOT_COVERED` from `@tessera/a11y`.
+This list is exported as `NOT_COVERED` from `@pixelscriptio/tessera/a11y`.

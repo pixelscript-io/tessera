@@ -27,7 +27,7 @@ Automation finds a minority of accessibility problems. These need a person:
 - Whether a flow is usable with a keyboard, a screen reader or zoom, end to end.
 - Anything with a time limit, a captcha or an authentication step.
 
-The exact list a generated suite does not cover is exported as `NOT_COVERED` from `@tessera/a11y` and repeated in [Behaviors and accessibility tests](/guide/behaviors). Passing generated tests is a floor, not a conformance claim.
+The exact list a generated suite does not cover is exported as `NOT_COVERED` from `@pixelscriptio/tessera/a11y` and repeated in [Behaviors and accessibility tests](/guide/behaviors). Passing generated tests is a floor, not a conformance claim.
 
 ## Routing
 

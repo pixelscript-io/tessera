@@ -1,7 +1,7 @@
 <contract>
 {
   "name": "Card",
-  "role": "group",
+  "role": "generic",
   "description": "A raised surface that groups related content, with an optional heading.",
   "parts": ["root", "header", "body"],
   "variants": {

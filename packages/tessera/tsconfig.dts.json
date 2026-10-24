@@ -26,6 +26,7 @@
     "src/router.ts",
     "src/router-app.ts",
     "src/behavior.ts",
+    "src/a11y.ts",
     "src/tokens.ts",
     "src/vite.ts",
     "src/cli.ts",

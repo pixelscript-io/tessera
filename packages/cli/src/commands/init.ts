@@ -297,6 +297,8 @@ function printSummary(
   io.out(steps.map((step, i) => `  ${ui.dim(String(i + 1))}  ${ui.bold(step)}`).join('\n'))
   io.out('')
   io.out(
-    ui.dim('Then: npx tessera docs for the design system docs, npx tessera check to validate.'),
+    ui.dim(
+      'Then: npx tessera docs for the design system docs, npx tessera check to validate, npx tessera a11y for accessibility tests.',
+    ),
   )
 }

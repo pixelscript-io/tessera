@@ -30,6 +30,7 @@
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2",
     "@pixelscriptio/tessera": "workspace:*",
+    "@tessera/a11y": "workspace:*",
     "@tessera/behavior": "workspace:*",
     "@tessera/cli": "workspace:*",
     "@tessera/compiler": "workspace:*",

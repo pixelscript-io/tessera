@@ -11,6 +11,7 @@
     "./router": "./src/router.ts",
     "./router/app": "./src/router-app.ts",
     "./behavior": "./src/behavior.ts",
+    "./a11y": "./src/a11y.ts",
     "./tokens": "./src/tokens.ts",
     "./vite": "./src/vite.ts",
     "./cli": "./src/cli.ts",
@@ -35,6 +36,10 @@
       "./behavior": {
         "types": "./dist/types/packages/tessera/src/behavior.d.ts",
         "default": "./dist/behavior.js"
+      },
+      "./a11y": {
+        "types": "./dist/types/packages/tessera/src/a11y.d.ts",
+        "default": "./dist/a11y.js"
       },
       "./tokens": {
         "types": "./dist/types/packages/tessera/src/tokens.d.ts",
@@ -72,10 +77,22 @@
     "playwright": "^1.64.1"
   },
   "peerDependencies": {
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0",
+    "vitest": "^3.2.0",
+    "@vitest/browser": "^3.2.0",
+    "axe-core": "^4.10.0"
   },
   "peerDependenciesMeta": {
     "prettier": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    },
+    "@vitest/browser": {
+      "optional": true
+    },
+    "axe-core": {
       "optional": true
     }
   },

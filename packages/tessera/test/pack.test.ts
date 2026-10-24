@@ -1,4 +1,4 @@
-import { execFileSync, execSync, spawn } from 'node:child_process'
+import { exec, execFileSync, execSync, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import {
   existsSync,
@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os'
 import { basename, delimiter, dirname, join, relative } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 import { chromium, type Page } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -21,6 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 // link to this repository, then run in a real browser. Installing uses pnpm's offline store so the test needs
 // no network; the same tarball installs with npm (docs/quick-start runs that, with the network).
 
+const execAsync = promisify(exec)
 const pkg = fileURLToPath(new URL('..', import.meta.url))
 const repo = join(pkg, '..', '..')
 const axeSource = readFileSync(
@@ -146,6 +148,7 @@ describe('the packed package', () => {
       'package/dist/router.js',
       'package/dist/router-app.js',
       'package/dist/behavior.js',
+      'package/dist/a11y.js',
       'package/dist/tokens.js',
       'package/dist/vite.js',
       'package/dist/cli.js',
@@ -171,9 +174,81 @@ describe('the packed package', () => {
       default: './dist/core.js',
     })
     expect(manifest.bin.tessera).toBe('./bin/tessera.js')
+    expect(manifest.exports['./a11y']).toEqual({
+      types: './dist/types/packages/tessera/src/a11y.d.ts',
+      default: './dist/a11y.js',
+    })
     expect(Object.keys(manifest.dependencies).sort()).toEqual(['acorn', 'vite'])
+    // The test tools are the project's own: optional peers, never dependencies.
+    for (const tool of ['vitest', '@vitest/browser', 'axe-core']) {
+      expect(manifest.peerDependenciesMeta[tool], tool).toEqual({ optional: true })
+    }
     expect(JSON.stringify(manifest)).not.toContain('workspace:')
   })
+
+  it('has no node-only code in the entry the browser tests load', () => {
+    const dir = scratch()
+    tar(tarball, '-xzf', dir)
+    const dist = join(dir, 'package', 'dist')
+    // a11y.js runs in a real browser, with the chunks it shares: none of them may import a Node module.
+    const seen = new Set<string>()
+    const visit = (file: string) => {
+      if (seen.has(file)) return
+      seen.add(file)
+      const text = readFileSync(join(dist, file), 'utf8')
+      expect(text, file).not.toMatch(/from ["']node:/)
+      for (const m of text.matchAll(/from ["']\.\/([^"']+\.js)["']/g)) visit(m[1]!)
+    }
+    visit('a11y.js')
+    expect([...seen].length).toBeGreaterThan(3)
+  })
+
+  it('runs the generated accessibility tests in a project that set them up with tessera a11y', async () => {
+    const dir = install()
+    run(dir, 'init', '--preset', 'tessera')
+    const out = run(dir, 'a11y')
+    expect(out).toContain('Set up the generated accessibility tests.')
+    for (const file of ['system/components/a11y.browser.test.ts', 'vitest.config.ts']) {
+      expect(existsSync(join(dir, file)), file).toBe(true)
+    }
+    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
+    expect(manifest.scripts['test:a11y']).toBe('vitest run')
+    expect(Object.keys(manifest.devDependencies)).toEqual(
+      expect.arrayContaining(['@vitest/browser', 'axe-core', 'playwright', 'vitest']),
+    )
+    // It does not install: the next step does.
+    expect(existsSync(join(dir, 'node_modules', 'vitest'))).toBe(false)
+    // Asynchronously: these take a minute, and a blocked worker cannot answer Vitest's own messages.
+    await execAsync('pnpm install --prefer-offline', {
+      cwd: dir,
+      env: {
+        ...env(),
+        npm_config_strict_dep_builds: 'false',
+        pnpm_config_strict_dep_builds: 'false',
+      },
+    })
+    let result: string
+    try {
+      result = (
+        await execAsync('pnpm exec vitest run --reporter=json', {
+          cwd: dir,
+          // An installed browser, so the test needs no download.
+          env: { ...env(), TESSERA_A11Y_CHANNEL: 'msedge' },
+          maxBuffer: 64 * 1024 * 1024,
+        })
+      ).stdout
+    } catch (error) {
+      const e = error as { stdout?: string; stderr?: string }
+      throw new Error(`vitest failed:\n${e.stdout ?? ''}\n${e.stderr ?? ''}`, { cause: error })
+    }
+    const report = JSON.parse(result.slice(result.indexOf('{'))) as {
+      numPassedTests: number
+      numFailedTests: number
+    }
+    expect(report.numFailedTests).toBe(0)
+    // Every component of the preset has tests: Button alone is 283.
+    expect(report.numPassedTests).toBeGreaterThan(400)
+  }, 600_000)
 
   it('formats .tess files through Prettier, from an editor or from the command line', () => {
     const dir = install()
