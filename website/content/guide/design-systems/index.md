@@ -10,4 +10,4 @@ The essentials guides show how to write components and pages. These pages are fo
 - [Extending and ejecting](/guide/design-systems/extending): wrapping, `tessera eject` and `forkedFrom`.
 - [Versioning and deprecation](/guide/design-systems/versioning): `since`, `deprecated` and `renamedFrom`.
 
-Not everything is built yet. What is missing (a deprecation window, a playground, and more behaviors and components) is listed on [the roadmap](/releases/roadmap) so you can see what to expect and what not to rely on.
+Not everything is built yet. What is missing (a deprecation window, a playground, and the menu, tabs, listbox and tooltip behaviors) is listed on [the roadmap](/releases/roadmap) so you can see what to expect and what not to rely on.

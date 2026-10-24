@@ -1,6 +1,6 @@
 # Releases
 
-This page records what each milestone of v0.1 delivered, newest first. `tessera diff --changelog` generates a section from any two versions.
+This page records what each release and milestone delivered, newest first. The current release is 0.5.0. `tessera diff --changelog` generates a section from any two versions.
 
 ## v0.1 (in progress)
 
