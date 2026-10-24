@@ -14,6 +14,7 @@ export default defineConfig({
     browser: {
       enabled: true,
       headless: true,
+      viewport: { width: 1280, height: 900 },
       provider: 'playwright',
       instances: [
         { browser: 'chromium', launch: { channel: process.env.TESSERA_A11Y_CHANNEL || undefined } },

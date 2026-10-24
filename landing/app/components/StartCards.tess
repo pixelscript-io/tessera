@@ -42,4 +42,10 @@ import { DOCS_COMMAND, QUICK_COMMAND } from '../data/code'
   gap: $space.12;
   align-items: stretch;
 }
+
+@media (max-width: 720px) {
+  .root {
+    padding: 0 $space.16 $space.40;
+  }
+}
 </style>

@@ -61,4 +61,11 @@ import { FEATURES } from '../data/copy'
   line-height: 1.55;
   text-wrap: pretty;
 }
+
+@media (max-width: 720px) {
+  .inner {
+    gap: $space.24;
+    padding: $space.40 $space.16;
+  }
+}
 </style>

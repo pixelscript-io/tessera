@@ -454,4 +454,47 @@ function setSize(id) {
     outline-offset: 2px;
   }
 }
+
+@media (max-width: 720px) {
+  .inner {
+    gap: $space.24;
+    padding: $space.56 $space.16;
+  }
+
+  .layout {
+    gap: $space.24;
+  }
+
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    flex-flow: row wrap;
+    gap: $space.4;
+    padding: $space.10 $space.12;
+    border-right: none;
+    border-bottom: 1px solid $color.border.default;
+  }
+
+  .group {
+    display: none;
+  }
+
+  .page {
+    padding: $space.14;
+  }
+
+  .choice {
+    padding: $space.6 $space.10;
+  }
+
+  .spec {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .specValue {
+    overflow-wrap: anywhere;
+  }
+}
 </style>

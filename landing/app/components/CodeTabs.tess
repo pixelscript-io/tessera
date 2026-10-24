@@ -167,4 +167,14 @@ function pick(detail) {
 [data-kind='err'] {
   color: $color.code.error;
 }
+
+@media (max-width: 720px) {
+  .tab {
+    padding: $space.8 $space.10;
+  }
+
+  .pane {
+    padding: $space.16;
+  }
+}
 </style>

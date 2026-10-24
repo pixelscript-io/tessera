@@ -59,4 +59,10 @@ import { links } from '../links'
     color: $color.accent.default;
   }
 }
+
+@media (max-width: 720px) {
+  .root {
+    padding: $space.8 $space.16;
+  }
+}
 </style>

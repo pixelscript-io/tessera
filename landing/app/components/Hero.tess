@@ -84,4 +84,18 @@ import { links } from '../links'
   gap: $space.8;
   margin-top: $space.28;
 }
+
+@media (max-width: 720px) {
+  .root {
+    padding: $space.40 $space.16 $space.24;
+  }
+
+  .lead {
+    font-size: $font.size.16;
+  }
+
+  .actions {
+    align-items: stretch;
+  }
+}
 </style>

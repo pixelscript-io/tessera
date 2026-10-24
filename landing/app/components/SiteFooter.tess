@@ -87,4 +87,10 @@ import { links } from '../links'
     color: $color.accent.default;
   }
 }
+
+@media (max-width: 720px) {
+  .bar {
+    padding: $space.24 $space.16;
+  }
+}
 </style>

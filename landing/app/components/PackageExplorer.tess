@@ -278,4 +278,29 @@ function unpreview() {
   color: $color.text.inverse-faint;
   font-size: $font.size.12;
 }
+
+@media (max-width: 720px) {
+  .inner {
+    gap: $space.24;
+    padding: $space.56 $space.16;
+  }
+
+  .layer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: $space.8;
+    padding: $space.12 $space.14;
+  }
+
+  .layerLabel {
+    min-width: 0;
+  }
+
+  .chip {
+    padding: $space.8 $space.12;
+  }
+
+  .detail {
+    padding: $space.16 $space.14;
+  }
+}
 </style>

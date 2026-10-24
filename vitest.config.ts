@@ -48,7 +48,8 @@ export default defineConfig({
         test: {
           name: 'landing',
           include: ['app/**/*.browser.test.ts'],
-          browser: browser(),
+          // A computer's width: the page has a phone layout below 720px, and the tests that need it set their own.
+          browser: { ...browser(), viewport: { width: 1280, height: 900 } },
         },
       },
       {

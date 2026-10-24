@@ -134,4 +134,44 @@ import { links } from '../links'
     color: $color.action.primary.fg;
   }
 }
+
+@media (max-width: 720px) {
+  .bar {
+    flex-wrap: wrap;
+    gap: $space.4 $space.12;
+    padding: $space.10 $space.16 0;
+  }
+
+  .brand {
+    order: 1;
+    margin-right: auto;
+  }
+
+  .actions {
+    order: 2;
+    gap: $space.6;
+  }
+
+  .links {
+    order: 3;
+    flex: 0 0 100%;
+    flex-wrap: nowrap;
+    gap: $space.20;
+    padding-bottom: $space.4;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .link {
+    flex: none;
+    padding: $space.8 0;
+    white-space: nowrap;
+  }
+
+  .github,
+  .start {
+    padding: $space.6 $space.10;
+    white-space: nowrap;
+  }
+}
 </style>

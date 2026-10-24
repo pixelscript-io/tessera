@@ -65,4 +65,10 @@ import { CODE_TABS, PANES } from '../data/code'
   font-weight: $font.weight.medium;
   letter-spacing: -0.015em;
 }
+
+@media (max-width: 720px) {
+  .inner {
+    padding: $space.40 $space.16 $space.56;
+  }
+}
 </style>
