@@ -1,0 +1,1 @@
+The landing page has no system components of its own: its components are in app/components, and this folder stops Tessera from using the repository's design system (system/ at the repository root) in its place.

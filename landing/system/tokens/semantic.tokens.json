@@ -1,0 +1,197 @@
+{
+  "$description": "What styles use: surfaces, text, borders, actions, accent and code (light).",
+  "color": {
+    "$type": "color",
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "surface": {
+      "default": {
+        "$value": "{color.neutral.100}"
+      },
+      "raised": {
+        "$value": "{color.neutral.50}"
+      },
+      "hover": {
+        "$value": "{color.neutral.150}"
+      },
+      "inverse": {
+        "$value": "{color.neutral.950}"
+      },
+      "code": {
+        "$value": "{color.neutral.900}"
+      },
+      "glass": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.94117647, 0.94901961, 0.92941176],
+          "alpha": 0.9
+        }
+      }
+    },
+    "text": {
+      "default": {
+        "$value": "{color.neutral.950}"
+      },
+      "muted": {
+        "$value": "{color.neutral.600}"
+      },
+      "subtle": {
+        "$value": "{color.neutral.550}"
+      },
+      "faint": {
+        "$value": "{color.neutral.400}"
+      },
+      "inverse": {
+        "$value": "{color.neutral.100}"
+      },
+      "inverse-muted": {
+        "$value": "{color.neutral.300}"
+      },
+      "inverse-subtle": {
+        "$value": "{color.neutral.500}"
+      },
+      "inverse-faint": {
+        "$value": "{color.neutral.400}"
+      }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.neutral.300}"
+      },
+      "strong": {
+        "$value": "{color.neutral.400}"
+      },
+      "inverse": {
+        "$value": "{color.neutral.800}"
+      },
+      "inverse-strong": {
+        "$value": "{color.neutral.600}"
+      }
+    },
+    "grid": {
+      "line": {
+        "$value": "{color.neutral.150}"
+      },
+      "line-inverse": {
+        "$value": "{color.neutral.925}"
+      }
+    },
+    "accent": {
+      "default": {
+        "$value": "{color.green.700}"
+      },
+      "bright": {
+        "$value": "{color.green.300}"
+      },
+      "on-bright": {
+        "$value": "{color.neutral.950}"
+      },
+      "ring": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.05882353, 0.41960784, 0.23529412],
+          "alpha": 0.12
+        }
+      },
+      "glow": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.05882353, 0.41960784, 0.23529412],
+          "alpha": 0.1
+        }
+      },
+      "wash": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.5254902, 0.9372549, 0.6745098],
+          "alpha": 0.08
+        }
+      }
+    },
+    "action": {
+      "primary": {
+        "bg": {
+          "$value": "{color.neutral.950}"
+        },
+        "bg-hover": {
+          "$value": "{color.neutral.800}"
+        },
+        "fg": {
+          "$value": "{color.neutral.100}"
+        }
+      }
+    },
+    "code": {
+      "bg": {
+        "$value": "{color.neutral.900}"
+      },
+      "fg": {
+        "$value": "{color.neutral.150}"
+      },
+      "inner": {
+        "$value": "{color.neutral.950}"
+      },
+      "border": {
+        "$value": "{color.neutral.800}"
+      },
+      "comment": {
+        "$value": "{color.neutral.500}"
+      },
+      "string": {
+        "$value": "{color.syntax.string}"
+      },
+      "key": {
+        "$value": "{color.syntax.key}"
+      },
+      "token": {
+        "$value": "{color.syntax.token}"
+      },
+      "tag": {
+        "$value": "{color.syntax.tag}"
+      },
+      "error": {
+        "$value": "{color.syntax.error}"
+      }
+    },
+    "mosaic": {
+      "off": {
+        "$value": "{color.neutral.700}"
+      },
+      "on": {
+        "$value": "{color.neutral.100}"
+      },
+      "lit": {
+        "$value": "{color.green.300}"
+      }
+    },
+    "demo": {
+      "stage": {
+        "$value": "{color.neutral.100}"
+      },
+      "stage-border": {
+        "$value": "{color.neutral.300}"
+      },
+      "primary-bg": {
+        "$value": "{color.neutral.950}"
+      },
+      "primary-fg": {
+        "$value": "{color.white}"
+      },
+      "neutral-fg": {
+        "$value": "{color.neutral.950}"
+      },
+      "neutral-border": {
+        "$value": "{color.neutral.500}"
+      },
+      "danger-bg": {
+        "$value": "{color.red.700}"
+      },
+      "danger-fg": {
+        "$value": "{color.white}"
+      }
+    }
+  }
+}

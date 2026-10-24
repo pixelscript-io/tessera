@@ -17,4 +17,5 @@ export const DEFAULT_BEHAVIORS: Readonly<Record<string, BehaviorRequirements>> =
   disclosure: { parts: ['root', 'trigger', 'content'], events: ['expand'], states: [] },
   dialog: { parts: ['root'], events: ['dismiss'], states: [] },
   combobox: { parts: ['root', 'input', 'listbox'], events: [], states: [] },
+  tabs: { parts: ['root', 'tab', 'panel'], events: ['activate'], states: [] },
 }

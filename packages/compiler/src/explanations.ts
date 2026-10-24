@@ -581,7 +581,7 @@ export const EXPLANATIONS: Record<string, Explanation> = {
   },
   T4011: {
     cause:
-      'A template directive (`if`, `else-if`, `else`, `each`, `key`, `bind:value`, `@event`) is used wrongly: `each` needs a `key`, `else` needs a preceding `if`, and so on.',
+      'A template directive (`if`, `else-if`, `else`, `each`, `key`, `bind:value`, `ref`, `@event`) is used wrongly: `each` needs a `key`, `else` needs a preceding `if`, `ref` names a `state()`, and so on.',
     fix: 'Follow the message. A list is `<li each="item in items" key="item.id">`.',
     example: tess(
       '<contract>\n{ "name": "Card", "role": "group", "parts": ["root"] }\n</contract>\n<script>\nconst items = state([])\n</script>\n<template><div class="root"><li each="item in items">x</li></div></template>\n',

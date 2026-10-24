@@ -1,0 +1,64 @@
+<contract>
+{
+  "name": "CodeShowcase",
+  "role": "generic",
+  "description": "The section that shows how a contract reads: its heading and the tabbed window.",
+  "parts": ["root", "inner", "head", "eyebrow", "title"],
+  "contrast": [
+    { "foreground": "eyebrow", "background": "root" },
+    { "foreground": "title", "background": "root" }
+  ]
+}
+</contract>
+
+<template>
+  <section class="root">
+    <div class="inner">
+      <div class="head">
+        <span class="eyebrow">How it reads</span>
+        <span class="title">One file declares it. The compiler holds you to it.</span>
+      </div>
+      <CodeTabs />
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background-color: $color.surface.default;
+  background-image:
+    linear-gradient($color.grid.line 1px, transparent 1px),
+    linear-gradient(90deg, $color.grid.line 1px, transparent 1px);
+  background-position: center top;
+  background-size: 40px 40px;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.20;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.56 $space.24 $space.80;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: $space.6;
+}
+
+.eyebrow {
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.title {
+  color: $color.text.default;
+  font-size: $font.size.20;
+  font-weight: $font.weight.medium;
+  letter-spacing: -0.015em;
+}
+</style>

@@ -1,0 +1,64 @@
+<contract>
+{
+  "name": "FeatureGrid",
+  "role": "generic",
+  "description": "What Tessera does, in six short items.",
+  "parts": ["root", "inner", "item", "title", "body"],
+  "contrast": [
+    { "foreground": "title", "background": "root" },
+    { "foreground": "body", "background": "root" }
+  ]
+}
+</contract>
+
+<script>
+import { FEATURES } from '../data/copy'
+</script>
+
+<template>
+  <section class="root">
+    <div class="inner">
+      <div class="item" each="f in FEATURES" key="f.title">
+        <h2 class="title">{f.title}</h2>
+        <p class="body">{f.body}</p>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: $space.28 $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.56 $space.24;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: $space.8;
+}
+
+.title {
+  margin: 0;
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+</style>

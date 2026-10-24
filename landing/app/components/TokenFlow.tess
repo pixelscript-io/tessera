@@ -1,0 +1,450 @@
+<contract>
+{
+  "name": "TokenFlow",
+  "role": "generic",
+  "description": "Tokens going in from design tools and out as CSS, DTCG, Tokens Studio and a manifest, drawn as a diagram. Choose a format to see its command.",
+  "since": "0.5.0",
+  "parts": [
+    "root",
+    "head",
+    "diagram",
+    "stage",
+    "lines",
+    "link",
+    "pulse",
+    "heading",
+    "node",
+    "mark",
+    "center",
+    "mosaic",
+    "cell",
+    "centerName",
+    "centerNote",
+    "detail",
+    "card",
+    "dir",
+    "label",
+    "point",
+    "bullet",
+    "command"
+  ]
+}
+</contract>
+
+<script>
+import { IO_NODES } from '../data/interchange'
+
+// The diagram is drawn in pixels at the width it has: 900 at most, and it follows the stage as the window changes.
+const HEIGHT = 340
+const NODE_WIDTH = 196
+const NODE_HEIGHT = 38
+const CENTER_WIDTH = 190
+const CENTER_HEIGHT = 110
+const DURATION = 3.2
+const MOSAIC = ['on', 'off', 'on', 'off', 'lit', 'off', 'on', 'off', 'on']
+
+const stage = state(null)
+const width = state(900)
+const selected = state('ts')
+
+effect(() => {
+  const el = stage.value
+  if (!el || typeof ResizeObserver === 'undefined' || !el.getBoundingClientRect) return
+  const measure = () => {
+    width.value = Math.round(el.getBoundingClientRect().width) || 900
+  }
+  measure()
+  const observer = new ResizeObserver(measure)
+  observer.observe(el)
+  onCleanup(() => observer.disconnect())
+})
+
+const ins = IO_NODES.filter((n) => n.side === 'in')
+const outs = IO_NODES.filter((n) => n.side === 'out')
+
+const rowY = (count, i) => 30 + ((HEIGHT - 30) * (i + 0.5)) / count
+const curve = (x1, y1, x2, y2) => {
+  const dx = (x2 - x1) / 2
+  return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`
+}
+
+const centerX = derived(() => width.value / 2)
+const centerY = HEIGHT / 2 + 15
+
+// Each link leaves a node, meets the center box a little apart from the others, and carries a dot along it.
+const links = derived(() => {
+  const w = width.value
+  const spread = (count, i) => centerY + (i - (count - 1) / 2) * 12
+  return [
+    ...ins.map((n, i) => ({
+      id: n.id,
+      d: curve(
+        NODE_WIDTH,
+        rowY(ins.length, i),
+        centerX.value - CENTER_WIDTH / 2,
+        spread(ins.length, i),
+      ),
+      begin: `${i * 0.5}s`,
+    })),
+    ...outs.map((n, i) => ({
+      id: n.id,
+      d: curve(
+        centerX.value + CENTER_WIDTH / 2,
+        spread(outs.length, i),
+        w - NODE_WIDTH,
+        rowY(outs.length, i),
+      ),
+      begin: `${1.4 + i * 0.5}s`,
+    })),
+  ]
+})
+
+const nodes = [
+  ...ins.map((n, i) => ({ ...n, top: rowY(ins.length, i) - NODE_HEIGHT / 2 })),
+  ...outs.map((n, i) => ({ ...n, top: rowY(outs.length, i) - NODE_HEIGHT / 2 })),
+]
+const centerStyle = derived(
+  () => `left:${centerX.value - CENTER_WIDTH / 2}px;top:${centerY - CENTER_HEIGHT / 2}px`,
+)
+const mosaic = MOSAIC.map((kind, i) => ({ kind, i }))
+
+const io = derived(() => IO_NODES.find((n) => n.id === selected.value))
+const direction = derived(() => (io.value.side === 'in' ? 'Import' : 'Export'))
+
+function choose(id) {
+  selected.value = id
+}
+</script>
+
+<template>
+  <section class="root" id="interchange">
+    <div class="head">
+      <SectionHeader align="center">
+        <span slot="eyebrow">Import and export</span>
+        <span slot="title">Tokens move in and out as files.</span>
+        Between DTCG and the shapes design tools write, without flattening aliases or losing a theme.
+      </SectionHeader>
+    </div>
+    <div class="diagram">
+      <div class="stage" ref="stage">
+        <svg class="lines" :viewBox="'0 0 ' + width + ' ' + HEIGHT" aria-hidden="true">
+          <path each="l in links" key="l.id" class="link" :d="l.d" :data-on="l.id === selected" />
+          <circle each="l in links" key="l.id" class="pulse" r="3.5" opacity="0">
+            <animateMotion
+              :dur="DURATION + 's'"
+              :begin="l.begin"
+              repeatCount="indefinite"
+              :path="l.d"
+              keyPoints="0;1;1"
+              keyTimes="0;0.45;1"
+              calcMode="linear"
+              />
+            <animate
+              attributeName="opacity"
+              values="0;1;1;0;0"
+              keyTimes="0;0.05;0.4;0.45;1"
+              :dur="DURATION + 's'"
+              :begin="l.begin"
+              repeatCount="indefinite"
+              />
+          </circle>
+        </svg>
+        <span class="heading" data-side="in">Import from</span>
+        <span class="heading" data-side="out">Export to</span>
+        <button
+          class="node"
+          each="n in nodes"
+          key="n.id"
+          type="button"
+          :data-side="n.side"
+          :data-on="n.id === selected"
+          :aria-pressed="n.id === selected ? 'true' : 'false'"
+          :style="'top:' + n.top + 'px'"
+          @click="choose(n.id)"
+          >
+          <span class="mark"></span>
+          <span>{n.label}</span>
+        </button>
+        <div class="center" :style="centerStyle">
+          <span class="mosaic" aria-hidden="true">
+            <span class="cell" each="m in mosaic" key="m.i" :data-cell="m.kind"></span>
+          </span>
+          <span class="centerName">system/tokens</span>
+          <span class="centerNote">DTCG 2025.10, checked by the compiler</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail">
+      <div class="card" aria-live="polite">
+        <div class="about">
+          <span class="dir">{direction}</span>
+          <span class="label">{io.label}</span>
+          <div class="point" each="pt in io.points" key="pt">
+            <span class="bullet" aria-hidden="true"></span>
+            <span>{pt}</span>
+          </div>
+        </div>
+        <div class="command" tabindex="0">{io.cmd}</div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background-color: $color.surface.default;
+  background-image:
+    linear-gradient($color.grid.line 1px, transparent 1px),
+    linear-gradient(90deg, $color.grid.line 1px, transparent 1px);
+  background-position: center top;
+  background-size: 40px 40px;
+}
+
+.head {
+  display: flex;
+  justify-content: center;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.80 $space.24 0;
+}
+
+.diagram {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.40 $space.24 $space.32;
+  overflow-x: auto;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  min-width: 640px;
+  max-width: 900px;
+  height: 340px;
+  margin: 0 auto;
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.link {
+  fill: none;
+  stroke: $color.border.strong;
+  stroke-width: 1;
+  transition-duration: $motion.duration.slow;
+
+  &[data-on] {
+    stroke: $color.accent.default;
+    stroke-width: 1.5;
+  }
+}
+
+.pulse {
+  fill: $color.accent.default;
+}
+
+.heading {
+  position: absolute;
+  top: -4px;
+  color: $color.text.subtle;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  &[data-side='in'] {
+    left: 0;
+  }
+
+  &[data-side='out'] {
+    right: 0;
+  }
+}
+
+.node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: $space.8;
+  width: 196px;
+  height: 38px;
+  padding: 0 $space.12;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.sm;
+  background: $color.surface.raised;
+  box-shadow: $shadow.node;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.14;
+  font-weight: $font.weight.medium;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition-duration: $motion.duration.base;
+
+  &[data-side='in'] {
+    left: 0;
+  }
+
+  &[data-side='out'] {
+    right: 0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.default;
+    outline-offset: 2px;
+  }
+
+  &[data-on] {
+    border-color: $color.accent.default;
+    background: $color.surface.hover;
+    box-shadow: $shadow.ring;
+  }
+}
+
+.mark {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: $radius.xs;
+  background: $color.border.strong;
+
+  .node[data-on] & {
+    background: $color.accent.default;
+  }
+}
+
+.center {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space.6;
+  width: 190px;
+  height: 110px;
+  padding: $space.12;
+  border-radius: $radius.md;
+  background: $color.surface.inverse;
+  box-shadow: $shadow.glow;
+  color: $color.text.inverse;
+  text-align: center;
+}
+
+.mosaic {
+  display: grid;
+  grid-template-columns: repeat(3, 8px);
+  gap: $space.2;
+}
+
+.cell {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius.xs;
+  background: $color.mosaic.off;
+
+  &[data-cell='on'] {
+    background: $color.mosaic.on;
+  }
+
+  &[data-cell='lit'] {
+    background: $color.mosaic.lit;
+  }
+}
+
+.centerName {
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.14;
+  font-weight: $font.weight.medium;
+}
+
+.centerNote {
+  color: $color.text.inverse-faint;
+  font-size: $font.size.12;
+  line-height: 1.4;
+}
+
+.detail {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 $space.24 $space.80;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: $space.20;
+  padding: $space.20;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: $space.8;
+}
+
+.dir {
+  color: $color.text.subtle;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.label {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.point {
+  display: flex;
+  gap: $space.10;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.5;
+}
+
+.bullet {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: $space.8;
+  border-radius: $radius.xs;
+  background: $color.accent.default;
+}
+
+.command {
+  align-self: start;
+  padding: $space.12 $space.14;
+  overflow: auto;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.sm;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  line-height: 1.7;
+  white-space: pre;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.default;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    display: none;
+  }
+}
+</style>

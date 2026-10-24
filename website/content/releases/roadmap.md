@@ -6,7 +6,7 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 - **A deprecation window** that the tooling enforces (`tessera diff` and the codemods exist; the window does not).
 - **Token importers tested against real exports** from Figma, Tokens Studio and Penpot. The importers are tested on files written to the formats' documentation.
-- **More behaviors and components:** menu, tabs, listbox and tooltip.
+- **More behaviors and components:** menu, listbox and tooltip, and a `Tabs` component (the `tabs` behavior is built).
 - **Hydration** for prerendered pages. `tessera build --prerender` writes static HTML today, and the router replaces it when the app starts.
 
 ## Later

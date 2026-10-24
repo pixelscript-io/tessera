@@ -41,6 +41,17 @@ export default defineConfig({
         },
       },
       {
+        // The landing page is a Tessera app too: its own tokens, and its own components in `app/`.
+        root: 'landing',
+        plugins: [tessera()],
+        optimizeDeps: { include: ['axe-core'] },
+        test: {
+          name: 'landing',
+          include: ['app/**/*.browser.test.ts'],
+          browser: browser(),
+        },
+      },
+      {
         root: 'examples/kitchen-sink',
         plugins: [tessera()],
         test: {

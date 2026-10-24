@@ -1,0 +1,457 @@
+<contract>
+{
+  "name": "DocsDemo",
+  "role": "generic",
+  "description": "The generated docs in miniature: a Button page with a control for each variant and a light and dark switch, beside what the docs hold.",
+  "since": "0.5.0",
+  "parts": [
+    "root",
+    "inner",
+    "layout",
+    "window",
+    "bar",
+    "address",
+    "switch",
+    "choice",
+    "body",
+    "sidebar",
+    "group",
+    "item",
+    "page",
+    "heading",
+    "name",
+    "sub",
+    "stage",
+    "preview",
+    "controls",
+    "row",
+    "key",
+    "spec",
+    "specKey",
+    "specValue",
+    "specPlain",
+    "list",
+    "entry",
+    "entryTitle",
+    "entryBody",
+    "commands",
+    "code"
+  ]
+}
+</contract>
+
+<script>
+import { DOC_ITEMS } from '../data/copy'
+
+const THEMES = [
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+]
+const TONES = ['primary', 'neutral', 'danger']
+const SIZES = ['sm', 'md', 'lg']
+const COMMANDS = [
+  '$ npx tessera docs',
+  '$ npx tessera docs --edit',
+  '$ npx tessera docs --static',
+].join('\n')
+
+const theme = state('light')
+const tone = state('primary')
+const size = state('md')
+
+function setTheme(id) {
+  theme.value = id
+}
+function setTone(id) {
+  tone.value = id
+}
+function setSize(id) {
+  size.value = id
+}
+</script>
+
+<template>
+  <section class="root" id="docs">
+    <div class="inner">
+      <SectionHeader>
+        <span slot="eyebrow">Documentation</span>
+        <span slot="title">Docs that cannot drift.</span>
+        <span class="code">tessera docs</span> runs a documentation app generated from the same contracts and tokens the compiler
+        enforces. Nothing in it is written by hand.
+      </SectionHeader>
+      <div class="layout">
+        <div class="window">
+          <div class="bar">
+            <span class="address">localhost:5173</span>
+            <div class="switch" role="group" aria-label="Docs theme">
+              <button
+                class="choice"
+                each="c in THEMES"
+                key="c.id"
+                type="button"
+                :aria-pressed="theme === c.id ? 'true' : 'false'"
+                @click="setTheme(c.id)"
+                >
+                {c.label}
+              </button>
+            </div>
+          </div>
+          <div class="body">
+            <div class="sidebar">
+              <span class="group">Components</span>
+              <span class="item">Badge</span>
+              <span class="item" data-active>Button</span>
+              <span class="item">Card</span>
+              <span class="item">Checkbox</span>
+              <span class="item">Dialog</span>
+              <span class="group" data-gap>Tokens</span>
+              <span class="item">color</span>
+              <span class="item">space</span>
+              <span class="item">Contrast</span>
+              <span class="group" data-gap>Report</span>
+              <span class="item">Overview</span>
+            </div>
+            <div class="page">
+              <div class="heading">
+                <span class="name">Button</span>
+                <span class="sub">role button · behavior press</span>
+              </div>
+              <div class="stage" :data-theme="theme">
+                <button class="preview" type="button" :data-tone="tone" :data-size="size" tabindex="-1">Save changes</button>
+              </div>
+              <div class="controls">
+                <div class="row" role="group" aria-label="tone">
+                  <span class="key">tone</span>
+                  <button
+                    class="choice"
+                    each="t in TONES"
+                    key="t"
+                    type="button"
+                    :aria-pressed="tone === t ? 'true' : 'false'"
+                    @click="setTone(t)"
+                    >
+                    {t}
+                  </button>
+                </div>
+                <div class="row" role="group" aria-label="size">
+                  <span class="key">size</span>
+                  <button
+                    class="choice"
+                    each="s in SIZES"
+                    key="s"
+                    type="button"
+                    :aria-pressed="size === s ? 'true' : 'false'"
+                    @click="setSize(s)"
+                    >
+                    {s}
+                  </button>
+                </div>
+              </div>
+              <div class="spec">
+                <span class="specKey">Parts</span><span class="specValue">root · icon · label</span>
+                <span class="specKey">Events</span><span class="specValue">press</span>
+                <span class="specKey">Tokens</span><span class="specValue">$color.action.primary.bg · $space.3</span>
+                <span class="specKey">A11y</span><span class="specPlain">Covered by a generated suite</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="list">
+          <div class="entry" each="d in DOC_ITEMS" key="d.title">
+            <span class="entryTitle">{d.title}</span>
+            <span class="entryBody">{d.body}</span>
+          </div>
+          <div class="commands" tabindex="0">{COMMANDS}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-bottom: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.80 $space.24;
+}
+
+.code {
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.14;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: $space.32;
+  align-items: start;
+}
+
+.window {
+  overflow: hidden;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space.10;
+  padding: $space.8 $space.12;
+  border-bottom: 1px solid $color.border.default;
+  background: $color.surface.raised;
+}
+
+.address {
+  color: $color.text.subtle;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.switch {
+  display: flex;
+  gap: $space.2;
+  padding: $space.2;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.sm;
+}
+
+.choice {
+  padding: $space.4 $space.8;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.sm;
+  background: $color.surface.raised;
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  cursor: pointer;
+
+  &:hover {
+    color: $color.text.default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.default;
+    outline-offset: 2px;
+  }
+
+  &[aria-pressed='true'] {
+    border-color: $color.action.primary.bg;
+    background: $color.action.primary.bg;
+    color: $color.action.primary.fg;
+  }
+}
+
+.switch .choice {
+  border-color: transparent;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: $space.2;
+  padding: $space.12 $space.8;
+  border-right: 1px solid $color.border.default;
+  font-size: $font.size.12;
+}
+
+.group {
+  padding: $space.4 $space.8;
+  color: $color.text.subtle;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.10;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  &[data-gap] {
+    padding-top: $space.10;
+  }
+}
+
+.item {
+  padding: $space.4 $space.8;
+  border-radius: $radius.sm;
+  color: $color.text.muted;
+
+  &[data-active] {
+    background: $color.surface.hover;
+    color: $color.text.default;
+    font-weight: $font.weight.medium;
+  }
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space.14;
+  min-width: 0;
+  padding: $space.16;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: $space.2;
+}
+
+.name {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.sub {
+  color: $color.text.subtle;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 110px;
+  border: 1px solid $color.demo.stage-border;
+  border-radius: $radius.sm;
+  background: $color.demo.stage;
+  transition-duration: $motion.duration.base;
+}
+
+.preview {
+  padding: $space.8 $space.14;
+  border: none;
+  border-radius: $radius.sm;
+  background: $color.demo.primary-bg;
+  color: $color.demo.primary-fg;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.14;
+  font-weight: $font.weight.medium;
+  cursor: default;
+
+  &[data-size='sm'] {
+    padding: $space.6 $space.10;
+    font-size: $font.size.12;
+  }
+
+  &[data-size='lg'] {
+    padding: $space.12 $space.18;
+    font-size: $font.size.16;
+  }
+
+  &[data-tone='neutral'] {
+    outline: 1px solid $color.demo.neutral-border;
+    outline-offset: -1px;
+    background: transparent;
+    color: $color.demo.neutral-fg;
+  }
+
+  &[data-tone='danger'] {
+    background: $color.demo.danger-bg;
+    color: $color.demo.danger-fg;
+  }
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: $space.8;
+  font-size: $font.size.12;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space.8;
+}
+
+.key {
+  width: 40px;
+  color: $color.text.subtle;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.spec {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: $space.6 $space.10;
+  padding-top: $space.10;
+  border-top: 1px solid $color.surface.hover;
+  font-size: $font.size.12;
+}
+
+.specKey {
+  color: $color.text.subtle;
+}
+
+.specValue {
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.specPlain {
+  color: $color.text.default;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space.20;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  padding-bottom: $space.18;
+  border-bottom: 1px solid $color.border.default;
+}
+
+.entryTitle {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.entryBody {
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+}
+
+.commands {
+  padding: $space.12 $space.14;
+  overflow: auto;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.sm;
+  background: $color.surface.raised;
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  line-height: 1.75;
+  white-space: pre;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.default;
+    outline-offset: 2px;
+  }
+}
+</style>

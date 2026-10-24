@@ -1,0 +1,105 @@
+<contract>
+{
+  "name": "ExampleCard",
+  "role": "generic",
+  "description": "A card that names a command, says what it is for and shows what it prints.",
+  "parts": ["root", "label", "title", "body", "terminal", "line"],
+  "contrast": [
+    { "foreground": "label", "background": "root" },
+    { "foreground": "title", "background": "root" },
+    { "foreground": "body", "background": "root" },
+    { "foreground": "terminal", "background": "terminal" }
+  ]
+}
+</contract>
+
+<script>
+const { label, title, body, lines } = props({ label: '', title: '', body: '', lines: [] })
+</script>
+
+<template>
+  <div class="root">
+    <span class="label">{label}</span>
+    <span class="title">{title}</span>
+    <p class="body">{body}</p>
+    <div class="terminal" tabindex="0">
+      <div class="line" each="ln in lines" key="ln">
+        <span each="s in ln.segs" key="s" :data-kind="s.kind">{s.text}</span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.10;
+  padding: $space.20;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+}
+
+.label {
+  color: $color.accent.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.14;
+  font-weight: $font.weight.medium;
+}
+
+.title {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+}
+
+.terminal {
+  margin-top: auto;
+  padding: $space.12 $space.14;
+  overflow: auto;
+  border-radius: $radius.sm;
+  background: $color.code.inner;
+  color: $color.code.fg;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  line-height: 1.7;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.bright;
+    outline-offset: 2px;
+  }
+}
+
+.line {
+  min-height: 1.7em;
+  white-space: pre;
+}
+
+[data-kind='str'] {
+  color: $color.code.string;
+}
+
+[data-kind='tok'] {
+  color: $color.code.token;
+}
+
+[data-kind='tag'] {
+  color: $color.code.tag;
+}
+
+[data-kind='com'] {
+  color: $color.code.comment;
+}
+
+[data-kind='err'] {
+  color: $color.code.error;
+}
+</style>

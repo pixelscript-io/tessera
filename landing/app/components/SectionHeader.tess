@@ -1,0 +1,87 @@
+<contract>
+{
+  "name": "SectionHeader",
+  "role": "generic",
+  "description": "The head of a section: a small label, the headline and a sentence under it.",
+  "parts": ["root", "eyebrow", "title", "description"],
+  "variants": {
+    "tone": ["light", "dark"], // first value is the default
+    "align": ["start", "center"]
+  },
+  "slots": {
+    "eyebrow": "the small label above the headline",
+    "title": "the headline",
+    "default": "the sentence under it"
+  }
+}
+</contract>
+
+<template>
+  <div class="root">
+    <span class="eyebrow"><slot name="eyebrow" /></span>
+    <h2 class="title"><slot name="title" /></h2>
+    <p class="description"><slot /></p>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.10;
+  max-width: 600px;
+}
+
+.eyebrow {
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.title {
+  margin: 0;
+  color: $color.text.default;
+  font-size: raw(
+    clamp(26px, 3.2vw, 34px),
+    'Fluid headline: a token is one fixed size',
+    '2027-12-31'
+  );
+  font-weight: $font.weight.medium;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.description {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.16;
+  line-height: 1.55;
+}
+
+.root[data-align='center'] {
+  align-items: center;
+  max-width: none;
+  text-align: center;
+
+  .description {
+    max-width: 48ch;
+  }
+}
+
+.root[data-tone='dark'] {
+  max-width: 560px;
+  background: $color.surface.inverse;
+
+  .eyebrow {
+    color: $color.text.inverse-faint;
+  }
+
+  .title {
+    color: $color.text.inverse;
+  }
+
+  .description {
+    color: $color.text.inverse-muted;
+  }
+}
+</style>

@@ -1,0 +1,76 @@
+<contract>
+{
+  "name": "AnyFramework",
+  "role": "generic",
+  "description": "The section for teams that do not write .tess: the linter and the custom elements, and two commands that help anywhere.",
+  "parts": ["root", "inner", "cards", "notes", "note", "command"],
+  "contrast": [{ "foreground": "note", "background": "root" }]
+}
+</contract>
+
+<script>
+import { ELEMENTS, LINT } from '../data/examples'
+</script>
+
+<template>
+  <section class="root" id="anywhere">
+    <div class="inner">
+      <SectionHeader>
+        <span slot="eyebrow">Outside .tess</span>
+        <span slot="title">The same system in any framework.</span>
+        Not every team will write .tess files. The token checks and the components work in React, Vue, Svelte, Angular or
+        plain HTML.
+      </SectionHeader>
+      <div class="cards">
+        <ExampleCard :label="LINT.label" :title="LINT.title" :body="LINT.body" :lines="LINT.lines" />
+        <ExampleCard :label="ELEMENTS.label" :title="ELEMENTS.title" :body="ELEMENTS.body" :lines="ELEMENTS.lines" />
+      </div>
+      <div class="notes">
+        <span class="note"><span class="command">tessera build --prerender</span> writes static HTML for pages.</span>
+        <span class="note"><span class="command">tessera a11y</span> puts the generated accessibility tests in your project.</span>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.80 $space.24;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: $space.12;
+  align-items: stretch;
+}
+
+.notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space.8 $space.24;
+  padding-top: $space.16;
+  border-top: 1px solid $color.border.default;
+}
+
+.note {
+  color: $color.text.muted;
+  font-size: $font.size.14;
+}
+
+.command {
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+</style>

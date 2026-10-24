@@ -1,0 +1,77 @@
+<contract>
+{
+  "name": "CopyInstall",
+  "role": "button",
+  "description": "The install command as a button that copies it, and says it did.",
+  "parts": ["root", "prompt", "command", "label"],
+  "states": ["hover", "focus-visible"],
+  "behavior": "press",
+  "events": {
+    "press": "fired when the command is copied"
+  }
+}
+</contract>
+
+<script>
+const COMMAND = 'npm install @pixelscriptio/tessera'
+
+const copied = state(false)
+let timer
+
+function copy(event) {
+  navigator.clipboard?.writeText(COMMAND).catch(() => {})
+  copied.value = true
+  clearTimeout(timer)
+  timer = setTimeout(() => {
+    copied.value = false
+  }, 1600)
+  emit('press', event)
+}
+
+onCleanup(() => clearTimeout(timer))
+</script>
+
+<template>
+  <button class="root" type="button" @press="copy($event)">
+    <span class="prompt" aria-hidden="true">$</span>
+    <span class="command">{COMMAND}</span>
+    <span class="label" aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
+  </button>
+</template>
+
+<style>
+.root {
+  display: flex;
+  align-items: center;
+  gap: $space.10;
+  padding: $space.10 $space.14;
+  border: 1px dashed $color.border.strong;
+  border-radius: $radius.sm;
+  background: transparent;
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.14;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color.text.default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.default;
+    outline-offset: 2px;
+  }
+}
+
+.prompt {
+  color: $color.text.subtle;
+}
+
+.label {
+  min-width: 40px;
+  color: $color.text.muted;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.12;
+  text-align: right;
+}
+</style>

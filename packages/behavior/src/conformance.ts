@@ -888,3 +888,5 @@ export function domComboboxHarness(
     },
   }
 }
+
+export * from './tabs-conformance'

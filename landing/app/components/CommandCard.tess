@@ -1,0 +1,83 @@
+<contract>
+{
+  "name": "CommandCard",
+  "role": "generic",
+  "description": "A card with a title, a sentence and the commands to run, dark or light.",
+  "parts": ["root", "title", "body", "commands"],
+  "variants": {
+    "tone": ["dark", "light"] // first value is the default
+  }
+}
+</contract>
+
+<script>
+const { title, body, commands } = props({ title: '', body: '', commands: '' })
+</script>
+
+<template>
+  <div class="root">
+    <span class="title">{title}</span>
+    <p class="body">{body}</p>
+    <div class="commands" tabindex="0">{commands}</div>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.8;
+  padding: $space.18 $space.20;
+  border: 1px solid $color.surface.inverse;
+  border-radius: $radius.md;
+  background: $color.surface.inverse;
+  color: $color.text.inverse;
+}
+
+.title {
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  margin: 0;
+  color: $color.text.inverse-muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+}
+
+.commands {
+  margin-top: auto;
+  padding: $space.10 $space.12;
+  overflow: auto;
+  border: 1px solid $color.code.border;
+  border-radius: $radius.sm;
+  background: $color.code.bg;
+  color: $color.code.fg;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  line-height: 1.75;
+  white-space: pre;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.bright;
+    outline-offset: 2px;
+  }
+}
+
+.root[data-tone='light'] {
+  border-color: $color.border.default;
+  background: $color.surface.raised;
+  color: $color.text.default;
+
+  .body {
+    color: $color.text.muted;
+  }
+
+  .commands {
+    border-color: $color.border.default;
+    background: $color.surface.default;
+    color: $color.text.default;
+  }
+}
+</style>

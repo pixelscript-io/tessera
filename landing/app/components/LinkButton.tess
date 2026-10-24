@@ -1,0 +1,56 @@
+<contract>
+{
+  "name": "LinkButton",
+  "role": "link",
+  "description": "A link that looks like a button: filled for the main action, outlined for the other.",
+  "parts": ["root"],
+  "variants": {
+    "kind": ["solid", "outline"] // first value is the default
+  },
+  "slots": {
+    "default": "the label"
+  },
+  "states": ["hover", "focus-visible"],
+  "contrast": [{ "foreground": "root", "background": "root" }]
+}
+</contract>
+
+<script>
+const { href } = props({ href: '' })
+</script>
+
+<template>
+  <a class="root" :href="href"><slot /></a>
+</template>
+
+<style>
+.root {
+  padding: $space.10 $space.16;
+  border: 1px solid transparent;
+  border-radius: $radius.sm;
+  background: $color.action.primary.bg;
+  color: $color.action.primary.fg;
+  font-size: $font.size.14;
+  font-weight: $font.weight.medium;
+
+  &:hover {
+    background: $color.action.primary.bg-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.default;
+    outline-offset: 2px;
+  }
+}
+
+.root[data-kind='outline'] {
+  border-color: $color.border.default;
+  background: $color.surface.raised;
+  color: $color.text.default;
+
+  &:hover {
+    background: $color.surface.raised;
+    color: $color.accent.default;
+  }
+}
+</style>

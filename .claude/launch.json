@@ -6,6 +6,27 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "pnpm@10", "--filter", "kitchen-sink", "dev"],
       "port": 5290
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.chdir('landing');process.argv=[process.argv[0],'tessera','dev','--port','5300'];import('./packages/tessera/bin/tessera.js')"
+      ],
+      "port": 5300
+    },
+    {
+      "name": "landing-original",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5310",
+        "--directory",
+        "C:/Users/joebe/AppData/Local/Temp/claude/C--Users-joebe-Desktop-Projects-tessera/ceba3bff-5de9-4b37-8456-72cfe494cc94/scratchpad/lp2"
+      ],
+      "port": 5310
     }
   ]
 }

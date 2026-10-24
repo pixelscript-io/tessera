@@ -1,0 +1,32 @@
+<contract>
+{
+  "name": "Measured",
+  "role": "generic",
+  "parts": ["root"]
+}
+</contract>
+
+<script>
+const box = state(null)
+const wide = state(false)
+const seen = state('none')
+
+effect(() => {
+  const el = box.value
+  seen.value = el ? el.tagName : 'none'
+})
+</script>
+
+<template>
+  <div class="root">
+    <div if="wide" ref="box" class="box">box</div>
+    <button class="toggle" type="button" @click="wide = !wide">toggle</button>
+    <output class="seen">{seen}</output>
+  </div>
+</template>
+
+<style>
+.root {
+  display: block;
+}
+</style>

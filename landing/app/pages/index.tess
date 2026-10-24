@@ -1,0 +1,23 @@
+<page>
+{ "title": "Tessera: the design system is the framework" }
+</page>
+
+<template>
+  <div class="root">
+    <Hero />
+    <StartCards />
+    <CodeShowcase />
+    <FeatureGrid />
+    <AnyFramework />
+    <PackageExplorer />
+    <DocsDemo />
+    <TokenFlow />
+    <AgentTools />
+  </div>
+</template>
+
+<style>
+.root {
+  display: block;
+}
+</style>

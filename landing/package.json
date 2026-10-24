@@ -1,0 +1,27 @@
+{
+  "name": "tessera-landing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Tessera landing page, built with Tessera.",
+  "dependencies": {
+    "@pixelscriptio/tessera": "workspace:*"
+  },
+  "scripts": {
+    "predev": "node scripts/version.mjs",
+    "dev": "tessera dev",
+    "prebuild": "node scripts/version.mjs",
+    "build": "tessera build --prerender",
+    "preview": "tessera preview",
+    "check": "tessera check",
+    "lint": "tessera lint app",
+    "test:a11y": "vitest run"
+  },
+  "devDependencies": {
+    "@tessera/compiler": "workspace:*",
+    "@vitest/browser": "^3.2.7",
+    "axe-core": "^4.14.0",
+    "playwright": "^1.64.1",
+    "vitest": "^3.2.7"
+  }
+}

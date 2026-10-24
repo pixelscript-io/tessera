@@ -4,7 +4,8 @@
  * interface or through generated code, so the engine can be swapped later.
  */
 export interface RendererAdapter<N = unknown, E extends N = N> {
-  createElement(tag: string): E
+  /** `namespace` is `'svg'` for an element of an `<svg>` tree, which the DOM needs created in the SVG namespace. */
+  createElement(tag: string, namespace?: 'svg'): E
   createText(text: string): N
   /** `null` removes the attribute. */
   setAttribute(el: E, name: string, value: string | null): void
@@ -29,7 +30,10 @@ export interface RendererAdapter<N = unknown, E extends N = N> {
 
 export function createDomAdapter(doc: Document = document): RendererAdapter<Node, Element> {
   return {
-    createElement: (tag) => doc.createElement(tag),
+    createElement: (tag, namespace) =>
+      namespace === 'svg'
+        ? doc.createElementNS('http://www.w3.org/2000/svg', tag)
+        : doc.createElement(tag),
     createText: (text) => doc.createTextNode(text),
     setAttribute: (el, name, value) => {
       if (value === null) el.removeAttribute(name)

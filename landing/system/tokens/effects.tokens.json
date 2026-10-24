@@ -1,0 +1,159 @@
+{
+  "$description": "Shadows, opacity and motion.",
+  "shadow": {
+    "$type": "shadow",
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "window": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0.03921569, 0.03921569, 0.03921569],
+          "alpha": 0.35
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 24,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 48,
+          "unit": "px"
+        },
+        "spread": {
+          "value": -24,
+          "unit": "px"
+        }
+      }
+    },
+    "node": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0.09019608, 0.08627451, 0.05882353],
+          "alpha": 0.06
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 1,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 2,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      }
+    },
+    "glow": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0.05882353, 0.41960784, 0.23529412],
+          "alpha": 0.35
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 20,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 40,
+          "unit": "px"
+        },
+        "spread": {
+          "value": -20,
+          "unit": "px"
+        }
+      }
+    },
+    "ring": {
+      "$value": {
+        "color": {
+          "colorSpace": "srgb",
+          "components": [0.05882353, 0.41960784, 0.23529412],
+          "alpha": 0.12
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 0,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 0,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 4,
+          "unit": "px"
+        }
+      }
+    }
+  },
+  "opacity": {
+    "$type": "number",
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "dim": {
+      "$value": 0.55
+    },
+    "full": {
+      "$value": 1
+    }
+  },
+  "motion": {
+    "$extensions": {
+      "tessera": {
+        "tier": "semantic"
+      }
+    },
+    "duration": {
+      "$type": "duration",
+      "fast": {
+        "$value": {
+          "value": 150,
+          "unit": "ms"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 200,
+          "unit": "ms"
+        }
+      },
+      "slow": {
+        "$value": {
+          "value": 300,
+          "unit": "ms"
+        }
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": [0.2, 0, 0, 1]
+      }
+    }
+  }
+}

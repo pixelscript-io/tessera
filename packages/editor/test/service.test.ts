@@ -148,6 +148,7 @@ describe('contract completion', () => {
       'disclosure',
       'dialog',
       'combobox',
+      'tabs',
     ])
     expect(at('{ "role": |}')!.items[0]!.insert).toMatch(/^"/)
   })

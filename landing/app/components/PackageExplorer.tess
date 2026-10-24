@@ -1,0 +1,281 @@
+<contract>
+{
+  "name": "PackageExplorer",
+  "role": "generic",
+  "description": "The packages as chips in four layers. Choose or hover one to see what it does, what it depends on and what uses it.",
+  "since": "0.5.0",
+  "parts": [
+    "root",
+    "inner",
+    "panel",
+    "layer",
+    "layerLabel",
+    "chips",
+    "chip",
+    "detail",
+    "name",
+    "summary",
+    "points",
+    "point",
+    "bullet",
+    "snippet",
+    "meta"
+  ]
+}
+</contract>
+
+<script>
+import { LAYERS, PACKAGES, byId, names, usedBy } from '../data/packages'
+
+const chosen = state('compiler')
+const hovered = state(null)
+
+// Hovering previews a package; leaving goes back to the chosen one.
+const shown = derived(() => hovered.value ?? chosen.value)
+const active = derived(() => byId(shown.value))
+const fullName = derived(() => active.value.scope + active.value.short)
+const dependsOn = derived(() => names(active.value.deps, 'nothing'))
+const usedByText = derived(() => names(usedBy(shown.value), 'you, directly'))
+
+function inLayer(id) {
+  return PACKAGES.filter((p) => p.layer === id)
+}
+
+function stateOf(id) {
+  if (id === shown.value) return 'selected'
+  if (active.value.deps.includes(id)) return 'dependency'
+  if (usedBy(shown.value).includes(id)) return 'user'
+  return 'idle'
+}
+
+function choose(id) {
+  chosen.value = id
+  hovered.value = null
+}
+
+function preview(id) {
+  hovered.value = id
+}
+
+function unpreview() {
+  hovered.value = null
+}
+</script>
+
+<template>
+  <section class="root" id="packages">
+    <div class="inner">
+      <SectionHeader tone="dark">
+        <span slot="eyebrow">Packages</span>
+        <span slot="title">One install, thirteen packages.</span>
+        Select a package to see what it does and how it connects.
+      </SectionHeader>
+      <div class="panel">
+        <div class="layer" each="l in LAYERS" key="l.id">
+          <span class="layerLabel">{l.label}</span>
+          <div class="chips">
+            <button
+              class="chip"
+              each="p in inLayer(l.id)"
+              key="p.id"
+              type="button"
+              :data-state="stateOf(p.id)"
+              :aria-pressed="p.id === chosen ? 'true' : 'false'"
+              @click="choose(p.id)"
+              @mouseenter="preview(p.id)"
+              @mouseleave="unpreview()"
+              >
+              {p.short}
+            </button>
+          </div>
+        </div>
+        <div class="detail" aria-live="polite">
+          <div class="about">
+            <span class="name">{fullName}</span>
+            <p class="summary">{active.summary}</p>
+          </div>
+          <div class="points">
+            <div class="point" each="pt in active.points" key="pt">
+              <span class="bullet" aria-hidden="true"></span>
+              <span>{pt}</span>
+            </div>
+          </div>
+          <div class="aside">
+            <div class="snippet" tabindex="0">{active.snippet}</div>
+            <span class="meta">Depends on {dependsOn} · Used by {usedByText}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  background-color: $color.surface.inverse;
+  background-image:
+    linear-gradient($color.grid.line-inverse 1px, transparent 1px),
+    linear-gradient(90deg, $color.grid.line-inverse 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: $color.text.inverse;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.80 $space.24;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid $color.border.inverse;
+  border-radius: $radius.md;
+  background: $color.surface.inverse;
+}
+
+.layer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), max-content));
+  gap: $space.10 $space.20;
+  align-items: center;
+  padding: $space.14 $space.18;
+  border-bottom: 1px dashed $color.border.inverse;
+}
+
+.layerLabel {
+  min-width: 160px;
+  color: $color.text.inverse-subtle;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space.6;
+}
+
+.chip {
+  padding: $space.6 $space.12;
+  border: 1px solid $color.border.inverse;
+  border-radius: $radius.sm;
+  background: $color.surface.code;
+  color: $color.text.inverse;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  cursor: pointer;
+  opacity: $opacity.dim;
+  transition-duration: $motion.duration.fast;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.bright;
+    outline-offset: 2px;
+  }
+
+  &[data-state='selected'] {
+    border-color: $color.accent.bright;
+    background: $color.accent.bright;
+    color: $color.accent.on-bright;
+    opacity: $opacity.full;
+  }
+
+  &[data-state='dependency'] {
+    border-color: $color.accent.bright;
+    background: $color.accent.wash;
+    opacity: $opacity.full;
+  }
+
+  &[data-state='user'] {
+    border-style: dashed;
+    border-color: $color.text.inverse-muted;
+    opacity: $opacity.full;
+  }
+}
+
+.detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: $space.20;
+  padding: $space.20 $space.18;
+  background: $color.surface.code;
+}
+
+.about,
+.points,
+.aside {
+  display: flex;
+  flex-direction: column;
+}
+
+.about {
+  gap: $space.8;
+}
+
+.points {
+  gap: $space.6;
+}
+
+.aside {
+  gap: $space.8;
+}
+
+.name {
+  color: $color.accent.bright;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.14;
+  font-weight: $font.weight.medium;
+}
+
+.summary {
+  margin: 0;
+  color: $color.text.inverse;
+  font-size: $font.size.14;
+  line-height: 1.5;
+}
+
+.point {
+  display: flex;
+  gap: $space.10;
+  color: $color.text.inverse-muted;
+  font-size: $font.size.14;
+  line-height: 1.5;
+}
+
+.bullet {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: $space.8;
+  border-radius: $radius.xs;
+  background: $color.accent.bright;
+}
+
+.snippet {
+  padding: $space.8 $space.10;
+  overflow: auto;
+  border: 1px solid $color.border.inverse;
+  border-radius: $radius.sm;
+  background: $color.surface.inverse;
+  color: $color.code.fg;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  white-space: pre;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.bright;
+    outline-offset: 2px;
+  }
+}
+
+.meta {
+  color: $color.text.inverse-faint;
+  font-size: $font.size.12;
+}
+</style>

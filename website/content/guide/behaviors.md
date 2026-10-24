@@ -2,7 +2,7 @@
 
 Introduced in v0.1 (Milestone 7).
 
-A behavior is the interaction logic of a component, separate from how it looks. Five are built: `press` (a click, a tap, or Enter or Space, with none of the differences between them), `toggle` (press that moves between on and off), `disclosure` (a trigger that shows and hides a region), `dialog` (a modal dialog) and `combobox` (the keyboard of an editable combobox with a list). They share one design: the component owns its state and binds it to the element, and the behavior reads that state from the element, handles the keyboard and pointer, and reports where it is going.
+A behavior is the interaction logic of a component, separate from how it looks. Six are built: `press` (a click, a tap, or Enter or Space, with none of the differences between them), `toggle` (press that moves between on and off), `disclosure` (a trigger that shows and hides a region), `dialog` (a modal dialog), `combobox` (the keyboard of an editable combobox with a list) and `tabs` (a tab list, with the arrow keys). They share one design: the component owns its state and binds it to the element, and the behavior reads that state from the element, handles the keyboard and pointer, and reports where it is going.
 
 ## Using press
 
@@ -185,6 +185,18 @@ The keyboard of an editable combobox with a listbox popup (the ARIA 1.2 pattern)
 | Tab        | nothing                        | `close`, and focus moves on      |
 
 `$event.command` is the command. The behavior also sets `role="combobox"`, `aria-autocomplete="list"`, `aria-expanded="false"` and `autocomplete="off"` if they are missing, ignores keys during text composition, and gives no commands while the input is disabled. Typing, filtering and clicking an option are the component's: see `Combobox` in the design system's `system/components` for a complete one.
+
+## tabs
+
+The keys and the pointer of a tab list (the ARIA tabs pattern, with automatic activation). Attach it to the element that has `role="tablist"` with `@activate`. The contract declares the parts `root`, `tab` and `panel` and the event `activate`. The component owns which tab is selected: it binds `aria-selected`, `tabindex` (0 for the selected tab and -1 for the others, so Tab leaves the list) and `aria-controls` on each tab, and `hidden` and `aria-labelledby` on each panel. The behavior finds the tabs (`role="tab"`), moves focus and reports where the person is going:
+
+| Input                   | What happens                                           |
+| ----------------------- | ------------------------------------------------------ |
+| Arrow Right, Arrow Left | Focus and activate the next or previous tab, wrapping. |
+| Home, End               | Focus and activate the first or last tab.              |
+| Click, Enter or Space   | Activate that tab.                                     |
+
+`$event.value` is the tab's `data-value` (or its `id`, or its position), and `$event.source` is `keyboard` or `pointer`. A list with `aria-orientation="vertical"` uses Arrow Down and Arrow Up instead. A disabled tab (`disabled`, or `aria-disabled="true"`) is skipped by the keys and gives no click. Unlike the other behaviors it needs a DOM, because it finds the tabs and moves focus. The landing page's code window (`landing/app/components/CodeTabs.tess` in the repository) is a complete one.
 
 ## The components that use them
 

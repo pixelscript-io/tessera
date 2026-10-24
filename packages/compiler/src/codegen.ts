@@ -314,7 +314,12 @@ export function generateTemplate(
     return genElement(el, locals)
   }
 
+  /** How many `<svg>` elements enclose the one being generated: its tree is created in the SVG namespace. */
+  let svgDepth = 0
+
   function genElement(el: ElementNode, locals: Locals): string | undefined {
+    const svg = el.tag === 'svg' || svgDepth > 0
+    const refs: string[] = []
     const attrs: string[] = []
     const props: string[] = []
     const handlers = new Map<string, string[]>()
@@ -378,6 +383,24 @@ export function generateTemplate(
             `($e: any) => { ${target}.value = $e.target.value }`,
           ])
         }
+      } else if (name === 'ref') {
+        const target = attr.value?.trim() ?? ''
+        const binding = ctx.bindings.get(target)
+        if (!binding || binding.signal !== 'signal') {
+          report.error(
+            'T4011',
+            attr.valueStart,
+            binding
+              ? `ref needs a signal made with state(), but "${target}" is not one.`
+              : `ref needs a signal made with state(), but "${target}" is not declared in <script>.`,
+            binding
+              ? undefined
+              : nearest(target, ctx.bindings.keys())
+                ? `Did you mean "${nearest(target, ctx.bindings.keys())}"?`
+                : undefined,
+          )
+          ok = false
+        } else refs.push(target)
       } else if (DIRECTIVES.has(name)) {
         continue
       } else {
@@ -393,6 +416,9 @@ export function generateTemplate(
 
     // Events a behavior produces (`@press`) are wired to the behavior, not to the DOM.
     const use: string[] = []
+    // `ref="box"` puts the element in the signal `box` while it is on the page, and null again after.
+    for (const target of refs)
+      use.push(`($el: any) => { ${target}.value = $el; return () => { ${target}.value = null } }`)
     for (const [event, fns] of [...handlers]) {
       const behavior = BEHAVIOR_EVENTS[event]
       if (!behavior) continue
@@ -435,8 +461,11 @@ export function generateTemplate(
       props.length ? `props: { ${props.join(', ')} }` : '',
       on.length ? `on: { ${on.join(', ')} }` : '',
       use.length ? `use: [${use.join(', ')}]` : '',
+      svg ? "ns: 'svg'" : '',
     ].filter(Boolean)
+    if (el.tag === 'svg') svgDepth++
     const children = genChildren(el.children, locals)
+    if (el.tag === 'svg') svgDepth--
     const args = [
       q(el.tag),
       ...(options.length || children.length

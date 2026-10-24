@@ -1,0 +1,45 @@
+<contract>
+{
+  "name": "StartCards",
+  "role": "generic",
+  "description": "The two ways in: a new project, or an existing app that adopts Tessera one violation at a time.",
+  "parts": ["root", "inner"]
+}
+</contract>
+
+<script>
+import { ADOPT_COMMAND, QUICK_COMMAND } from '../data/code'
+</script>
+
+<template>
+  <section class="root">
+    <div class="inner">
+      <CommandCard
+        title="Start a project"
+        body="The tessera preset, the default, gives you a small design system with light and dark themes. The docs use the same tokens."
+        :commands="QUICK_COMMAND"
+        />
+      <CommandCard
+        tone="light"
+        title="Adopt in an existing app"
+        body="Record today's violations as a baseline. Enforcement fails only on new ones, and the count can only go down."
+        :commands="ADOPT_COMMAND"
+        />
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 $space.24 $space.64;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: $space.12;
+  align-items: stretch;
+}
+</style>

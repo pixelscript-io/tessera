@@ -1,0 +1,64 @@
+<contract>
+{
+  "name": "SiteFooter",
+  "role": "contentinfo",
+  "description": "The foot of the page: the release, and the links to the roadmap, contributing and the repository.",
+  "parts": ["root", "bar", "note", "links", "link"],
+  "contrast": [
+    { "foreground": "bar", "background": "root" },
+    { "foreground": "link", "background": "root" }
+  ]
+}
+</contract>
+
+<script>
+import { SHORT_VERSION } from '../version'
+import { links } from '../links'
+</script>
+
+<template>
+  <footer class="root" role="contentinfo">
+    <div class="bar">
+      <span class="note">Tessera {SHORT_VERSION} · Early development, the API will change.</span>
+      <div class="links">
+        <a class="link" :href="links.roadmap">Roadmap</a>
+        <a class="link" :href="links.contributing">Contributing</a>
+        <a class="link" :href="links.github">GitHub</a>
+      </div>
+    </div>
+  </footer>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space.16;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.28 $space.24;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space.18;
+}
+
+.link {
+  color: $color.text.muted;
+
+  &:hover {
+    color: $color.accent.default;
+  }
+}
+</style>

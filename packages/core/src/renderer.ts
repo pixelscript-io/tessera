@@ -36,6 +36,8 @@ export interface ElementOptions {
    * A returned function is called when the element's scope is disposed.
    */
   use?: Array<(el: any) => void | (() => void)>
+  /** `'svg'` for `<svg>` and everything inside it. */
+  ns?: 'svg'
 }
 
 export interface Renderer<N, E extends N> {
@@ -109,7 +111,7 @@ export function createRenderer<N, E extends N>(adapter: RendererAdapter<N, E>): 
   }
 
   function el(tag: string, options: ElementOptions = {}, ...children: Child<N, E>[]): E {
-    const element = adapter.createElement(tag)
+    const element = adapter.createElement(tag, options.ns)
 
     for (const [name, value] of Object.entries(options.attrs ?? {})) {
       if (typeof value === 'function') {

@@ -1,0 +1,27 @@
+<contract>
+{
+  "name": "Chart",
+  "role": "img",
+  "parts": ["root"]
+}
+</contract>
+
+<script>
+const width = state(100)
+</script>
+
+<template>
+  <div class="root" role="img" aria-label="A line">
+    <svg viewBox="0 0 100 40" :width="width">
+      <path d="M0,0 L100,40" stroke-width="2" fill="none" />
+      <circle r="3"><animate attributeName="opacity" dur="1s" /></circle>
+    </svg>
+    <span>after</span>
+  </div>
+</template>
+
+<style>
+.root {
+  display: block;
+}
+</style>

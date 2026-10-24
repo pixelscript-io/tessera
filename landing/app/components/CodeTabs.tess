@@ -1,0 +1,164 @@
+<contract>
+{
+  "name": "CodeTabs",
+  "role": "generic",
+  "description": "A dark window with tabs: a component file, the check that reads it, and the MCP server that asks the same compiler.",
+  "since": "0.5.0",
+  "parts": ["root", "list", "tab", "panel", "pane", "line"],
+  "behavior": "tabs",
+  "events": {
+    "activate": "fired with { value, source } when a tab is chosen"
+  },
+  "contrast": [
+    { "foreground": "pane", "background": "root" },
+    { "foreground": "tab", "background": "list" }
+  ]
+}
+</contract>
+
+<script>
+import { CODE_TABS, PANES } from '../data/code'
+
+const { initial } = props({ initial: 'contract' })
+const selected = state(initial.value)
+
+function pick(detail) {
+  selected.value = detail.value
+  emit('activate', detail)
+}
+</script>
+
+<template>
+  <div class="root">
+    <div class="list" role="tablist" aria-label="How it reads" @activate="pick($event)">
+      <button
+        each="t in CODE_TABS"
+        key="t.id"
+        class="tab"
+        type="button"
+        role="tab"
+        :id="'tab-' + t.id"
+        :data-value="t.id"
+        :aria-controls="'panel-' + t.id"
+        :aria-selected="selected === t.id ? 'true' : 'false'"
+        :tabindex="selected === t.id ? 0 : -1"
+        >
+        {t.label}
+      </button>
+    </div>
+    <div
+      each="t in CODE_TABS"
+      key="t.id"
+      class="panel"
+      role="tabpanel"
+      :id="'panel-' + t.id"
+      :aria-labelledby="'tab-' + t.id"
+      :hidden="selected !== t.id"
+      >
+      <div class="pane" each="pane in PANES[t.id]" key="pane" tabindex="0">
+        <div class="line" each="ln in pane.lines" key="ln">
+          <span each="s in ln.segs" key="s" :data-kind="s.kind">{s.text}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.root {
+  overflow: hidden;
+  border-radius: $radius.md;
+  background: $color.code.inner;
+  box-shadow: $shadow.window;
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space.2;
+  padding: $space.8 $space.10;
+  border-bottom: 1px solid $color.code.border;
+  background: $color.code.inner;
+}
+
+.tab {
+  padding: $space.6 $space.10;
+  border: none;
+  border-radius: $radius.sm;
+  background: transparent;
+  color: $color.text.inverse-faint;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  cursor: pointer;
+
+  &:hover {
+    color: $color.text.inverse;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.bright;
+    outline-offset: -2px;
+  }
+
+  &[aria-selected='true'] {
+    background: $color.code.border;
+    color: $color.text.inverse;
+  }
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane {
+  position: relative;
+  left: -1px;
+  padding: $space.20 $space.24;
+  overflow: auto;
+  border-left: 1px solid $color.code.border;
+  color: $color.code.fg;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  line-height: 1.65;
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.bright;
+    outline-offset: -2px;
+  }
+}
+
+.line {
+  min-height: 1.65em;
+  white-space: pre;
+}
+
+[data-kind='str'] {
+  color: $color.code.string;
+}
+
+[data-kind='key'] {
+  color: $color.code.key;
+}
+
+[data-kind='tok'] {
+  color: $color.code.token;
+}
+
+[data-kind='tag'] {
+  color: $color.code.tag;
+}
+
+[data-kind='com'] {
+  color: $color.code.comment;
+}
+
+[data-kind='err'] {
+  color: $color.code.error;
+}
+</style>

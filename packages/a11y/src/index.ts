@@ -16,7 +16,9 @@ import {
   domComboboxHarness,
   domDialogHarness,
   domHarness,
+  domTabsHarness,
   pressConformance,
+  tabsConformance,
   toggleConformance,
 } from '@tessera/behavior/conformance'
 import { extractContract, type Contract } from '@tessera/compiler'
@@ -105,6 +107,7 @@ const BEHAVIOR_EVENT: Record<string, string> = {
   dialog: 'dismiss',
   // A combobox's own event is its keys; what the suite counts is what was chosen.
   combobox: 'select',
+  tabs: 'activate',
 }
 
 function mount(
@@ -166,6 +169,11 @@ function mount(
 function subjectOf(root: HTMLElement, contract: Contract): HTMLElement {
   if (contract.behavior === 'disclosure')
     return root.querySelector<HTMLElement>('[class*="__trigger"]') ?? root
+  // The tab list is the element a tabs behavior is attached to.
+  if (contract.behavior === 'tabs')
+    return root.matches('[role="tablist"]')
+      ? root
+      : (root.querySelector<HTMLElement>('[role="tablist"]') ?? root)
   // A dialog is the element that has the role, which is the root.
   if (contract.behavior === 'dialog') return root
   if (root.matches('button, input, select, textarea, [role]')) return root
@@ -293,6 +301,22 @@ const SUITES: Record<string, Suite> = {
         },
       })
     },
+  },
+  tabs: {
+    title: 'tabs behavior conformance',
+    cases: tabsConformance,
+    focusRing: false,
+    harness: (m, subject) =>
+      domTabsHarness(subject, userEvent, {
+        panels: () => [...m.root.querySelectorAll<HTMLElement>('[role="tabpanel"]')],
+        activations: m.presses as Array<{ value: string; source: string }>,
+        // The behavior reads the attribute, so the case sets the one a component would bind.
+        setDisabled: (index, disabled) => {
+          const tab = subject.querySelectorAll('[role="tab"]')[index]!
+          if (disabled) tab.setAttribute('aria-disabled', 'true')
+          else tab.removeAttribute('aria-disabled')
+        },
+      }),
   },
   combobox: {
     title: 'combobox behavior conformance',

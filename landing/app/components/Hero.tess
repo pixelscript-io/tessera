@@ -1,0 +1,87 @@
+<contract>
+{
+  "name": "Hero",
+  "role": "generic",
+  "description": "The first screen: what Tessera is in one line, why, and the two ways to begin.",
+  "parts": ["root", "eyebrow", "dot", "title", "lead", "actions"],
+  "contrast": [
+    { "foreground": "eyebrow", "background": "root" },
+    { "foreground": "title", "background": "root" },
+    { "foreground": "lead", "background": "root" }
+  ]
+}
+</contract>
+
+<script>
+import { links } from '../links'
+</script>
+
+<template>
+  <section class="root">
+    <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Design-system-first frontend framework</p>
+    <h1 class="title">The design system is the framework.</h1>
+    <p class="lead">
+      Tokens, accessibility, variants and docs are built in and enforced at compile time. Your AI tools ask the compiler
+      before they write.
+    </p>
+    <div class="actions">
+      <LinkButton :href="links.quickStart">Quick start</LinkButton>
+      <LinkButton kind="outline" :href="links.introduction">What is Tessera?</LinkButton>
+      <CopyInstall />
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.72 $space.24 $space.32;
+  background: $color.surface.default;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: $space.8;
+  margin: 0 0 $space.20;
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: $radius.xs;
+  background: $color.accent.default;
+}
+
+.title {
+  max-width: 15ch;
+  margin: 0;
+  color: $color.text.default;
+  font-size: raw(clamp(34px, 5vw, 56px), 'Fluid headline: a token is one fixed size', '2027-12-31');
+  font-weight: $font.weight.medium;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 46ch;
+  margin: $space.18 0 0;
+  color: $color.text.muted;
+  font-size: $font.size.18;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space.8;
+  margin-top: $space.28;
+}
+</style>

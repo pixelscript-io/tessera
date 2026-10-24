@@ -1,0 +1,13 @@
+/* What every page of the original design assumed: border-box sizing, and links that are the color around them with no underline. */
+@layer tessera.reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

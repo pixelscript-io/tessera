@@ -1,0 +1,28 @@
+<script>
+// The page is light only: the tokens have a dark theme for the docs demo, not for the page.
+</script>
+
+<template>
+  <div class="root" id="top">
+    <Banner />
+    <SiteNav />
+    <main class="main"><slot /></main>
+    <SiteFooter />
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.main {
+  flex: 1;
+}
+</style>

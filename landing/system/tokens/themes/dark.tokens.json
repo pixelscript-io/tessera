@@ -1,0 +1,26 @@
+{
+  "$extends": "base",
+  "color": {
+    "$type": "color",
+    "demo": {
+      "stage": {
+        "$value": "{color.neutral.900}"
+      },
+      "stage-border": {
+        "$value": "{color.neutral.800}"
+      },
+      "primary-bg": {
+        "$value": "{color.neutral.100}"
+      },
+      "primary-fg": {
+        "$value": "{color.neutral.950}"
+      },
+      "neutral-fg": {
+        "$value": "{color.neutral.100}"
+      },
+      "neutral-border": {
+        "$value": "{color.neutral.600}"
+      }
+    }
+  }
+}

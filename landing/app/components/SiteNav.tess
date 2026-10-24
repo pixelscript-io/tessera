@@ -1,0 +1,137 @@
+<contract>
+{
+  "name": "SiteNav",
+  "role": "banner",
+  "description": "The header that stays at the top: the name, the sections of the page and the two links out.",
+  "parts": ["root", "bar", "brand", "mark", "cell", "links", "link", "actions", "github", "start"],
+  "contrast": [
+    { "foreground": "link", "background": "root" },
+    { "foreground": "start", "background": "start" }
+  ]
+}
+</contract>
+
+<script>
+import { links } from '../links'
+</script>
+
+<template>
+  <header class="root" role="banner">
+    <nav class="bar" aria-label="Main">
+      <a class="brand" href="#top">
+        <span class="mark" aria-hidden="true"><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i></span>
+        Tessera
+      </a>
+      <div class="links">
+        <a class="link" :href="links.docs">Docs</a>
+        <a class="link" href="#packages">Packages</a>
+        <a class="link" href="#anywhere">Any framework</a>
+        <a class="link" href="#interchange">Tokens</a>
+        <a class="link" href="#agents">AI tools</a>
+      </div>
+      <div class="actions">
+        <a class="github" :href="links.github">GitHub</a>
+        <a class="start" :href="links.quickStart">Quick start</a>
+      </div>
+    </nav>
+  </header>
+</template>
+
+<style>
+.root {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: $color.surface.glass;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid $color.border.default;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: $space.28;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.12 $space.24;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: $space.8;
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+
+  &:hover {
+    color: $color.accent.default;
+  }
+}
+
+.mark {
+  display: grid;
+  grid-template-columns: repeat(2, 8px);
+  gap: $space.2;
+}
+
+.cell {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius.xs;
+  background: $color.text.default;
+}
+
+.cell:nth-child(2) {
+  background: $color.accent.default;
+}
+
+.links {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: $space.20;
+  font-size: $font.size.14;
+}
+
+.link {
+  color: $color.text.muted;
+
+  &:hover {
+    color: $color.accent.default;
+  }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: $space.8;
+}
+
+.github,
+.start {
+  padding: $space.6 $space.12;
+  border-radius: $radius.sm;
+  font-size: $font.size.14;
+}
+
+.github {
+  border: 1px solid $color.border.default;
+  background: $color.surface.raised;
+  color: $color.text.default;
+
+  &:hover {
+    color: $color.accent.default;
+  }
+}
+
+.start {
+  background: $color.action.primary.bg;
+  color: $color.action.primary.fg;
+
+  &:hover {
+    background: $color.action.primary.bg-hover;
+    color: $color.action.primary.fg;
+  }
+}
+</style>

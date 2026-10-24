@@ -1,0 +1,109 @@
+<contract>
+{
+  "name": "AgentTools",
+  "role": "generic",
+  "description": "What AI coding tools get from Tessera: the manifest, the MCP server and the generated instruction files.",
+  "parts": ["root", "inner", "head", "note", "cards", "card", "title", "body", "command"],
+  "contrast": [
+    { "foreground": "note", "background": "root" },
+    { "foreground": "title", "background": "card" },
+    { "foreground": "body", "background": "card" },
+    { "foreground": "command", "background": "card" }
+  ]
+}
+</contract>
+
+<script>
+import { AGENT_ITEMS } from '../data/copy'
+</script>
+
+<template>
+  <section class="root" id="agents">
+    <div class="inner">
+      <div class="head">
+        <SectionHeader>
+          <span slot="eyebrow">AI coding tools</span>
+          <span slot="title">Tell the tool the truth before it writes.</span>
+          Tools guess: a button that does not exist, a padding of 13px. Tessera rejects those at compile time and lets the tool ask
+          first.
+        </SectionHeader>
+        <span class="note">Smoke test, six prompts: 2 errors in 15 files without the tools, 0 in 9 with them.</span>
+      </div>
+      <div class="cards">
+        <div class="card" each="a in AGENT_ITEMS" key="a.title">
+          <span class="title">{a.title}</span>
+          <p class="body">{a.body}</p>
+          <code class="command">{a.cmd}</code>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  border-bottom: 1px solid $color.border.default;
+  background: $color.surface.hover;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.80 $space.24;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space.20;
+}
+
+.note {
+  max-width: 34ch;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: $space.12;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: $space.8;
+  padding: $space.20;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+}
+
+.title {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+}
+
+.command {
+  margin-top: auto;
+  padding-top: $space.6;
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+</style>

@@ -1,0 +1,62 @@
+<contract>
+{
+  "name": "Banner",
+  "role": "complementary",
+  "description": "The line above the page that says which release this is and what is new in it.",
+  "parts": ["root", "version", "text", "link"],
+  "contrast": [{ "foreground": "text", "background": "root" }]
+}
+</contract>
+
+<script>
+import { SHORT_VERSION } from '../version'
+import { links } from '../links'
+</script>
+
+<template>
+  <aside class="root" role="complementary" aria-label="Release announcement">
+    <span class="version">{SHORT_VERSION}</span>
+    <span class="text">
+      tessera lint for any project, the design system as custom elements, and accessibility tests in your own repo.
+    </span>
+    <a class="link" :href="links.releases">Releases</a>
+  </aside>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: $space.8;
+  padding: $space.8 $space.20;
+  border-bottom: 1px solid $color.border.default;
+  background: $color.surface.default;
+  font-size: $font.size.14;
+  text-align: center;
+}
+
+.text {
+  color: $color.text.muted;
+}
+
+.version {
+  padding: $space.2 $space.6;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.full;
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.link {
+  color: $color.text.default;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover {
+    color: $color.accent.default;
+  }
+}
+</style>

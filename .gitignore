@@ -14,3 +14,4 @@ website/content/.vitepress/theme/tokens.css
 experiments/agent-mcp/work
 .docs-test*
 .format-test
+landing/**/__screenshots__
