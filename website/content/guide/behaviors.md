@@ -2,7 +2,7 @@
 
 Introduced in v0.1 (Milestone 7).
 
-A behavior is the interaction logic of a component, separate from how it looks. Three are built: `press` (a click, a tap, or Enter or Space, with none of the differences between them), `toggle` (press that moves between on and off) and `disclosure` (a trigger that shows and hides a region). They share one design: the component owns its state and binds it to the element, and the behavior reads that state from the element, handles the keyboard and pointer, and reports where it is going.
+A behavior is the interaction logic of a component, separate from how it looks. Five are built: `press` (a click, a tap, or Enter or Space, with none of the differences between them), `toggle` (press that moves between on and off), `disclosure` (a trigger that shows and hides a region), `dialog` (a modal dialog) and `combobox` (the keyboard of an editable combobox with a list). They share one design: the component owns its state and binds it to the element, and the behavior reads that state from the element, handles the keyboard and pointer, and reports where it is going.
 
 ## Using press
 
@@ -129,18 +129,76 @@ function change(detail) {
 
 The trigger starts collapsed if it has no state. Arrow-key movement between the triggers of an accordion is not built.
 
+## dialog
+
+A modal dialog on a native `<dialog>`. Put `@dismiss` on the `<dialog>` element, and bind `data-open="true"` to the component's state:
+
+```xml tess
+<contract>
+{
+  "name": "Notice",
+  "role": "dialog",
+  "parts": ["root", "panel"],
+  "behavior": "dialog",
+  "slots": { "default": "the content" },
+  "events": { "dismiss": "fired with { reason } when the person asks to close it" }
+}
+</contract>
+
+<script>
+const { open } = props({ open: false })
+const isOpen = state(open.value)
+effect(() => {
+  isOpen.value = open.value
+})
+
+function dismiss(detail) {
+  isOpen.value = false
+  emit('dismiss', detail)
+}
+</script>
+
+<template>
+  <dialog class="root" aria-label="Notice" :data-open="isOpen ? 'true' : null" @dismiss="dismiss($event)">
+    <div class="panel"><slot /></div>
+  </dialog>
+</template>
+```
+
+- The browser does the hard parts of a modal: `showModal()` makes the page behind it inert, moves focus in, and gives it back to what opened it on close. The behavior adds what it does not.
+- **It follows `data-open`.** The behavior shows the dialog modally when the attribute is `true`, and closes it when it is removed.
+- **Dismissing is a request.** Escape, a click outside the panel, and the browser closing the dialog by itself are reported as `dismiss` with `reason`: `escape`, `backdrop` or `native`. The dialog stays as it is until the component moves its state, so a component can confirm first.
+- **Tab stays inside**: Tab on the last control goes to the first and Shift+Tab on the first goes to the last, so focus cannot leave through the browser's own controls.
+- **The page does not scroll behind it**, and the scrollbar's width is kept so nothing shifts. Nested dialogs share one lock.
+- The dialog needs a name: `aria-labelledby` pointing at its title, or `aria-label`. Make an id that is unique to each instance in the script, as the `Dialog` component does.
+
+## combobox
+
+The keyboard of an editable combobox with a listbox popup (the ARIA 1.2 pattern). Attach it to the text input with `@command`. The contract declares the parts `root`, `input` and `listbox`. The component owns the text, the options, the active option and whether the list is open; the behavior reads `aria-expanded` and `aria-activedescendant` from the input, turns keys into commands, and the component moves its state:
+
+| Key        | While closed                   | While open                       |
+| ---------- | ------------------------------ | -------------------------------- |
+| Arrow Down | `open` (first option active)   | `next`                           |
+| Arrow Up   | `open-last`                    | `prev`                           |
+| Enter      | nothing (a form still submits) | `select`, if an option is active |
+| Escape     | nothing                        | `close`                          |
+| Tab        | nothing                        | `close`, and focus moves on      |
+
+`$event.command` is the command. The behavior also sets `role="combobox"`, `aria-autocomplete="list"`, `aria-expanded="false"` and `autocomplete="off"` if they are missing, ignores keys during text composition, and gives no commands while the input is disabled. Typing, filtering and clicking an option are the component's: see `Combobox` in the design system's `system/components` for a complete one.
+
 ## The components that use them
 
-The design system's own components are built on these behaviors, and each has generated accessibility tests: `Button` (press), `Checkbox` and `Switch` (toggle), `AccordionItem` and `Accordion` (disclosure), and `TextField`. They live in the repository's `system/components`, and `tessera init` writes them into your project's `system/components` for the `tessera` and `tailwind` presets. The `none` preset has no design system, so it gets none of them: write your own, with the same behaviors, which ship with the framework.
+The design system's own components are built on these behaviors, and each has generated accessibility tests: `Button` (press), `Checkbox` and `Switch` (toggle), `AccordionItem` and `Accordion` (disclosure), `Dialog` (dialog), `Combobox` (combobox), and `TextField` and `Select` (the browser's own controls, with a visible label). They live in the repository's `system/components`, and `tessera init` writes them into your project's `system/components` for the `tessera` and `tailwind` presets. The `none` preset has no design system, so it gets none of them: write your own, with the same behaviors, which ship with the framework.
 
 ## Generated accessibility tests
 
 Every component in `system/components` gets tests generated from its contract. Nothing is registered; adding a component adds its tests. For each component, in the default theme and in dark:
 
-- an axe-core run (WCAG 2.0 to 2.2 A and AA, plus best practices) for every combination of variant values, in every state the contract declares: rest, `hover`, `focus-visible`, `pressed`, `checked`, `expanded` and `disabled` (checked and expanded are reached by pressing it), created with a real mouse and keyboard in a real browser;
+- an axe-core run (WCAG 2.0 to 2.2 A and AA, plus best practices) for every combination of variant values, in every state the contract declares: rest, `hover`, `focus-visible`, `pressed`, `checked`, `expanded`, `open` and `disabled` (checked and expanded are reached by pressing it or, for a combobox, with Arrow Down; open sets the dialog's `open` prop), created with a real mouse and keyboard in a real browser;
 - the root has the role the contract declares;
 - if it declares `disabled`, a disabled component says so to assistive technology;
-- if it uses a behavior (`press`, `toggle` or `disclosure`): a visible focus indicator, and that behavior's full conformance suite run against the component itself (against its trigger, for a disclosure);
+- if it uses a behavior: a visible focus indicator, and that behavior's full conformance suite run against the component itself (against its trigger, for a disclosure; for a dialog, opening it, Escape, the backdrop, the scroll lock, the focus trap and where focus goes back to; for a combobox, the keys, the filter and the list);
+- a component that needs data to be shown, such as a combobox with options, is given it in `fixtures`, an option of `defineA11ySuites`;
 - every slot the contract declares is given text, so a component that needs a label has one.
 
 Compile-time checks add to this: the compiler checks contrast between a part's color and background tokens in every theme and every variant and state combination, and the browser run measures the real rendering.

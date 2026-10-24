@@ -10,11 +10,14 @@ import axe from 'axe-core'
 import { userEvent } from '@vitest/browser/context'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  comboboxConformance,
+  dialogConformance,
   disclosureConformance,
+  domComboboxHarness,
+  domDialogHarness,
   domHarness,
   pressConformance,
   toggleConformance,
-  type PressHarness,
 } from '@tessera/behavior/conformance'
 import { extractContract, type Contract } from '@tessera/compiler'
 import { constant, flush, getRenderer, state, type Component } from '@tessera/core'
@@ -33,7 +36,7 @@ export const NOT_COVERED = [
 ] as const
 
 export type State =
-  'rest' | 'hover' | 'focus-visible' | 'pressed' | 'disabled' | 'checked' | 'expanded'
+  'rest' | 'hover' | 'focus-visible' | 'pressed' | 'disabled' | 'checked' | 'expanded' | 'open'
 
 /** Every combination of one value per variant. A component with no variants has one empty combination. */
 export function variantCombinations(contract: Contract): Array<Record<string, string>> {
@@ -52,6 +55,7 @@ export function statesFor(contract: Contract): State[] {
     'pressed',
     'checked',
     'expanded',
+    'open',
     'disabled',
   ]
   return ['rest', ...supported.filter((s) => contract.states.includes(s))]
@@ -64,17 +68,30 @@ export interface A11yOptions {
   sources: Record<string, string>
   /** Themes to run in. `null` is the default theme. */
   themes?: Array<string | null>
+  /**
+   * Props a component needs to be tested with, by component name: a combobox needs options to show. They are given as
+   * props in every run of that component.
+   */
+  fixtures?: Record<string, { props?: Record<string, unknown> }>
 }
 
 const r = getRenderer()
 
 /** What an event carried, as a conformance suite reads it. */
-type Recorded = { source: string; checked?: boolean; expanded?: boolean }
+type Recorded = {
+  source: string
+  checked?: boolean
+  expanded?: boolean
+  reason?: string
+  label?: string
+}
 
 interface Mounted {
   host: HTMLElement
   root: HTMLElement
   disabled: ReturnType<typeof state<boolean>>
+  /** Whether the component is open, for a dialog. */
+  open: ReturnType<typeof state<boolean>>
   /** The events of the contract's behavior, in order. */
   presses: Recorded[]
   dispose(): void
@@ -85,6 +102,9 @@ const BEHAVIOR_EVENT: Record<string, string> = {
   press: 'press',
   toggle: 'toggle',
   disclosure: 'expand',
+  dialog: 'dismiss',
+  // A combobox's own event is its keys; what the suite counts is what was chosen.
+  combobox: 'select',
 }
 
 function mount(
@@ -92,6 +112,7 @@ function mount(
   contract: Contract,
   variants: Record<string, string>,
   initial: { disabled?: boolean } = {},
+  fixture: { props?: Record<string, unknown> } = {},
 ): Mounted {
   const host = document.createElement('div')
   // A page-like surface, so contrast is measured against what a real page would paint.
@@ -99,6 +120,7 @@ function mount(
     'padding: 16px; background: var(--t-color-surface-default); color: var(--t-color-text-default);'
   document.body.append(host)
   const disabled = state(initial.disabled ?? false)
+  const open = state(false)
   const presses: Recorded[] = []
   const own = contract.behavior ? BEHAVIOR_EVENT[contract.behavior] : undefined
   const dispose = r.mount(host, () =>
@@ -106,6 +128,10 @@ function mount(
       props: {
         ...Object.fromEntries(Object.entries(variants).map(([k, v]) => [k, constant(v)])),
         disabled,
+        open,
+        ...Object.fromEntries(
+          Object.entries(fixture.props ?? {}).map(([k, v]) => [k, constant(v)]),
+        ),
       },
       events: Object.fromEntries(
         Object.keys(contract.events).map((name) => [
@@ -130,6 +156,7 @@ function mount(
     host,
     root: host.firstElementChild as HTMLElement,
     disabled,
+    open,
     presses,
     dispose: () => (dispose(), host.remove()),
   }
@@ -139,6 +166,8 @@ function mount(
 function subjectOf(root: HTMLElement, contract: Contract): HTMLElement {
   if (contract.behavior === 'disclosure')
     return root.querySelector<HTMLElement>('[class*="__trigger"]') ?? root
+  // A dialog is the element that has the role, which is the root.
+  if (contract.behavior === 'dialog') return root
   if (root.matches('button, input, select, textarea, [role]')) return root
   return root.querySelector<HTMLElement>('input, select, textarea, button') ?? root
 }
@@ -155,7 +184,17 @@ async function enter(state: State, m: Mounted, subject: HTMLElement): Promise<vo
   else if (state === 'hover') await userEvent.hover(subject)
   else if (state === 'focus-visible') await userEvent.tab()
   // Checked and expanded are reached the way a person reaches them: by pressing it.
-  else if (state === 'checked' || state === 'expanded') await userEvent.click(subject)
+  else if (state === 'checked' || state === 'expanded') {
+    // A combobox is expanded from the keyboard, with focus in the field.
+    if (subject.getAttribute('role') === 'combobox') {
+      subject.focus()
+      await userEvent.keyboard('{ArrowDown}')
+    } else await userEvent.click(subject)
+  } else if (state === 'open') {
+    m.open.value = true
+    // The behavior follows the attribute in a microtask, and the browser moves focus.
+    await new Promise((resolve) => setTimeout(resolve, 30))
+  }
   await settle(m.root)
 }
 
@@ -206,12 +245,87 @@ const IMPLICIT_ROLES: Record<string, string> = {
   table: 'table',
 }
 
-/** The conformance suite of a behavior, and the text for it in a failing run. */
-const SUITES = {
-  press: { cases: pressConformance, title: 'press behavior conformance' },
-  toggle: { cases: toggleConformance, title: 'toggle behavior conformance' },
-  disclosure: { cases: disclosureConformance, title: 'disclosure behavior conformance' },
-} as const
+/**
+ * What a behavior's conformance suite runs against, and how to make that from a mounted component. A press, toggle or
+ * disclosure is one element; a dialog and a combobox are a component with an opener, a list and the rest.
+ */
+interface Suite {
+  title: string
+  cases: ReadonlyArray<{ name: string; run(harness: any): Promise<void> }>
+  /** Whether the visible focus ring is checked on the subject at rest (not for a dialog, which starts closed). */
+  focusRing: boolean
+  harness(m: Mounted, subject: HTMLElement, fixture: { props?: Record<string, unknown> }): any
+}
+
+const SUITES: Record<string, Suite> = {
+  press: {
+    title: 'press behavior conformance',
+    cases: pressConformance,
+    focusRing: true,
+    harness: (m, subject) => elementHarness(m, subject),
+  },
+  toggle: {
+    title: 'toggle behavior conformance',
+    cases: toggleConformance,
+    focusRing: true,
+    harness: (m, subject) => elementHarness(m, subject),
+  },
+  disclosure: {
+    title: 'disclosure behavior conformance',
+    cases: disclosureConformance,
+    focusRing: true,
+    harness: (m, subject) =>
+      elementHarness(m, subject, m.root.querySelector<HTMLElement>('[class*="__content"]')),
+  },
+  dialog: {
+    title: 'dialog behavior conformance',
+    cases: dialogConformance,
+    focusRing: false,
+    harness: (m, subject) => {
+      const opener = document.createElement('button')
+      opener.textContent = 'Open'
+      m.host.append(opener)
+      return domDialogHarness(subject as HTMLDialogElement, opener, userEvent, {
+        dismissals: m.presses as Array<{ reason: string }>,
+        setOpen: async (open) => {
+          m.open.value = open
+          flush()
+        },
+      })
+    },
+  },
+  combobox: {
+    title: 'combobox behavior conformance',
+    cases: comboboxConformance,
+    focusRing: true,
+    harness: (m, subject, fixture) => {
+      const given = (fixture.props?.options ?? []) as Array<{ label: string }>
+      const listbox = () => m.root.querySelector<HTMLElement>('[role="listbox"]')
+      return domComboboxHarness(subject as HTMLInputElement, userEvent, {
+        listbox,
+        options: () => [...(listbox()?.querySelectorAll<HTMLElement>('[role="option"]') ?? [])],
+        labels: given.map((o) => o.label),
+        selections: m.presses,
+        setDisabled: async (disabled) => {
+          m.disabled.value = disabled
+          flush()
+        },
+      })
+    },
+  },
+}
+
+/** The harness of the one-element behaviors: the element, the events it produced, and how to disable it. */
+function elementHarness(m: Mounted, subject: HTMLElement, content?: HTMLElement | null) {
+  return domHarness(subject, userEvent, {
+    presses: m.presses,
+    setDisabled: async (disabled) => {
+      m.disabled.value = disabled
+      flush()
+    },
+    ...(content !== undefined ? { content } : {}),
+  })
+}
 
 export function defineA11ySuites(options: A11yOptions): void {
   const themes = options.themes ?? [null, 'dark']
@@ -237,6 +351,7 @@ export function defineA11ySuites(options: A11yOptions): void {
   })
 
   for (const { contract, component } of entries) {
+    const fixture = options.fixtures?.[contract.name] ?? {}
     describe(`${contract.name} accessibility`, () => {
       for (const theme of themes) {
         const themeName = theme ?? 'default theme'
@@ -245,7 +360,7 @@ export function defineA11ySuites(options: A11yOptions): void {
             for (const variants of variantCombinations(contract)) {
               it(`has no axe violations: ${label(variants)}, ${state}`, async () => {
                 setTheme(theme)
-                const m = mount(component, contract, variants)
+                const m = mount(component, contract, variants, {}, fixture)
                 const subject = subjectOf(m.root, contract)
                 try {
                   await enter(state, m, subject)
@@ -261,7 +376,7 @@ export function defineA11ySuites(options: A11yOptions): void {
       }
 
       it(`has the ${contract.role} role its contract declares`, () => {
-        const m = mount(component, contract, {})
+        const m = mount(component, contract, {}, {}, fixture)
         try {
           const actual = m.root.getAttribute('role') ?? IMPLICIT_ROLES[m.root.tagName.toLowerCase()]
           if (!['generic', 'none', 'presentation'].includes(contract.role))
@@ -309,45 +424,34 @@ export function defineA11ySuites(options: A11yOptions): void {
         })
       }
 
-      const suite = contract.behavior ? SUITES[contract.behavior as keyof typeof SUITES] : undefined
+      const suite = contract.behavior ? SUITES[contract.behavior] : undefined
       if (suite) {
-        it('shows a visible focus indicator when reached with the keyboard', async () => {
-          const m = mount(component, contract, {})
-          const subject = subjectOf(m.root, contract)
-          try {
-            await userEvent.tab()
-            expect(document.activeElement).toBe(subject)
-            const style = getComputedStyle(subject)
-            expect(
-              style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0,
-              'no outline on :focus-visible',
-            ).toBe(true)
-          } finally {
-            await leave('rest', m, subject)
-            m.dispose()
-          }
-        })
+        if (suite.focusRing) {
+          it('shows a visible focus indicator when reached with the keyboard', async () => {
+            const m = mount(component, contract, {}, {}, fixture)
+            const subject = subjectOf(m.root, contract)
+            try {
+              await userEvent.tab()
+              expect(document.activeElement).toBe(subject)
+              const style = getComputedStyle(subject)
+              expect(
+                style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0,
+                'no outline on :focus-visible',
+              ).toBe(true)
+            } finally {
+              await leave('rest', m, subject)
+              m.dispose()
+            }
+          })
+        }
 
         describe(suite.title, () => {
-          for (const testCase of suite.cases as ReadonlyArray<{
-            name: string
-            run(h: PressHarness): Promise<void>
-          }>) {
+          for (const testCase of suite.cases) {
             it(testCase.name, async () => {
-              const m = mount(component, contract, {})
+              const m = mount(component, contract, {}, {}, fixture)
               const subject = subjectOf(m.root, contract)
               try {
-                const harness = domHarness(subject, userEvent, {
-                  presses: m.presses,
-                  setDisabled: async (disabled) => {
-                    m.disabled.value = disabled
-                    flush()
-                  },
-                  ...(contract.behavior === 'disclosure'
-                    ? { content: m.root.querySelector<HTMLElement>('[class*="__content"]') }
-                    : {}),
-                })
-                await testCase.run(harness)
+                await testCase.run(suite.harness(m, subject, fixture))
               } finally {
                 await leave('rest', m, subject)
                 m.dispose()

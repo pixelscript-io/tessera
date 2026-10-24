@@ -107,6 +107,10 @@
       },
       "hover": {
         "$value": "{color.neutral.200}"
+      },
+      "inverse": {
+        "$value": "{color.neutral.900}",
+        "$description": "Dark in light themes: a backdrop, a tooltip"
       }
     },
     "text": {
@@ -287,6 +291,12 @@
       "base": {
         "$value": {
           "value": 1,
+          "unit": "rem"
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 1.125,
           "unit": "rem"
         }
       }

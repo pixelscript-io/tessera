@@ -389,6 +389,344 @@ export const disclosureConformance: ConformanceCase<PressHarness>[] = [
   },
 ]
 
+// --- dialog -----------------------------------------------------------------------------------------------------
+
+/** What a case may do to a dialog, and see of it. */
+export interface DialogHarness {
+  readonly dialog: HTMLDialogElement
+  /** The element that has focus before the dialog opens, and should have it back after. */
+  readonly opener: HTMLElement
+  /** Open or close it the way its owner does: by the state the component binds. */
+  setOpen(open: boolean): Promise<void>
+  /** One entry per `dismiss` the dialog has reported. */
+  dismissals(): Array<{ reason: string }>
+  /** A key sent to whatever has focus, such as `Escape`. */
+  press(key: 'Escape'): Promise<void>
+  /** Tab, or Shift+Tab with `back`, from where focus is. */
+  tab(back?: boolean): Promise<void>
+  /** A click on the dimmed page around the dialog. */
+  clickBackdrop(): Promise<void>
+  /** A real click on the dialog's own content. */
+  clickPanel(): Promise<void>
+}
+
+const pageLocked = () => getComputedStyle(document.documentElement).overflow === 'hidden'
+
+/**
+ * Conformance for `dialog`. The component under test closes when it is told to dismiss, as a real one does, so each
+ * case that dismisses also checks that the dialog followed.
+ */
+export const dialogConformance: ConformanceCase<DialogHarness>[] = [
+  {
+    name: 'is closed until it is opened',
+    async run(h) {
+      assert(!h.dialog.open, 'the dialog is open before it was asked to open')
+      assert(!pageLocked(), 'the page is locked while the dialog is closed')
+    },
+  },
+  {
+    name: 'opens as a modal dialog, with focus inside it',
+    async run(h) {
+      h.opener.focus()
+      await h.setOpen(true)
+      assert(h.dialog.open, 'the dialog did not open')
+      assert(
+        h.dialog.matches(':modal'),
+        'the dialog is open but not modal: the page behind it is still reachable',
+      )
+      assert(h.dialog.contains(document.activeElement), 'focus did not move into the dialog')
+    },
+  },
+  {
+    name: 'has an accessible name',
+    async run(h) {
+      await h.setOpen(true)
+      const labelled = h.dialog.getAttribute('aria-labelledby')
+      const text = labelled
+        ? labelled
+            .split(' ')
+            .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+            .join(' ')
+            .trim()
+        : (h.dialog.getAttribute('aria-label') ?? '').trim()
+      assert(
+        text.length > 0,
+        'the dialog has no name: aria-labelledby points at nothing, or aria-label is empty',
+      )
+    },
+  },
+  {
+    name: 'Escape asks to dismiss, and the dialog closes when its owner lets it',
+    async run(h) {
+      await h.setOpen(true)
+      await h.press('Escape')
+      assert(h.dismissals().length === 1, `expected 1 dismissal, got ${h.dismissals().length}`)
+      assert(
+        h.dismissals()[0]!.reason === 'escape',
+        `expected reason "escape", got "${h.dismissals()[0]!.reason}"`,
+      )
+      assert(!h.dialog.open, 'the dialog did not close after it was dismissed')
+    },
+  },
+  {
+    name: 'a click on the backdrop dismisses it, and a click inside does not',
+    async run(h) {
+      await h.setOpen(true)
+      await h.clickPanel()
+      assert(h.dismissals().length === 0, 'a click inside the dialog dismissed it')
+      assert(h.dialog.open, 'a click inside the dialog closed it')
+      await h.clickBackdrop()
+      assert(h.dismissals().length === 1, `expected 1 dismissal, got ${h.dismissals().length}`)
+      assert(
+        h.dismissals()[0]!.reason === 'backdrop',
+        `expected reason "backdrop", got "${h.dismissals()[0]!.reason}"`,
+      )
+      assert(!h.dialog.open, 'the dialog did not close after the backdrop click')
+    },
+  },
+  {
+    name: 'locks the page from scrolling while open, and unlocks it on close',
+    async run(h) {
+      await h.setOpen(true)
+      assert(pageLocked(), 'the page can still scroll behind the open dialog')
+      await h.setOpen(false)
+      assert(!pageLocked(), 'the page is still locked after the dialog closed')
+    },
+  },
+  {
+    name: 'keeps focus inside while open, going either way with Tab',
+    async run(h) {
+      await h.setOpen(true)
+      for (let i = 0; i < 4; i++) {
+        await h.tab()
+        assert(
+          h.dialog.contains(document.activeElement),
+          `focus left the dialog after ${i + 1} Tab presses`,
+        )
+      }
+      for (let i = 0; i < 4; i++) {
+        await h.tab(true)
+        assert(
+          h.dialog.contains(document.activeElement),
+          `focus left the dialog after ${i + 1} Shift+Tab presses`,
+        )
+      }
+    },
+  },
+  {
+    name: 'returns focus to what opened it',
+    async run(h) {
+      h.opener.focus()
+      await h.setOpen(true)
+      await h.setOpen(false)
+      assert(
+        document.activeElement === h.opener,
+        `focus did not return to the opener; it is on ${document.activeElement?.tagName.toLowerCase() ?? 'nothing'}`,
+      )
+    },
+  },
+  {
+    name: 'opens and closes again and again without leaving the page locked',
+    async run(h) {
+      for (let i = 0; i < 3; i++) {
+        await h.setOpen(true)
+        await h.setOpen(false)
+      }
+      assert(!pageLocked(), 'the page stayed locked after three open and close cycles')
+      assert(!h.dialog.open, 'the dialog is open after the last close')
+    },
+  },
+]
+
+// --- combobox ---------------------------------------------------------------------------------------------------
+
+/** What a case may do to an editable combobox with a listbox popup, and see of it. */
+export interface ComboboxHarness {
+  readonly input: HTMLInputElement
+  /** The popup, if it is in the page. */
+  listbox(): HTMLElement | null
+  /** The options that can be chosen right now. */
+  options(): HTMLElement[]
+  /** Every option's label when nothing is typed: what a typed filter is matched against. */
+  readonly labels: readonly string[]
+  /** One entry per choice the combobox has reported, with the label it showed. */
+  selections(): Array<{ label?: string }>
+  setDisabled(disabled: boolean): Promise<void>
+  focus(): Promise<void>
+  /** Characters typed into the field, as a person types. */
+  type(text: string): Promise<void>
+  press(key: 'ArrowDown' | 'ArrowUp' | 'Enter' | 'Escape'): Promise<void>
+  tab(): Promise<void>
+  clickOption(index: number): Promise<void>
+}
+
+const expanded = (h: ComboboxHarness) => h.input.getAttribute('aria-expanded') === 'true'
+const active = (h: ComboboxHarness) => h.input.getAttribute('aria-activedescendant')
+const listVisible = (h: ComboboxHarness) => {
+  const box = h.listbox()
+  return !!box && !box.hidden && getComputedStyle(box).display !== 'none'
+}
+
+/**
+ * Conformance for `combobox`: an editable combobox with a listbox popup (ARIA 1.2). It needs at least three options
+ * that share a letter in their labels, and a typed filter that keeps the options whose label contains what was typed.
+ */
+export const comboboxConformance: ConformanceCase<ComboboxHarness>[] = [
+  {
+    name: 'has the combobox pattern at rest: role, closed, a list to control',
+    async run(h) {
+      assert(h.input.getAttribute('role') === 'combobox', 'the input does not have role="combobox"')
+      assert(!expanded(h), 'the combobox starts open')
+      assert(
+        h.input.getAttribute('aria-autocomplete') === 'list',
+        'aria-autocomplete should be "list"',
+      )
+      const controls = h.input.getAttribute('aria-controls')
+      assert(
+        !!controls && document.getElementById(controls)?.getAttribute('role') === 'listbox',
+        'aria-controls must name an element with role="listbox"',
+      )
+      assert(!listVisible(h), 'the list is visible while the combobox is closed')
+    },
+  },
+  {
+    name: 'Arrow Down opens the list and makes the first option active',
+    async run(h) {
+      await h.focus()
+      await h.press('ArrowDown')
+      assert(expanded(h), 'aria-expanded did not become "true"')
+      assert(listVisible(h), 'the list is not visible')
+      const options = h.options()
+      assert(options.length > 0, 'the list has no options')
+      assert(
+        options.every((o) => o.getAttribute('role') === 'option'),
+        'every option needs role="option"',
+      )
+      assert(
+        active(h) === options[0]!.id && options[0]!.id !== '',
+        `aria-activedescendant should name the first option, got ${JSON.stringify(active(h))}`,
+      )
+      assert(document.activeElement === h.input, 'focus left the input; it should stay on it')
+    },
+  },
+  {
+    name: 'Arrow Down and Arrow Up move the active option',
+    async run(h) {
+      await h.focus()
+      await h.press('ArrowDown')
+      await h.press('ArrowDown')
+      assert(active(h) === h.options()[1]!.id, 'Arrow Down did not move to the second option')
+      await h.press('ArrowUp')
+      assert(active(h) === h.options()[0]!.id, 'Arrow Up did not move back to the first option')
+    },
+  },
+  {
+    name: 'Arrow Up while closed opens the list on the last option',
+    async run(h) {
+      await h.focus()
+      await h.press('ArrowUp')
+      assert(expanded(h), 'the list did not open')
+      const options = h.options()
+      assert(
+        active(h) === options[options.length - 1]!.id,
+        'the last option should be active after Arrow Up',
+      )
+    },
+  },
+  {
+    name: 'Enter chooses the active option and closes the list',
+    async run(h) {
+      await h.focus()
+      await h.press('ArrowDown')
+      const label = h.options()[0]!.textContent!.trim()
+      await h.press('Enter')
+      assert(h.selections().length === 1, `expected 1 choice, got ${h.selections().length}`)
+      assert(h.selections()[0]!.label === label, `expected the choice to be "${label}"`)
+      assert(!expanded(h), 'the list stayed open after a choice')
+      assert(h.input.value === label, `the field should show "${label}", shows "${h.input.value}"`)
+    },
+  },
+  {
+    name: 'Enter with no active option chooses nothing',
+    async run(h) {
+      await h.focus()
+      await h.press('Enter')
+      assert(h.selections().length === 0, 'Enter chose something with nothing active')
+    },
+  },
+  {
+    name: 'Escape closes the list and keeps what was typed',
+    async run(h) {
+      await h.focus()
+      await h.type(h.labels[0]!.slice(0, 2).toLowerCase())
+      await h.press('ArrowDown')
+      await h.press('Escape')
+      assert(!expanded(h), 'the list stayed open after Escape')
+      assert(
+        h.input.value === h.labels[0]!.slice(0, 2).toLowerCase(),
+        `Escape changed the text to "${h.input.value}"`,
+      )
+    },
+  },
+  {
+    name: 'typing opens the list and keeps only the options that match',
+    async run(h) {
+      await h.focus()
+      const typed = h.labels[0]!.slice(0, 2).toLowerCase()
+      await h.type(typed)
+      assert(expanded(h), 'typing did not open the list')
+      const expected = h.labels.filter((l) => l.toLowerCase().includes(typed))
+      assert(
+        h.options().length === expected.length,
+        `expected ${expected.length} options for "${typed}", got ${h.options().length}`,
+      )
+    },
+  },
+  {
+    name: 'with nothing matching, there is nothing to choose',
+    async run(h) {
+      await h.focus()
+      await h.type('zzzzqx')
+      await h.press('ArrowDown')
+      await h.press('Enter')
+      assert(h.options().length === 0, 'options are shown for text that matches none')
+      assert(h.selections().length === 0, 'something was chosen from an empty list')
+      assert(!active(h), 'an option is active in an empty list')
+    },
+  },
+  {
+    name: 'a click on an option chooses it',
+    async run(h) {
+      await h.focus()
+      await h.press('ArrowDown')
+      const label = h.options()[1]!.textContent!.trim()
+      await h.clickOption(1)
+      assert(h.selections().length === 1, `expected 1 choice, got ${h.selections().length}`)
+      assert(h.selections()[0]!.label === label, `expected the choice to be "${label}"`)
+      assert(!expanded(h), 'the list stayed open after a click')
+    },
+  },
+  {
+    name: 'Tab closes the list and moves on',
+    async run(h) {
+      await h.focus()
+      await h.press('ArrowDown')
+      await h.tab()
+      assert(!expanded(h), 'the list stayed open after Tab')
+      assert(document.activeElement !== h.input, 'Tab did not leave the field')
+    },
+  },
+  {
+    name: 'does nothing while disabled',
+    async run(h) {
+      await h.setDisabled(true)
+      h.input.focus()
+      await h.press('ArrowDown')
+      assert(!expanded(h), 'a disabled combobox opened')
+    },
+  },
+]
+
 /** What a driver must be able to do. `@vitest/browser`'s `userEvent` satisfies it directly. */
 export interface Driver {
   click(element: Element): Promise<void>
@@ -460,6 +798,93 @@ export function domHarness(
       element.dispatchEvent(
         new PointerEvent('pointerup', { bubbles: true, cancelable: true, button: 0, pointerId: 1 }),
       )
+    },
+  }
+}
+
+/** A harness over a real `<dialog>` in a real browser. */
+export function domDialogHarness(
+  dialog: HTMLDialogElement,
+  opener: HTMLElement,
+  driver: Driver,
+  options: {
+    dismissals: Array<{ reason: string }>
+    setOpen(open: boolean): Promise<void> | void
+  },
+): DialogHarness {
+  return {
+    dialog,
+    opener,
+    async setOpen(open) {
+      await options.setOpen(open)
+      // The behavior follows the attribute in a microtask; give it, and the browser's focus move, a turn.
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    },
+    dismissals: () => options.dismissals,
+    press: (key) => driver.keyboard(`{${key}}`),
+    async tab(back = false) {
+      await driver.tab(back ? { shift: true } : undefined)
+    },
+    async clickBackdrop() {
+      const box = dialog.getBoundingClientRect()
+      // A click on the ::backdrop is delivered to the dialog itself, at a point outside its box.
+      dialog.dispatchEvent(
+        new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          clientX: Math.max(1, box.left - 20),
+          clientY: Math.max(1, box.top - 20),
+        }),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    },
+    async clickPanel() {
+      await driver.click((dialog.firstElementChild as Element | null) ?? dialog)
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    },
+  }
+}
+
+/** A harness over a real combobox in a real browser. */
+export function domComboboxHarness(
+  input: HTMLInputElement,
+  driver: Driver,
+  options: {
+    listbox(): HTMLElement | null
+    options(): HTMLElement[]
+    labels: readonly string[]
+    selections: Array<{ label?: string }>
+    setDisabled(disabled: boolean): Promise<void> | void
+  },
+): ComboboxHarness {
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 20))
+  return {
+    input,
+    listbox: options.listbox,
+    options: options.options,
+    labels: options.labels,
+    selections: () => options.selections,
+    async setDisabled(disabled) {
+      await options.setDisabled(disabled)
+    },
+    async focus() {
+      input.focus()
+    },
+    async type(text) {
+      await driver.keyboard(text)
+      await settle()
+    },
+    async press(key) {
+      await driver.keyboard(`{${key}}`)
+      await settle()
+    },
+    async tab() {
+      await driver.tab()
+      await settle()
+    },
+    async clickOption(index) {
+      await driver.click(options.options()[index]!)
+      await settle()
     },
   }
 }

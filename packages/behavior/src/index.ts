@@ -1,6 +1,8 @@
 export { attachPress, type PressDetail, type PressOptions } from './press'
 export { attachToggle, toggleAttribute, type ToggleDetail, type ToggleOptions } from './toggle'
 export { attachDisclosure, type DisclosureOptions, type ExpandDetail } from './disclosure'
+export { attachDialog, type DialogOptions, type DismissDetail } from './dialog'
+export { attachCombobox, type ComboboxCommand, type ComboboxOptions } from './combobox'
 export {
   BEHAVIOR_ATTACH,
   BEHAVIOR_EVENTS,

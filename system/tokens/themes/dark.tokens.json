@@ -11,6 +11,9 @@
       },
       "hover": {
         "$value": "{color.neutral.700}"
+      },
+      "inverse": {
+        "$value": "{color.neutral.0}"
       }
     },
     "text": {

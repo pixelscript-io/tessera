@@ -20,6 +20,11 @@ export interface RendererAdapter<N = unknown, E extends N = N> {
   parentNode(node: N): E | null
   addListener(el: E, type: string, handler: (event: any) => void): void
   removeListener(el: E, type: string, handler: (event: any) => void): void
+  /**
+   * Call `callback` whenever the attribute changes, however it changed. Returns a function that stops. Optional: a
+   * behavior that needs it (a dialog follows `data-open`) does nothing about changes where it is missing.
+   */
+  observeAttribute?(el: E, name: string, callback: () => void): () => void
 }
 
 export function createDomAdapter(doc: Document = document): RendererAdapter<Node, Element> {
@@ -50,5 +55,12 @@ export function createDomAdapter(doc: Document = document): RendererAdapter<Node
     parentNode: (node) => node.parentElement,
     addListener: (el, type, handler) => el.addEventListener(type, handler),
     removeListener: (el, type, handler) => el.removeEventListener(type, handler),
+    observeAttribute: (el, name, callback) => {
+      const view = el.ownerDocument.defaultView
+      if (!view) return () => {}
+      const observer = new view.MutationObserver(callback)
+      observer.observe(el, { attributes: true, attributeFilter: [name] })
+      return () => observer.disconnect()
+    },
   }
 }

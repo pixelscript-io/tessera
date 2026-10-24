@@ -77,7 +77,7 @@ describe('tessera init --preset tessera', () => {
     const dir = scratch()
     await run(dir, 'init', '--preset', 'tessera')
     const { code, out } = await run(dir, 'check')
-    expect(out).toContain('0 errors, 0 warnings in 10 files.')
+    expect(out).toContain('0 errors, 0 warnings in 13 files.')
     expect(code).toBe(0)
   })
 
@@ -149,7 +149,7 @@ describe('tessera init --preset tailwind', () => {
     const dir = scratch()
     await run(dir, 'init', '--preset', 'tailwind')
     const { code, out } = await run(dir, 'check')
-    expect(out).toContain('0 errors, 0 warnings in 10 files.')
+    expect(out).toContain('0 errors, 0 warnings in 13 files.')
     expect(code).toBe(0)
   })
 
@@ -209,6 +209,9 @@ describe("the design system's own components", () => {
         'AccordionItem.tess',
         'Button.tess',
         'Checkbox.tess',
+        'Combobox.tess',
+        'Dialog.tess',
+        'Select.tess',
         'Switch.tess',
         'TextField.tess',
       ]),

@@ -250,7 +250,7 @@ describe('invalid contracts', () => {
     expect(d.map((x) => [x.code, x.message, x.hint])).toEqual([
       [
         'T3008',
-        'Unknown behavior "pres". Known behaviors: "press", "toggle", "disclosure".',
+        'Unknown behavior "pres". Known behaviors: "press", "toggle", "disclosure", "dialog", "combobox".',
         'Did you mean "press"?',
       ],
     ])

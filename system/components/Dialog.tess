@@ -1,0 +1,122 @@
+<contract>
+{
+  "name": "Dialog",
+  "role": "dialog",
+  "description": "A modal dialog: it takes focus, makes the page behind it inert and stops it scrolling, and gives focus back when it closes.",
+  "since": "0.5.0",
+  "parts": ["root", "panel", "title", "body", "actions"],
+  "variants": {
+    "size": ["md", "sm", "lg"] // first value is the default
+  },
+  "states": ["open"],
+  "behavior": "dialog",
+  "slots": {
+    "title": "the heading, which is also the dialog's accessible name",
+    "default": "the content",
+    "actions": "the buttons, such as Cancel and Save"
+  },
+  "events": {
+    "dismiss": "fired with { reason: 'escape' | 'backdrop' | 'native' } when the person asks to close it; listen and set open to false"
+  },
+  "contrast": [
+    { "foreground": "body", "background": "panel" },
+    { "foreground": "title", "background": "panel" }
+  ]
+}
+</contract>
+
+<script>
+const { open, persistent } = props({ open: false, persistent: false })
+
+// The component owns whether it is open, starts from the prop and follows it when it changes.
+const isOpen = state(open.value)
+effect(() => {
+  isOpen.value = open.value
+})
+
+// An id of its own, so the title can name the dialog however many there are.
+const titleId = `t-dialog-${Math.random().toString(36).slice(2, 9)}`
+
+function dismiss(detail) {
+  // A persistent dialog only reports the request, so its owner can confirm first and close it by setting open.
+  if (!persistent.value) isOpen.value = false
+  emit('dismiss', detail)
+}
+</script>
+
+<template>
+  <dialog
+    class="root"
+    :data-open="isOpen ? 'true' : null"
+    :aria-labelledby="titleId"
+    @dismiss="dismiss($event)"
+    >
+    <div class="panel">
+      <h2 class="title" :id="titleId"><slot name="title" /></h2>
+      <div class="body"><slot /></div>
+      <div class="actions"><slot name="actions" /></div>
+    </div>
+  </dialog>
+</template>
+
+<style>
+.root {
+  max-width: calc(100vw - 2rem);
+  padding: 0;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.lg;
+  background: $color.surface.default;
+  color: $color.text.default;
+  box-shadow: $shadow.md;
+  font-family: var(--t-font-family-sans);
+
+  &::backdrop {
+    /* No text goes on the backdrop; this says what would be readable on it, for the contrast check. */
+    color: $color.surface.default;
+    background: $color.surface.inverse;
+    opacity: $opacity.disabled;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  box-sizing: border-box;
+  width: 28rem;
+  max-width: 100%;
+  padding: $space.6;
+  background: $color.surface.default;
+}
+
+.root[data-size='sm'] .panel {
+  width: 20rem;
+}
+
+.root[data-size='lg'] .panel {
+  width: 40rem;
+}
+
+.title {
+  margin: 0;
+  color: $color.text.default;
+  font-size: $font.size.lg;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  color: $color.text.muted;
+  font-size: $font.size.base;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space.2;
+}
+
+.actions:empty {
+  display: none;
+}
+</style>

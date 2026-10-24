@@ -142,7 +142,13 @@ describe('contract completion', () => {
   it('suggests ARIA roles and behaviors as values', () => {
     expect(labels('{ "role": "|" }')).toContain('button')
     expect(labels('{ "role": "tool|" }')).toContain('toolbar')
-    expect(labels('{ "behavior": "|" }')).toEqual(['press', 'toggle', 'disclosure'])
+    expect(labels('{ "behavior": "|" }')).toEqual([
+      'press',
+      'toggle',
+      'disclosure',
+      'dialog',
+      'combobox',
+    ])
     expect(at('{ "role": |}')!.items[0]!.insert).toMatch(/^"/)
   })
 
