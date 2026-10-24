@@ -27,9 +27,8 @@ jobs:
       - run: pnpm --filter website generate
       - run: pnpm --filter website check
       - run: pnpm --filter website exec vitepress build content
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: website
-          command: deploy
+      # Wrangler runs through npx, outside the workspace: the action's own npm install fails on `workspace:*` dependencies.
+      - run: npx --yes wrangler@4 deploy --config website/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
