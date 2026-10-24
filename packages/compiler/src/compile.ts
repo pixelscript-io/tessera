@@ -11,7 +11,7 @@ import { generateTemplate, type ComponentInfo, type ComponentResolver } from './
 import { Reporter, type CompilerDiagnostic } from './diagnostics'
 import { analyzeScript, type Binding } from './script'
 import { parseSfc } from './sfc'
-import { BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
+import { BEHAVIOR_ATTACH, BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
 import { isBaselineable } from './accountability'
 import { resolveConfig, type TesseraConfig } from './config'
 import type { ComponentRegistry } from './registry'
@@ -409,7 +409,9 @@ function assemble(
         `import ${tag} from ${JSON.stringify(info.importPath)}`,
     )
 
-  const behaviorImports = generated.behaviors.has('press') ? ['attachPress as $attachPress'] : []
+  const behaviorImports = [...generated.behaviors].map(
+    (b) => `${BEHAVIOR_ATTACH[b]} as $${BEHAVIOR_ATTACH[b]}`,
+  )
   const hmr = options.hmrId !== undefined
   const lines = [
     `import { ${coreImports.join(', ')} } from "${PUBLIC_PACKAGES.core}"`,

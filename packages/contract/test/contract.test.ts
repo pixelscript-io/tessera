@@ -266,7 +266,7 @@ describe('invalid contracts', () => {
       ],
     ])
     const disclosure = parse(
-      '{ "name": "Details", "role": "group", "parts": ["root"], "behavior": "disclosure", "events": { "toggle": "t" } }',
+      '{ "name": "Details", "role": "group", "parts": ["root"], "behavior": "disclosure", "events": { "expand": "e" } }',
       'Details.tess',
     )
     expect(disclosure.diagnostics.map((x) => x.message)).toEqual([

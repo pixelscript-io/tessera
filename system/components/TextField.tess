@@ -1,0 +1,120 @@
+<contract>
+{
+  "name": "TextField",
+  "role": "generic",
+  "description": "A text input with a visible label and an optional hint. The label is required: it is what assistive technology reads.",
+  "since": "0.5.0",
+  "parts": ["root", "label", "input", "hint"],
+  "variants": {
+    "size": ["md", "sm"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "disabled"],
+  "slots": {
+    "label": "the visible label, required",
+    "hint": "help or an error message under the input"
+  },
+  "events": {
+    "input": "fired with the new text on every change",
+    "change": "fired with the text when the person leaves the field after changing it"
+  }
+}
+</contract>
+
+<script>
+const { value, type, placeholder, disabled, invalid } = props({
+  value: '',
+  type: 'text',
+  placeholder: '',
+  disabled: false,
+  invalid: false,
+})
+
+// The field owns what is typed, starts from the prop and follows it when it changes.
+const text = state(value.value)
+effect(() => {
+  text.value = value.value
+})
+
+function typed(event) {
+  emit('input', event.target.value)
+}
+
+function committed(event) {
+  emit('change', event.target.value)
+}
+</script>
+
+<template>
+  <label class="root">
+    <span class="label"><slot name="label" /></span>
+    <input
+      class="input"
+      :type="type"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      :aria-invalid="invalid ? 'true' : null"
+      bind:value="text"
+      @input="typed($event)"
+      @change="committed($event)"
+      />
+    <span class="hint"><slot name="hint" /></span>
+  </label>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.base;
+}
+
+.label {
+  font-size: $font.size.sm;
+  font-weight: $font.weight.bold;
+}
+
+.input {
+  padding: $space.2 $space.3;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.md;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font: inherit;
+  transition-duration: $motion.duration.fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color.text.default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: $color.action.danger.text;
+  }
+}
+
+.root[data-size='sm'] .input {
+  padding: $space.1 $space.2;
+  font-size: $font.size.sm;
+}
+
+.hint {
+  color: $color.text.muted;
+  font-size: $font.size.sm;
+}
+
+.hint:empty {
+  display: none;
+}
+</style>

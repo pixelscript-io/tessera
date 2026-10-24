@@ -155,6 +155,16 @@
         "$value": "{color.blue.600}",
         "$description": "Focus indicator"
       }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.neutral.200}",
+        "$description": "Dividers and quiet outlines"
+      },
+      "strong": {
+        "$value": "{color.neutral.600}",
+        "$description": "The outline of a control"
+      }
     }
   },
   "space": {
@@ -182,6 +192,12 @@
         "unit": "px"
       }
     },
+    "5": {
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      }
+    },
     "6": {
       "$value": {
         "value": 24,
@@ -198,6 +214,12 @@
     "$extensions": {
       "tessera": {
         "tier": "semantic"
+      }
+    },
+    "0-5": {
+      "$value": {
+        "value": 2,
+        "unit": "px"
       }
     }
   },
@@ -225,6 +247,12 @@
       "tessera": {
         "tier": "semantic"
       }
+    },
+    "full": {
+      "$value": {
+        "value": 9999,
+        "unit": "px"
+      }
     }
   },
   "font": {
@@ -246,6 +274,21 @@
     "$extensions": {
       "tessera": {
         "tier": "semantic"
+      }
+    },
+    "size": {
+      "$type": "dimension",
+      "sm": {
+        "$value": {
+          "value": 0.875,
+          "unit": "rem"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 1,
+          "unit": "rem"
+        }
       }
     }
   },

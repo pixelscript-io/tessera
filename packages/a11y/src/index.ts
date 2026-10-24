@@ -9,7 +9,13 @@
 import axe from 'axe-core'
 import { userEvent } from '@vitest/browser/context'
 import { afterEach, describe, expect, it } from 'vitest'
-import { domHarness, pressConformance } from '@tessera/behavior/conformance'
+import {
+  disclosureConformance,
+  domHarness,
+  pressConformance,
+  toggleConformance,
+  type PressHarness,
+} from '@tessera/behavior/conformance'
 import { extractContract, type Contract } from '@tessera/compiler'
 import { constant, flush, getRenderer, state, type Component } from '@tessera/core'
 import { setTheme } from '@tessera/tokens'
@@ -26,7 +32,8 @@ export const NOT_COVERED = [
   'Combinations of a component with others, and content the app puts in its slots.',
 ] as const
 
-export type State = 'rest' | 'hover' | 'focus-visible' | 'pressed' | 'disabled'
+export type State =
+  'rest' | 'hover' | 'focus-visible' | 'pressed' | 'disabled' | 'checked' | 'expanded'
 
 /** Every combination of one value per variant. A component with no variants has one empty combination. */
 export function variantCombinations(contract: Contract): Array<Record<string, string>> {
@@ -39,7 +46,14 @@ export function variantCombinations(contract: Contract): Array<Record<string, st
 
 /** `rest`, then each state the contract declares that the test can create. */
 export function statesFor(contract: Contract): State[] {
-  const supported: State[] = ['hover', 'focus-visible', 'pressed', 'disabled']
+  const supported: State[] = [
+    'hover',
+    'focus-visible',
+    'pressed',
+    'checked',
+    'expanded',
+    'disabled',
+  ]
   return ['rest', ...supported.filter((s) => contract.states.includes(s))]
 }
 
@@ -54,16 +68,28 @@ export interface A11yOptions {
 
 const r = getRenderer()
 
+/** What an event carried, as a conformance suite reads it. */
+type Recorded = { source: string; checked?: boolean; expanded?: boolean }
+
 interface Mounted {
   host: HTMLElement
   root: HTMLElement
   disabled: ReturnType<typeof state<boolean>>
-  presses: Array<{ source: string }>
+  /** The events of the contract's behavior, in order. */
+  presses: Recorded[]
   dispose(): void
+}
+
+/** The event each behavior produces, which is what its conformance suite counts. */
+const BEHAVIOR_EVENT: Record<string, string> = {
+  press: 'press',
+  toggle: 'toggle',
+  disclosure: 'expand',
 }
 
 function mount(
   component: Component,
+  contract: Contract,
   variants: Record<string, string>,
   initial: { disabled?: boolean } = {},
 ): Mounted {
@@ -73,20 +99,31 @@ function mount(
     'padding: 16px; background: var(--t-color-surface-default); color: var(--t-color-text-default);'
   document.body.append(host)
   const disabled = state(initial.disabled ?? false)
-  const presses: Array<{ source: string }> = []
+  const presses: Recorded[] = []
+  const own = contract.behavior ? BEHAVIOR_EVENT[contract.behavior] : undefined
   const dispose = r.mount(host, () =>
     component({
       props: {
         ...Object.fromEntries(Object.entries(variants).map(([k, v]) => [k, constant(v)])),
         disabled,
       },
-      events: {
-        press: (detail) =>
-          presses.push({
-            source: (detail as { source?: string } | undefined)?.source ?? 'unknown',
-          }),
-      },
-      slots: { default: () => ['Label'] },
+      events: Object.fromEntries(
+        Object.keys(contract.events).map((name) => [
+          name,
+          (detail: unknown) => {
+            if (name !== own) return
+            const d = detail as Recorded | undefined
+            presses.push({ ...(d ?? {}), source: d?.source ?? 'unknown' })
+          },
+        ]),
+      ),
+      // Every slot the contract declares has text, so a component that needs a label has one.
+      slots: Object.fromEntries(
+        Object.keys(contract.slots).map((name) => [
+          name,
+          () => [name === 'default' ? 'Label' : `${name} text`],
+        ]),
+      ),
     }),
   )
   return {
@@ -98,22 +135,32 @@ function mount(
   }
 }
 
+/** The element a behavior's conformance runs against: the root, a trigger inside it, or a form control inside it. */
+function subjectOf(root: HTMLElement, contract: Contract): HTMLElement {
+  if (contract.behavior === 'disclosure')
+    return root.querySelector<HTMLElement>('[class*="__trigger"]') ?? root
+  if (root.matches('button, input, select, textarea, [role]')) return root
+  return root.querySelector<HTMLElement>('input, select, textarea, button') ?? root
+}
+
 async function settle(root: HTMLElement): Promise<void> {
   flush()
   // Colors are measured after any transition finishes, not partway through.
   await Promise.all(root.getAnimations().map((a) => a.finished.catch(() => undefined)))
 }
 
-async function enter(state: State, m: Mounted): Promise<void> {
+async function enter(state: State, m: Mounted, subject: HTMLElement): Promise<void> {
   if (state === 'disabled') m.disabled.value = true
-  else if (state === 'pressed') m.root.setAttribute('data-state', 'pressed')
-  else if (state === 'hover') await userEvent.hover(m.root)
+  else if (state === 'pressed') subject.setAttribute('data-state', 'pressed')
+  else if (state === 'hover') await userEvent.hover(subject)
   else if (state === 'focus-visible') await userEvent.tab()
+  // Checked and expanded are reached the way a person reaches them: by pressing it.
+  else if (state === 'checked' || state === 'expanded') await userEvent.click(subject)
   await settle(m.root)
 }
 
-async function leave(state: State, m: Mounted): Promise<void> {
-  if (state === 'hover') await userEvent.unhover(m.root)
+async function leave(state: State, m: Mounted, subject: HTMLElement): Promise<void> {
+  if (state === 'hover') await userEvent.unhover(subject)
   ;(document.activeElement as HTMLElement | null)?.blur()
 }
 
@@ -159,6 +206,13 @@ const IMPLICIT_ROLES: Record<string, string> = {
   table: 'table',
 }
 
+/** The conformance suite of a behavior, and the text for it in a failing run. */
+const SUITES = {
+  press: { cases: pressConformance, title: 'press behavior conformance' },
+  toggle: { cases: toggleConformance, title: 'toggle behavior conformance' },
+  disclosure: { cases: disclosureConformance, title: 'disclosure behavior conformance' },
+} as const
+
 export function defineA11ySuites(options: A11yOptions): void {
   const themes = options.themes ?? [null, 'dark']
   const entries = Object.entries(options.sources)
@@ -191,12 +245,13 @@ export function defineA11ySuites(options: A11yOptions): void {
             for (const variants of variantCombinations(contract)) {
               it(`has no axe violations: ${label(variants)}, ${state}`, async () => {
                 setTheme(theme)
-                const m = mount(component, variants)
+                const m = mount(component, contract, variants)
+                const subject = subjectOf(m.root, contract)
                 try {
-                  await enter(state, m)
+                  await enter(state, m, subject)
                   expect(await runAxe(m.host)).toEqual([])
                 } finally {
-                  await leave(state, m)
+                  await leave(state, m, subject)
                   m.dispose()
                 }
               })
@@ -206,7 +261,7 @@ export function defineA11ySuites(options: A11yOptions): void {
       }
 
       it(`has the ${contract.role} role its contract declares`, () => {
-        const m = mount(component, {})
+        const m = mount(component, contract, {})
         try {
           const actual = m.root.getAttribute('role') ?? IMPLICIT_ROLES[m.root.tagName.toLowerCase()]
           if (!['generic', 'none', 'presentation'].includes(contract.role))
@@ -218,14 +273,15 @@ export function defineA11ySuites(options: A11yOptions): void {
 
       if (contract.states.includes('disabled')) {
         it('is disabled in a way assistive technology can see', () => {
-          const m = mount(component, {}, { disabled: true })
+          const m = mount(component, contract, {}, { disabled: true })
           try {
             flush()
+            const subject = subjectOf(m.root, contract)
             const disabled =
-              m.root.hasAttribute('disabled') || m.root.getAttribute('aria-disabled') === 'true'
+              subject.hasAttribute('disabled') || subject.getAttribute('aria-disabled') === 'true'
             expect(
               disabled,
-              'the root has neither disabled nor aria-disabled="true" when disabled',
+              'the element has neither disabled nor aria-disabled="true" when disabled',
             ).toBe(true)
           } finally {
             m.dispose()
@@ -233,38 +289,67 @@ export function defineA11ySuites(options: A11yOptions): void {
         })
       }
 
-      if (contract.behavior === 'press') {
-        it('shows a visible focus indicator when reached with the keyboard', async () => {
-          const m = mount(component, {})
+      if (contract.states.includes('focus-visible') && !contract.behavior) {
+        it('shows a visible focus indicator on its control when reached with the keyboard', async () => {
+          const m = mount(component, contract, {})
+          const subject = subjectOf(m.root, contract)
           try {
             await userEvent.tab()
-            expect(document.activeElement).toBe(m.root)
-            const style = getComputedStyle(m.root)
+            expect(document.activeElement).toBe(subject)
+            const style = getComputedStyle(subject)
+            expect(
+              (style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0) ||
+                style.boxShadow !== 'none',
+              'no outline or ring on :focus-visible',
+            ).toBe(true)
+          } finally {
+            await leave('rest', m, subject)
+            m.dispose()
+          }
+        })
+      }
+
+      const suite = contract.behavior ? SUITES[contract.behavior as keyof typeof SUITES] : undefined
+      if (suite) {
+        it('shows a visible focus indicator when reached with the keyboard', async () => {
+          const m = mount(component, contract, {})
+          const subject = subjectOf(m.root, contract)
+          try {
+            await userEvent.tab()
+            expect(document.activeElement).toBe(subject)
+            const style = getComputedStyle(subject)
             expect(
               style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0,
               'no outline on :focus-visible',
             ).toBe(true)
           } finally {
-            await leave('rest', m)
+            await leave('rest', m, subject)
             m.dispose()
           }
         })
 
-        describe('press behavior conformance', () => {
-          for (const testCase of pressConformance) {
+        describe(suite.title, () => {
+          for (const testCase of suite.cases as ReadonlyArray<{
+            name: string
+            run(h: PressHarness): Promise<void>
+          }>) {
             it(testCase.name, async () => {
-              const m = mount(component, {})
+              const m = mount(component, contract, {})
+              const subject = subjectOf(m.root, contract)
               try {
-                const harness = domHarness(m.root, userEvent, {
+                const harness = domHarness(subject, userEvent, {
                   presses: m.presses,
                   setDisabled: async (disabled) => {
                     m.disabled.value = disabled
                     flush()
                   },
+                  ...(contract.behavior === 'disclosure'
+                    ? { content: m.root.querySelector<HTMLElement>('[class*="__content"]') }
+                    : {}),
                 })
                 await testCase.run(harness)
               } finally {
-                await leave('rest', m)
+                await leave('rest', m, subject)
                 m.dispose()
               }
             })

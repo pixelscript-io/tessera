@@ -8,7 +8,7 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 ## Later
 
-- More behaviors and components: `toggle`, `disclosure`, dialog and combobox.
+- More behaviors and components: dialog and combobox, then menu, tabs, tooltip and select.
 - A global store and data-fetching layer.
 - An in-browser playground, versioned docs and a hosted site. The compiler core is browser-safe so the playground does not need a rewrite.
 - Type-checking of templates (`tessera check --types`) and source maps.

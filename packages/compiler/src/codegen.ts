@@ -1,7 +1,7 @@
 import { nearest, type Contract } from '@tessera/contract'
 import type { Reporter } from './diagnostics'
 import { rewriteExpression, type ExprScope } from './expr'
-import { BEHAVIOR_EVENTS, BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
+import { BEHAVIOR_ATTACH, BEHAVIOR_EVENTS, BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
 import { unknownRoute } from './routes'
 import type { Binding } from './script'
 import type { Attr, ElementNode, TemplateNode, TextNode } from './template'
@@ -418,8 +418,10 @@ export function generateTemplate(
       const handlerCode =
         fns.length === 1 ? fns[0]! : `($e: any) => { ${fns.map((f) => `(${f})($e)`).join('; ')} }`
       const native = isNativelyPressable(el)
+      // Every behavior is attached the same way: its attach function, the element, and `on<Event>`, `native` and `role`.
+      const handler = `on${event[0]!.toUpperCase()}${event.slice(1)}`
       use.push(
-        `($el: any) => $attachPress($r.adapter, $el, { onPress: ${handlerCode}, native: ${native}, role: ${q(ctx.contract!.role)} })`,
+        `($el: any) => $${BEHAVIOR_ATTACH[behavior]}($r.adapter, $el, { ${handler}: ${handlerCode}, native: ${native}, role: ${q(ctx.contract!.role)} })`,
       )
     }
 

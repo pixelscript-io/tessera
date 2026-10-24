@@ -14,5 +14,5 @@ export interface BehaviorRequirements {
 export const DEFAULT_BEHAVIORS: Readonly<Record<string, BehaviorRequirements>> = {
   press: { parts: ['root'], events: ['press'], states: [] },
   toggle: { parts: ['root'], events: ['toggle'], states: [] },
-  disclosure: { parts: ['root', 'trigger', 'content'], events: ['toggle'], states: [] },
+  disclosure: { parts: ['root', 'trigger', 'content'], events: ['expand'], states: [] },
 }

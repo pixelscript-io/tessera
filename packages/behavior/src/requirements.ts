@@ -11,16 +11,16 @@ export interface BehaviorRequirements {
 
 /**
  * What a contract must declare to use each behavior. The compiler validates `"behavior"` against this table.
- * `toggle` and `disclosure` are reserved names until Milestone 17.
+ * `dialog` and `combobox` are reserved names until Milestone 18.
  */
 export const BEHAVIOR_REQUIREMENTS: Readonly<Record<string, BehaviorRequirements>> = {
   press: { parts: ['root'], events: ['press'], states: [], implemented: true },
-  toggle: { parts: ['root'], events: ['toggle'], states: [], implemented: false },
+  toggle: { parts: ['root'], events: ['toggle'], states: [], implemented: true },
   disclosure: {
     parts: ['root', 'trigger', 'content'],
-    events: ['toggle'],
+    events: ['expand'],
     states: [],
-    implemented: false,
+    implemented: true,
   },
 }
 
@@ -28,4 +28,12 @@ export const BEHAVIOR_REQUIREMENTS: Readonly<Record<string, BehaviorRequirements
 export const BEHAVIOR_EVENTS: Readonly<Record<string, string>> = {
   press: 'press',
   toggle: 'toggle',
+  expand: 'disclosure',
+}
+
+/** The function each behavior is attached with, exported from `@pixelscriptio/tessera/behavior`. */
+export const BEHAVIOR_ATTACH: Readonly<Record<string, string>> = {
+  press: 'attachPress',
+  toggle: 'attachToggle',
+  disclosure: 'attachDisclosure',
 }

@@ -13,11 +13,16 @@ const component = (name: string) => data.components.find((c) => c.name === name)
 describe('the docs data', () => {
   it('has a page of data for every component, system, app and router', () => {
     expect(data.components.map((c) => [c.name, c.origin])).toEqual([
+      ['Accordion', 'system'],
+      ['AccordionItem', 'system'],
       ['Button', 'system'],
+      ['Checkbox', 'system'],
       ['ConfirmBar', 'app'],
       ['Counter', 'app'],
       ['Link', 'router'],
       ['SiteNav', 'app'],
+      ['Switch', 'system'],
+      ['TextField', 'system'],
     ])
     expect(data.hasTokens).toBe(true)
   })

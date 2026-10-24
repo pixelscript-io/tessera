@@ -63,8 +63,8 @@ describe('table row: $token that does not exist', () => {
   it('offers an autofix only when exactly one token is a plausible typo', () => {
     const typo = run(decl('background: $color.action.primry.bg')).issues[0]!
     expect(typo.fix).toEqual({ start: 17, end: 40, text: '$color.action.primary.bg' })
-    // Two tokens are one edit away from "space.5" (space.4 and space.6): ambiguous.
-    const ambiguous = run(decl('padding: $space.5')).issues[0]!
+    // Two tokens are one edit away from "space.7" (space.6 and space.8): ambiguous.
+    const ambiguous = run(decl('padding: $space.7')).issues[0]!
     expect(ambiguous.code).toBe('T2104')
     expect(ambiguous.fix).toBeUndefined()
     expect(run(decl('padding: $nothing.like.this')).issues[0]!.fix).toBeUndefined()
@@ -176,9 +176,12 @@ describe('table row: raw length in a governed property', () => {
   })
 
   it('says so when no token could fit', () => {
-    const r = run(decl('font-size: 14px'))
+    // A governed property whose token group has no tokens in this system.
+    const r = run(decl('letter-spacing: 40px'), {
+      config: { governed: { 'letter-spacing': { type: 'dimension', groups: ['tracking'] } } },
+    })
     expect(r.summary).toEqual([
-      'T2102 Raw length "14px" in "font-size" is not a token. | No matching tokens exist. Add one, or write raw(14px, "reason").',
+      'T2102 Raw length "40px" in "letter-spacing" is not a token. | No matching tokens exist. Add one, or write raw(40px, "reason").',
     ])
   })
 

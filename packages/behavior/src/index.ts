@@ -1,2 +1,9 @@
 export { attachPress, type PressDetail, type PressOptions } from './press'
-export { BEHAVIOR_EVENTS, BEHAVIOR_REQUIREMENTS, type BehaviorRequirements } from './requirements'
+export { attachToggle, toggleAttribute, type ToggleDetail, type ToggleOptions } from './toggle'
+export { attachDisclosure, type DisclosureOptions, type ExpandDetail } from './disclosure'
+export {
+  BEHAVIOR_ATTACH,
+  BEHAVIOR_EVENTS,
+  BEHAVIOR_REQUIREMENTS,
+  type BehaviorRequirements,
+} from './requirements'

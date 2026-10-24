@@ -93,7 +93,18 @@ describe('the MCP protocol', () => {
 describe('components', () => {
   it('lists every component', () => {
     const names = (call('list_components').json as Array<{ name: string }>).map((c) => c.name)
-    expect(names).toEqual(['Button', 'ConfirmBar', 'Counter', 'Link', 'SiteNav'])
+    expect(names).toEqual([
+      'Accordion',
+      'AccordionItem',
+      'Button',
+      'Checkbox',
+      'ConfirmBar',
+      'Counter',
+      'Link',
+      'SiteNav',
+      'Switch',
+      'TextField',
+    ])
   })
 
   it('finds components by what they do', () => {
@@ -119,7 +130,7 @@ describe('components', () => {
     const r = call('get_component', { name: 'Buton' })
     expect(r.isError).toBe(true)
     expect(r.text).toBe(
-      'There is no component named Buton. Components: Button, ConfirmBar, Counter, Link, SiteNav.',
+      'There is no component named Buton. Components: Accordion, AccordionItem, Button, Checkbox, ConfirmBar, Counter, Link, SiteNav, Switch, TextField.',
     )
     expect(call('get_component', { name: 'Conf' }).text).toContain('Did you mean ConfirmBar?')
     expect(call('get_component', {}).text).toBe('"name" is required and must be a string.')

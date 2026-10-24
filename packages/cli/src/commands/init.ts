@@ -5,7 +5,6 @@ import { flag } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
 import { VERSION } from '../version'
-import BUTTON from '../../../../system/components/Button.tess?raw'
 
 export const PRESETS = ['tessera', 'tailwind', 'none'] as const
 export type Preset = (typeof PRESETS)[number]
@@ -18,6 +17,15 @@ const TEMPLATES = import.meta.glob('../../templates/**/*', {
   import: 'default',
 }) as Record<string, string>
 
+// The design system's own components (the repository's `system/components`): Button, Checkbox, Switch, TextField,
+// Accordion and the rest. There is one copy of each, and the presets that have a design system write it into the project.
+// `none` has no design system, so it gets none of them.
+const SYSTEM_COMPONENTS = import.meta.glob('../../../../system/components/*.tess', {
+  query: '?raw',
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+
 /** The files a preset writes, by path relative to the project. */
 export function presetFiles(preset: Preset): Record<string, string> {
   const prefix = `../../templates/${preset}/`
@@ -25,8 +33,11 @@ export function presetFiles(preset: Preset): Record<string, string> {
   for (const [key, content] of Object.entries(TEMPLATES)) {
     if (key.startsWith(prefix)) files[key.slice(prefix.length)] = content
   }
-  // The presets' Button is the design system's own, so there is one copy to maintain.
-  if (preset !== 'none') files['system/components/Button.tess'] = BUTTON
+  if (preset !== 'none') {
+    for (const [key, content] of Object.entries(SYSTEM_COMPONENTS)) {
+      files[`system/components/${key.split('/').pop()}`] = content
+    }
+  }
   return files
 }
 

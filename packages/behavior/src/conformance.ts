@@ -7,8 +7,10 @@
 /** What a case may do to the element under test. */
 export interface PressHarness {
   readonly element: HTMLElement
-  /** One entry per press the element has produced so far. */
-  presses(): Array<{ source: string }>
+  /** One entry per press (or toggle, or expand) the element has produced so far. */
+  presses(): Array<{ source: string; checked?: boolean; expanded?: boolean }>
+  /** For a disclosure: whether the region the trigger controls can be seen. */
+  contentVisible?(): boolean
   /** The role the element has, explicit or implied by its tag. */
   role(): string | undefined
   setDisabled(disabled: boolean): Promise<void>
@@ -174,6 +176,219 @@ export const pressConformance: ConformanceCase<PressHarness>[] = [
   },
 ]
 
+// --- toggle -----------------------------------------------------------------------------------------------------
+
+const checkedAttribute = (h: PressHarness) =>
+  h.role() === 'button' ? 'aria-pressed' : 'aria-checked'
+const checkedOf = (h: PressHarness) => h.element.getAttribute(checkedAttribute(h))
+
+/**
+ * Conformance for `toggle`: a checkbox, a switch or a toggle button. The element under test must reflect the state in
+ * `aria-checked` (`aria-pressed` for a toggle button) when it gets the event, the way a component does.
+ */
+export const toggleConformance: ConformanceCase<PressHarness>[] = [
+  {
+    name: 'has a state from the start, so it always has a value to announce',
+    async run(h) {
+      assert(
+        checkedOf(h) === 'false' || checkedOf(h) === 'true',
+        `expected ${checkedAttribute(h)} to be "true" or "false" at rest, got ${JSON.stringify(checkedOf(h))}`,
+      )
+    },
+  },
+  {
+    name: 'a click turns it on, and the next click turns it off',
+    async run(h) {
+      const start = checkedOf(h) === 'true'
+      await h.click()
+      assert(h.presses().length === 1, `expected 1 toggle after a click, got ${h.presses().length}`)
+      assert(
+        h.presses()[0]!.checked === !start,
+        `expected the event to say checked=${!start}, got ${h.presses()[0]!.checked}`,
+      )
+      assert(
+        checkedOf(h) === String(!start),
+        `expected ${checkedAttribute(h)}="${!start}" after the click, got ${JSON.stringify(checkedOf(h))}`,
+      )
+      await h.click()
+      assert(
+        h.presses().length === 2,
+        `expected 2 toggles after two clicks, got ${h.presses().length}`,
+      )
+      assert(
+        checkedOf(h) === String(start),
+        `expected it back to ${start}, got ${JSON.stringify(checkedOf(h))}`,
+      )
+    },
+  },
+  {
+    name: 'a click sent from code toggles once, as virtual',
+    async run(h) {
+      await h.dispatchClick()
+      assert(h.presses().length === 1, `expected 1 toggle, got ${h.presses().length}`)
+      assert(
+        h.presses()[0]!.source === 'virtual',
+        `expected source "virtual", got "${h.presses()[0]!.source}"`,
+      )
+    },
+  },
+  {
+    name: 'Space toggles once, on keyup',
+    async run(h) {
+      await h.focus()
+      await h.keyDown('Space')
+      assert(
+        h.presses().length === 0,
+        `Space toggled on keydown (${h.presses().length}); it should wait for keyup`,
+      )
+      await h.keyUp('Space')
+      assert(h.presses().length === 1, `expected 1 toggle after Space, got ${h.presses().length}`)
+      assert(
+        h.presses()[0]!.source === 'keyboard',
+        `expected source "keyboard", got "${h.presses()[0]!.source}"`,
+      )
+    },
+  },
+  {
+    name: 'Enter toggles a switch or a toggle button once, and does nothing on a checkbox',
+    async run(h) {
+      await h.focus()
+      await h.keyDown('Enter')
+      await h.keyUp('Enter')
+      const expected = h.role() === 'checkbox' ? 0 : 1
+      assert(
+        h.presses().length === expected,
+        `expected ${expected} toggle for Enter on a ${h.role()}, got ${h.presses().length}`,
+      )
+    },
+  },
+  {
+    name: 'other keys do not toggle',
+    async run(h) {
+      await h.focus()
+      await h.keyDown('a')
+      await h.keyUp('a')
+      await h.keyDown('Escape')
+      await h.keyUp('Escape')
+      assert(
+        h.presses().length === 0,
+        `expected no toggles for other keys, got ${h.presses().length}`,
+      )
+    },
+  },
+  {
+    name: 'can be reached with the Tab key',
+    async run(h) {
+      await h.tab()
+      assert(document.activeElement === h.element, 'Tab did not move focus to the element')
+    },
+  },
+  {
+    name: 'does nothing while disabled',
+    async run(h) {
+      await h.setDisabled(true)
+      await h.dispatchClick()
+      await h.focus()
+      await h.keyDown('Enter')
+      await h.keyUp('Enter')
+      await h.keyDown('Space')
+      await h.keyUp('Space')
+      assert(h.presses().length === 0, `a disabled element toggled ${h.presses().length} times`)
+    },
+  },
+]
+
+// --- disclosure -------------------------------------------------------------------------------------------------
+
+/**
+ * Conformance for `disclosure`, run against the trigger. The harness needs `content`, the region it shows and hides.
+ */
+export const disclosureConformance: ConformanceCase<PressHarness>[] = [
+  {
+    name: 'starts collapsed: aria-expanded is false and the content is hidden',
+    async run(h) {
+      assert(
+        h.element.getAttribute('aria-expanded') === 'false',
+        `expected aria-expanded="false" at rest, got ${JSON.stringify(h.element.getAttribute('aria-expanded'))}`,
+      )
+      assert(h.contentVisible?.() === false, 'the content is visible while collapsed')
+    },
+  },
+  {
+    name: 'a click expands it, and the next click collapses it',
+    async run(h) {
+      await h.click()
+      assert(h.presses().length === 1, `expected 1 expand event, got ${h.presses().length}`)
+      assert(h.presses()[0]!.expanded === true, 'the first event should say expanded=true')
+      assert(
+        h.element.getAttribute('aria-expanded') === 'true',
+        'aria-expanded did not become "true"',
+      )
+      assert(h.contentVisible?.() === true, 'the content is hidden while expanded')
+      await h.click()
+      assert(h.presses()[1]?.expanded === false, 'the second event should say expanded=false')
+      assert(
+        h.element.getAttribute('aria-expanded') === 'false',
+        'aria-expanded did not go back to "false"',
+      )
+      assert(h.contentVisible?.() === false, 'the content is visible after collapsing')
+    },
+  },
+  {
+    name: 'Enter expands once, on keydown',
+    async run(h) {
+      await h.focus()
+      await h.keyDown('Enter')
+      assert(
+        h.presses().length === 1,
+        `expected 1 event when Enter goes down, got ${h.presses().length}`,
+      )
+      await h.keyUp('Enter')
+      assert(h.presses().length === 1, `Enter fired again on keyup: ${h.presses().length}`)
+    },
+  },
+  {
+    name: 'Space expands once, on keyup',
+    async run(h) {
+      await h.focus()
+      await h.keyDown('Space')
+      assert(h.presses().length === 0, 'Space fired on keydown; it should wait for keyup')
+      await h.keyUp('Space')
+      assert(h.presses().length === 1, `expected 1 event after Space, got ${h.presses().length}`)
+    },
+  },
+  {
+    name: 'other keys do nothing',
+    async run(h) {
+      await h.focus()
+      await h.keyDown('a')
+      await h.keyUp('a')
+      assert(
+        h.presses().length === 0,
+        `expected no events for other keys, got ${h.presses().length}`,
+      )
+    },
+  },
+  {
+    name: 'can be reached with the Tab key',
+    async run(h) {
+      await h.tab()
+      assert(document.activeElement === h.element, 'Tab did not move focus to the trigger')
+    },
+  },
+  {
+    name: 'does nothing while disabled',
+    async run(h) {
+      await h.setDisabled(true)
+      await h.dispatchClick()
+      await h.focus()
+      await h.keyDown('Enter')
+      await h.keyUp('Enter')
+      assert(h.presses().length === 0, `a disabled trigger fired ${h.presses().length} times`)
+    },
+  },
+]
+
 /** What a driver must be able to do. `@vitest/browser`'s `userEvent` satisfies it directly. */
 export interface Driver {
   click(element: Element): Promise<void>
@@ -194,13 +409,23 @@ export function domHarness(
   element: HTMLElement,
   driver: Driver,
   options: {
-    presses: Array<{ source: string }>
+    presses: Array<{ source: string; checked?: boolean; expanded?: boolean }>
     setDisabled(disabled: boolean): Promise<void> | void
+    /** For a disclosure: the region the trigger shows and hides. */
+    content?: HTMLElement | null
   },
 ): PressHarness {
   return {
     element,
     presses: () => options.presses,
+    ...(options.content !== undefined
+      ? {
+          contentVisible: () => {
+            const content = options.content
+            return !!content && !content.hidden && getComputedStyle(content).display !== 'none'
+          },
+        }
+      : {}),
     role: () => element.getAttribute('role') ?? IMPLICIT_ROLES[element.tagName.toLowerCase()],
     async setDisabled(disabled) {
       await options.setDisabled(disabled)

@@ -46,6 +46,14 @@
       "ring": {
         "$value": "{color.blue.400}"
       }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.neutral.700}"
+      },
+      "strong": {
+        "$value": "{color.neutral.100}"
+      }
     }
   }
 }

@@ -1,0 +1,123 @@
+<contract>
+{
+  "name": "Checkbox",
+  "role": "checkbox",
+  "description": "A choice that is on or off. Press it, or use Space.",
+  "since": "0.5.0",
+  "parts": ["root", "box", "mark", "label"],
+  "variants": {
+    "size": ["md", "sm"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "checked", "disabled"],
+  "behavior": "toggle",
+  "slots": {
+    "default": "the label"
+  },
+  "events": {
+    "toggle": "fired with { checked, source } when the person changes it; the checked prop sets it from outside"
+  }
+}
+</contract>
+
+<script>
+const { checked, disabled } = props({ checked: false, disabled: false })
+
+// The component owns the state, starts from the prop and follows it when it changes.
+const on = state(checked.value)
+effect(() => {
+  on.value = checked.value
+})
+
+function change(detail) {
+  on.value = detail.checked
+  emit('toggle', detail)
+}
+</script>
+
+<template>
+  <button
+    class="root"
+    type="button"
+    role="checkbox"
+    :aria-checked="on ? 'true' : 'false'"
+    :disabled="disabled"
+    @toggle="change($event)"
+    >
+    <span class="box"><span class="mark" aria-hidden="true">✓</span></span>
+    <span class="label"><slot /></span>
+  </button>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: $space.2;
+  padding: $space.1 0;
+  border: 0;
+  background: transparent;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.base;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+
+  &[data-size='sm'] {
+    font-size: $font.size.sm;
+  }
+}
+
+.box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: $space.5;
+  height: $space.5;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.sm;
+  background: $color.surface.default;
+  color: $color.action.primary.fg;
+  transition-duration: $motion.duration.fast;
+}
+
+.root[data-size='sm'] .box {
+  width: $space.4;
+  height: $space.4;
+}
+
+.root:hover:not(:disabled) .box {
+  background: $color.surface.hover;
+}
+
+.root[aria-checked='true'] .box {
+  border-color: $color.action.primary.bg;
+  background: $color.action.primary.bg;
+}
+
+.root[aria-checked='true']:hover:not(:disabled) .box {
+  background: $color.action.primary.bg-hover;
+}
+
+.mark {
+  visibility: hidden;
+  font-size: $font.size.sm;
+  line-height: 1;
+}
+
+.root[aria-checked='true'] .mark {
+  visibility: visible;
+}
+
+.label:empty {
+  display: none;
+}
+</style>

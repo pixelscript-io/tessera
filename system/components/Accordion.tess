@@ -1,0 +1,25 @@
+<contract>
+{
+  "name": "Accordion",
+  "role": "group",
+  "description": "A stack of AccordionItems that share a border and spacing.",
+  "since": "0.5.0",
+  "parts": ["root"],
+  "slots": {
+    "default": "AccordionItem components"
+  }
+}
+</contract>
+
+<template>
+  <div class="root" role="group">
+    <slot />
+  </div>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+</style>

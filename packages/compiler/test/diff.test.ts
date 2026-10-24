@@ -133,11 +133,13 @@ describe('diff: tokens', () => {
     after.tokens!.tokens = after.tokens!.tokens.filter((t) => t.path !== gone)
     token(after, 'space.4').type = 'number'
     after.tokens!.themes = after.tokens!.themes.filter((t) => t.name !== 'compact')
-    expect(messages(snapshot(), after).sort()).toEqual([
-      'breaking: $space.4 changed type from dimension to number.',
-      `breaking: $${gone} was removed.`,
-      'breaking: The theme "density=compact" was removed.',
-    ])
+    expect(messages(snapshot(), after).sort()).toEqual(
+      [
+        'breaking: $space.4 changed type from dimension to number.',
+        `breaking: $${gone} was removed.`,
+        'breaking: The theme "density=compact" was removed.',
+      ].sort(),
+    )
   })
 
   it('a new token or theme is additive', () => {

@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -69,7 +77,7 @@ describe('tessera init --preset tessera', () => {
     const dir = scratch()
     await run(dir, 'init', '--preset', 'tessera')
     const { code, out } = await run(dir, 'check')
-    expect(out).toContain('0 errors, 0 warnings in 5 files.')
+    expect(out).toContain('0 errors, 0 warnings in 10 files.')
     expect(code).toBe(0)
   })
 
@@ -141,7 +149,7 @@ describe('tessera init --preset tailwind', () => {
     const dir = scratch()
     await run(dir, 'init', '--preset', 'tailwind')
     const { code, out } = await run(dir, 'check')
-    expect(out).toContain('0 errors, 0 warnings in 5 files.')
+    expect(out).toContain('0 errors, 0 warnings in 10 files.')
     expect(code).toBe(0)
   })
 
@@ -187,6 +195,38 @@ describe('tessera init --preset tailwind', () => {
       'utf8',
     )
     expect(presetFiles('tailwind')['system/components/Button.tess']).toBe(repoButton)
+  })
+})
+
+describe("the design system's own components", () => {
+  const dir = fileURLToPath(new URL('../../../system/components', import.meta.url))
+  const names = readdirSync(dir).filter((f) => f.endsWith('.tess'))
+
+  it('lists the components of the milestone, so a missing one is noticed', () => {
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'Accordion.tess',
+        'AccordionItem.tess',
+        'Button.tess',
+        'Checkbox.tess',
+        'Switch.tess',
+        'TextField.tess',
+      ]),
+    )
+  })
+
+  for (const preset of ['tessera', 'tailwind'] as const) {
+    it(`are written by the ${preset} preset, one copy of each`, () => {
+      const files = presetFiles(preset)
+      for (const name of names) {
+        expect(files[`system/components/${name}`], name).toBe(readFileSync(join(dir, name), 'utf8'))
+      }
+    })
+  }
+
+  it('are not written when no design system is chosen', () => {
+    const files = Object.keys(presetFiles('none'))
+    expect(files.filter((f) => f.startsWith('system/components/'))).toEqual([])
   })
 })
 

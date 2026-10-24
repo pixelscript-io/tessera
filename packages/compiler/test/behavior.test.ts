@@ -103,13 +103,42 @@ describe('wiring a behavior event in a template', () => {
     ])
   })
 
-  it('errors for a behavior that exists only as a name', () => {
+  it('attaches toggle the same way, with its own event and import', () => {
+    const { code, diagnostics } = compile(
+      component(
+        `<button class="root" role="checkbox" @toggle="emit('toggle', $event.checked)"></button>`,
+        '"behavior": "toggle", "events": { "toggle": "t" }',
+      ),
+      { file: 'Card.tess' },
+    )
+    expect(diagnostics).toEqual([])
+    expect(code).toContain(
+      'import { attachToggle as $attachToggle } from "@pixelscriptio/tessera/behavior"',
+    )
+    expect(code).toContain('$attachToggle($r.adapter, $el, { onToggle: ')
+  })
+
+  it('attaches disclosure to its trigger through the expand event', () => {
+    const { code, diagnostics } = compile(
+      `<contract>
+{ "name": "Card", "role": "generic", "parts": ["root", "trigger", "content"], "behavior": "disclosure", "events": { "expand": "e" } }
+</contract>
+<template><div class="root"><button class="trigger" @expand="emit('expand', $event)"></button><div class="content"></div></div></template>`,
+      { file: 'Card.tess' },
+    )
+    expect(diagnostics).toEqual([])
+    expect(code).toContain('$attachDisclosure($r.adapter, $el, { onExpand: ')
+  })
+
+  it('errors when the event belongs to a behavior the contract does not declare', () => {
     const source = component(
-      '<button class="root" @toggle="emit(\'toggle\')"></button>',
-      '"behavior": "toggle", "events": { "toggle": "t" }',
+      `<button class="root" @toggle="emit('toggle')"></button>`,
+      '"behavior": "press", "events": { "press": "p", "toggle": "t" }',
     )
     expect(issues(source)).toEqual([
-      expect.stringMatching(/^T4015 \d+:\d+ The "toggle" behavior is not built yet\.$/),
+      expect.stringContaining(
+        '@toggle is an event of the "toggle" behavior, but this component\'s contract does not declare it.',
+      ),
     ])
   })
 

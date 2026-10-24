@@ -9,11 +9,16 @@ const component = (name: string) => manifest.components.find((c) => c.name === n
 describe('the agent manifest: components', () => {
   it('lists every component, system and app, sorted by name', () => {
     expect(manifest.components.map((c) => c.name)).toEqual([
+      'Accordion',
+      'AccordionItem',
       'Button',
+      'Checkbox',
       'ConfirmBar',
       'Counter',
       'Link',
       'SiteNav',
+      'Switch',
+      'TextField',
     ])
     expect(manifest.version).toBe(1)
     expect(manifest.generator).toBe('tessera')
