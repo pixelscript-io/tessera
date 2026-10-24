@@ -1,6 +1,6 @@
 {
   "name": "@pixelscriptio/create-tessera",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "npm create @pixelscriptio/tessera: starts a Tessera project.",
   "type": "module",
   "bin": {
