@@ -1,6 +1,6 @@
 # Sharing state between components
 
-Introduced in v0.7 (Milestone 34).
+Introduced in 0.6.5 (Milestone 34).
 
 Some data is needed by more than one component: what is in a cart, a draft, a filter, whether a drawer is open. In other frameworks this is a store, with a provider, an id, a reducer or `storeToRefs`. In Tessera it is a file.
 

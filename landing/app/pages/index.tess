@@ -9,6 +9,7 @@
     <CodeShowcase />
     <FeatureGrid />
     <DataCall />
+    <SharedState />
     <AnyFramework />
     <PackageExplorer />
     <DocsDemo />

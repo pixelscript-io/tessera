@@ -1,0 +1,85 @@
+<contract>
+{
+  "name": "SharedState",
+  "role": "generic",
+  "description": "The section that shows how components share data: one file of signals and functions, read by components that never import it, and read-only outside it.",
+  "parts": ["root", "inner", "notes", "note", "noteTitle", "noteBody"],
+  "contrast": [
+    { "foreground": "noteTitle", "background": "root" },
+    { "foreground": "noteBody", "background": "root" }
+  ]
+}
+</contract>
+
+<script>
+import { STATE_NOTES, STATE_PANES, STATE_TABS } from '../data/shared-state'
+</script>
+
+<template>
+  <section class="root" id="state">
+    <div class="inner">
+      <SectionHeader>
+        <span slot="eyebrow">Shared state</span>
+        <span slot="title">Sharing data is a file.</span>
+        Put signals and functions in app/state, then name the file in any component. There is no store to define and no provider to wrap the app in.
+      </SectionHeader>
+      <CodeTabs :tabs="STATE_TABS" :panes="STATE_PANES" label="Sharing state" name="state" />
+      <div class="notes">
+        <div class="note" each="n in STATE_NOTES" key="n.title">
+          <span class="noteTitle">{n.title}</span>
+          <p class="noteBody">{n.body}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.80 $space.24;
+}
+
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: $space.24;
+  padding-top: $space.16;
+  border-top: 1px solid $color.border.default;
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: $space.6;
+}
+
+.noteTitle {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.noteBody {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .inner {
+    gap: $space.24;
+    padding: $space.56 $space.16;
+  }
+}
+</style>

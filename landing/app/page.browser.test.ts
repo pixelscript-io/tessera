@@ -67,6 +67,20 @@ describe('the page', () => {
     expect(visible.textContent).toContain('Did you mean')
   })
 
+  it('shows shared state: the file, two components, and the compiler check, in tabs', async () => {
+    const state = section('state')
+    expect(state.querySelector('h2')!.textContent).toBe('Sharing data is a file.')
+    const tabs = [...state.querySelectorAll('[role=tab]')].map((t) => t.textContent!.trim())
+    expect(tabs).toEqual(['app/state/cart.ts', 'two components', 'tessera check'])
+    await userEvent.click(button(state, 'tessera check'))
+    flush()
+    const visible = [...state.querySelectorAll<HTMLElement>('[role=tabpanel]')].find(
+      (p) => !p.hidden,
+    )!
+    expect(visible.textContent).toContain('T5011')
+    expect(visible.textContent).toContain('T5012')
+  })
+
   it('sends the docs links to the docs site', () => {
     const hrefs = [...root.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '')
     expect(hrefs).toContain('https://tessera-docs.pixelscript.io/quick-start')
