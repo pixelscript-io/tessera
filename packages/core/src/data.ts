@@ -264,8 +264,6 @@ export function createApi(initial: ApiOptions = {}): Api {
     return config.base.replace(/\/+$/, '') + path
   }
 
-  const pathOf = (url: string) => url.split('?')[0]!
-
   async function parseBody(response: Response): Promise<unknown> {
     if (response.status === 204 || response.status === 205) return undefined
     const text = await response.text()
@@ -374,13 +372,13 @@ export function createApi(initial: ApiOptions = {}): Api {
     }
   }
 
-  function entryFor(key: string, url: string): Entry {
+  function entryFor(key: string, url: string, path: string): Entry {
     let entry = entries.get(key)
     if (!entry) {
       entry = {
         key,
         url,
-        path: pathOf(url),
+        path,
         data: state<unknown>(undefined),
         error: state<ApiError | undefined>(undefined),
         loading: state(false),
@@ -500,11 +498,11 @@ export function createApi(initial: ApiOptions = {}): Api {
       const { path: filled, rest, missing } = fill(path, given)
       // A parameter with no value yet means there is nothing to ask for yet.
       if (missing) return undefined
-      return join(filled) + queryString(rest)
+      return { url: join(filled) + queryString(rest), path: filled }
     })
     const entry = derived(() => {
-      const url = target.value
-      return url === undefined ? undefined : entryFor(`GET ${url}`, url)
+      const found = target.value
+      return found === undefined ? undefined : entryFor(`GET ${found.url}`, found.url, found.path)
     })
     const request: RequestOptions = {
       headers: options.headers,

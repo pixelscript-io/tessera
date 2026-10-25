@@ -166,7 +166,8 @@ function skipTemplate(code: string, i: number): number {
   return code.length
 }
 
-export type SignalKind = 'signal' | 'props' | 'plain' | 'callable' | 'unknown'
+export type SignalKind =
+  'signal' | 'props' | 'plain' | 'callable' | 'unknown' | 'resource' | 'action'
 
 export interface Binding {
   name: string
@@ -176,6 +177,8 @@ export interface Binding {
    * `props`: the object returned by props(), whose members are signals (not unwrapped when reached through it).
    * `plain`: a literal or object that is not a signal. `callable`: a function or class.
    * `unknown`: anything else, unwrapped at runtime.
+   * `resource`: what `get()` returns, whose `data`, `error`, `loading` and `refreshing` are signals.
+   * `action`: what `post()`, `put()`, `patch()` and `del()` return, a function whose `pending`, `error` and `data` are signals.
    */
   signal: SignalKind
   /** For an object literal holding signals: the keys that hold them. */
@@ -209,6 +212,26 @@ export interface ScriptAnalysis {
   /** Offsets and literal names of `emit('name')` calls. */
   emits: Array<{ name: string; offset: number }>
   impure: ScriptIssue[]
+  /** `name.get(`, `name.post(` and the like, with `name` not after a dot: possibly a call on an api. */
+  apiCalls: Array<{ name: string; verb: string; offset: number }>
+  /** Each `const x = get(...)` and the like that was kept as a read or a write. */
+  dataCalls: DataCall[]
+}
+
+/** A call to `get`, `post`, `put`, `patch` or `del` (on the shared api or on a named one) whose result is kept. */
+export interface DataCall {
+  kind: 'resource' | 'action'
+  verb: string
+  /** The api it is made on, if it is a named one: `github` in `github.get('/users')`. */
+  api?: string
+  /** How to show it in a message: `github.get('/users')`. */
+  call: string
+  /** Where the call starts in the script. */
+  offset: number
+  /** The name it was kept as, when it was not destructured. */
+  binding?: string
+  /** For a destructured one: each member taken, and the name it is taken as. */
+  members?: Array<{ key: string; local: string }>
 }
 
 const isId = (t: Token | undefined, value?: string) =>
@@ -249,6 +272,93 @@ const BLOCKISH = new Set([
   'do',
 ])
 const SIGNAL_MAKERS = new Set(['state', 'derived', 'constant'])
+const DATA_VERBS = new Set(['get', 'post', 'put', 'patch', 'del'])
+/** The members of a read and of a write that are signals, read as `.value` in a template. */
+export const READ_SIGNALS: ReadonlySet<string> = new Set(['data', 'error', 'loading', 'refreshing'])
+export const WRITE_SIGNALS: ReadonlySet<string> = new Set(['pending', 'error', 'data'])
+
+/**
+ * Is `tokens[from..to)` one call of `get`, `post`... (or of one of those on a named api), with nothing after it? A type
+ * argument (`get<Task[]>('/tasks')`) is allowed. Whether the name is really Tessera's, and not one the script defines,
+ * is decided afterwards, when every binding is known.
+ */
+function dataCall(
+  tokens: Token[],
+  from: number,
+  to: number,
+  apis: ReadonlySet<string> | undefined,
+): DataCall | undefined {
+  let j = from
+  let api: string | undefined
+  if (
+    isId(tokens[j]) &&
+    isP(tokens[j + 1], '.') &&
+    isId(tokens[j + 2]) &&
+    DATA_VERBS.has(tokens[j + 2]!.value) &&
+    apis?.has(tokens[j]!.value)
+  ) {
+    api = tokens[j]!.value
+    j += 2
+  } else if (!(isId(tokens[j]) && DATA_VERBS.has(tokens[j]!.value))) return undefined
+  const verb = tokens[j]!.value
+  j++
+  if (isP(tokens[j], '<')) {
+    let depth = 0
+    for (; j < to; j++) {
+      const t = tokens[j]!
+      if (isP(t, '<')) depth++
+      else if (isP(t, '>')) depth--
+      else if (isP(t, '>>')) depth -= 2
+      if (depth <= 0) {
+        j++
+        break
+      }
+    }
+  }
+  if (!isP(tokens[j], '(')) return undefined
+  const close = matching(tokens, j)
+  if (close + 1 < to) return undefined
+  const first = tokens[j + 1]
+  const argument =
+    first?.type === 'str' && (isP(tokens[j + 2], ',') || isP(tokens[j + 2], ')'))
+      ? first.value
+      : '…'
+  return {
+    kind: verb === 'get' ? 'resource' : 'action',
+    verb,
+    ...(api ? { api } : {}),
+    call: `${api ? `${api}.` : ''}${verb}(${argument})`,
+    offset: tokens[from]!.start,
+  }
+}
+
+/** The members an object pattern takes, and the names it takes them as: `{ data: tasks, loading }`. */
+function objectPatternMembers(
+  tokens: Token[],
+  from: number,
+  to: number,
+): Array<{ key: string; local: string }> {
+  const out: Array<{ key: string; local: string }> = []
+  const close = to - 1
+  let depth = 0
+  let entry = from + 1
+  for (let j = from + 1; j <= close; j++) {
+    const t = tokens[j]!
+    if (t.type === 'p' && OPEN.has(t.value)) depth++
+    else if (t.type === 'p' && CLOSE.has(t.value) && j < close) depth--
+    else if (depth === 0 && (j === close || isP(t, ','))) {
+      const key = tokens[entry]
+      if (key && (isId(key) || key.type === 'str') && !isP(tokens[entry - 1], '...')) {
+        const name = key.type === 'str' ? key.value.slice(1, -1) : key.value
+        if (isP(tokens[entry + 1], ':')) {
+          if (isId(tokens[entry + 2])) out.push({ key: name, local: tokens[entry + 2]!.value })
+        } else out.push({ key: name, local: name })
+      }
+      entry = j + 1
+    }
+  }
+  return out
+}
 
 /** A line break does not end a statement when the code obviously continues. */
 function continues(prev: Token, next: Token): boolean {
@@ -524,7 +634,10 @@ function parseImport(tokens: Token[], from: number, to: number): ImportStatement
   return stmt
 }
 
-export function analyzeScript(code: string): ScriptAnalysis {
+export function analyzeScript(
+  code: string,
+  options: { apis?: ReadonlySet<string> } = {},
+): ScriptAnalysis {
   const tokens = tokenize(code)
   const result: ScriptAnalysis = {
     imports: [],
@@ -534,6 +647,8 @@ export function analyzeScript(code: string): ScriptAnalysis {
     calls: new Map(),
     emits: [],
     impure: [],
+    apiCalls: [],
+    dataCalls: [],
   }
 
   for (const [i, t] of tokens.entries()) {
@@ -543,6 +658,13 @@ export function analyzeScript(code: string): ScriptAnalysis {
     if (afterDot) continue
     if (!result.firstUse.has(t.value)) result.firstUse.set(t.value, t.start)
     if (isP(tokens[i + 1], '(') && !result.calls.has(t.value)) result.calls.set(t.value, t.start)
+    if (
+      isP(tokens[i + 1], '.') &&
+      isId(tokens[i + 2]) &&
+      DATA_VERBS.has(tokens[i + 2]!.value) &&
+      (isP(tokens[i + 3], '(') || isP(tokens[i + 3], '<'))
+    )
+      result.apiCalls.push({ name: t.value, verb: tokens[i + 2]!.value, offset: t.start })
     if (t.value === 'emit' && isP(tokens[i + 1], '(')) {
       const arg = tokens[i + 2]
       if (arg?.type === 'str')
@@ -647,10 +769,31 @@ export function analyzeScript(code: string): ScriptAnalysis {
         }
         const isDestructured = isP(tokens[patternStart], '{') || isP(tokens[patternStart], '[')
         const info = classifyInit(tokens, initFrom, initTo)
+        // A read or a write kept as it is, or taken apart by name: which names are signals depends on the member.
+        const data = dataCall(tokens, initFrom, initTo, options.apis)
+        const members =
+          data && isP(tokens[patternStart], '{')
+            ? objectPatternMembers(tokens, patternStart, pEnd)
+            : undefined
+        if (data) {
+          result.dataCalls.push({
+            ...data,
+            ...(!isDestructured && names[0] ? { binding: names[0].name } : {}),
+            ...(members ? { members } : {}),
+          })
+        }
+        const signalMembers = data?.kind === 'resource' ? READ_SIGNALS : WRITE_SIGNALS
         for (const { name, start } of names) {
           let signal: SignalKind = info.signal
           if (isDestructured) signal = info.signal === 'props' ? 'signal' : 'unknown'
           else if (info.signal === 'props') signal = 'props'
+          if (data) {
+            if (!isDestructured) signal = data.kind
+            else {
+              const member = members?.find((m) => m.local === name)
+              signal = member ? (signalMembers.has(member.key) ? 'signal' : 'callable') : 'unknown'
+            }
+          }
           result.bindings.set(name, {
             name,
             kind,
@@ -683,5 +826,16 @@ export function analyzeScript(code: string): ScriptAnalysis {
     if (end <= i) end = i + 1
     i = end
   }
+  // A `get` (or a named api) that the script defines itself is not Tessera's: what it returns is not a read.
+  const mine = (call: DataCall) => result.bindings.has(call.api ?? call.verb)
+  result.dataCalls = result.dataCalls.filter((call) => {
+    if (!mine(call)) return true
+    for (const binding of result.bindings.values()) {
+      if (binding.signal === 'resource' || binding.signal === 'action') {
+        if (call.binding === binding.name) binding.signal = 'unknown'
+      } else if (call.members?.some((m) => m.local === binding.name)) binding.signal = 'unknown'
+    }
+    return false
+  })
   return result
 }

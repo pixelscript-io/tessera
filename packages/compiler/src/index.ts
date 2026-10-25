@@ -61,6 +61,7 @@ export {
   type RegistryFile,
 } from './registry'
 export { checkPlainScriptAutoImports, AUTO_IMPORTS } from './autoimport-ts'
+export { buildApiList, DATA_APIS, DEFAULT_API, type ApiDiagnostic, type ProjectApi } from './apis'
 export { generateComponentsDts } from './dts'
 export { generateRoutesDts, generateRoutesModule, routeDiagnostics, unknownRoute } from './routes'
 export {

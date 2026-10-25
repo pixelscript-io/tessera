@@ -39,7 +39,7 @@ A component is one `.tess` file with up to four blocks, in any order: `<contract
 
 ## Script
 
-`state`, `derived`, `effect`, `onCleanup`, `onMount`, `props` and `emit` are available without imports. Imports you write are moved to the top of the module. Reactive values are signals: read and write them with `.value` in `<script>`.
+`state`, `derived`, `effect`, `onCleanup`, `onMount`, `props` and `emit` are available without imports, and so are `get`, `post`, `put`, `patch` and `del` for [fetching data](/guide/data). Imports you write are moved to the top of the module. Reactive values are signals: read and write them with `.value` in `<script>`.
 
 - `props({ disabled: false })` returns read-only signals for the contract's variants plus the extra props you name.
 - `emit('change', value)` calls the parent's `@change` handler. The compiler checks the name against the contract's `events`.

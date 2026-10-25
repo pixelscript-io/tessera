@@ -94,6 +94,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
   }
 
   const loadRoutes = (): ProjectRoutes => project.routes()
+  const apiErrors = (): string => project.apis().diagnostics.map(formatDiagnostic).join('\n\n')
 
   const pagesDisplay = () => relative(root, loadRoutes().dir).replaceAll('\\', '/')
 
@@ -138,11 +139,13 @@ export function tessera(options: TesseraOptions = {}): Plugin {
     buildStart() {
       project.resetComponents()
       project.resetRoutes()
+      project.resetApis()
       writeComponentTypes()
       writeRouteTypes()
       writeManifest()
       // A build fails on a route conflict even if nothing imports the routes; the dev server shows it on load.
       if (!serving && routeErrors()) this.error(routeErrors())
+      if (!serving && apiErrors()) this.error(apiErrors())
     },
 
     configureServer(server) {
@@ -154,6 +157,8 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       server.watcher.add(join(root, 'app', 'components'))
       server.watcher.add(loadRoutes().dir)
       server.watcher.add(loadRoutes().layoutsDir)
+      // The apis folder may not exist yet; its first file still needs to be seen.
+      server.watcher.add(project.apis().dir)
 
       const inPages = (file: string) =>
         file.endsWith('.tess') &&
@@ -201,13 +206,33 @@ export function tessera(options: TesseraOptions = {}): Plugin {
         }
       }
 
+      const inApis = (file: string) =>
+        /\.(?:ts|js|mts|mjs)$/.test(file) &&
+        file.replaceAll('\\', '/').startsWith(`${project.apis().dir}/`)
+
+      /** An api was added or removed: scripts that name it, or no longer can, must compile again. */
+      const refreshApis = () => {
+        const names = () => JSON.stringify(project.apis().apis.map((a) => a.name))
+        const before = names()
+        project.resetApis()
+        if (names() === before) return
+        for (const module of server.moduleGraph.idToModuleMap.values()) {
+          if (module.file?.endsWith('.tess') && !module.id?.includes('type=style')) {
+            server.moduleGraph.invalidateModule(module)
+            void server.reloadModule(module)
+          }
+        }
+      }
+
       server.watcher.on('add', (file) => {
         if (inComponents(file)) refreshComponents()
         if (inPages(file)) refreshRoutes()
+        if (inApis(file)) refreshApis()
       })
       server.watcher.on('unlink', (file) => {
         if (inComponents(file)) refreshComponents()
         if (inPages(file)) refreshRoutes()
+        if (inApis(file)) refreshApis()
       })
       server.watcher.on('change', (file) => {
         if (file.endsWith('.tokens.json')) {

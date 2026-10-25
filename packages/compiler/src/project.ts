@@ -9,10 +9,12 @@ import {
   findUp,
   loadComponentRegistry,
   loadDesignTokens,
+  loadProjectApis,
   loadProjectRoutes,
   resolveImportedComponents,
   scanComponentFiles,
   type DesignTokens,
+  type ProjectApis,
   type ProjectComponents,
   type ProjectRoutes,
 } from './node'
@@ -56,6 +58,7 @@ export class Project {
   private tokenCache: DesignTokens | null | undefined
   private componentCache: ProjectComponents | undefined
   private routeCache: ProjectRoutes | undefined
+  private apiCache: ProjectApis | undefined
 
   constructor(
     readonly root: string,
@@ -90,6 +93,11 @@ export class Project {
 
   routes(): ProjectRoutes {
     return (this.routeCache ??= loadProjectRoutes(this.root))
+  }
+
+  /** The apis of the project: the script files in `app/apis`, each named after its file. */
+  apis(): ProjectApis {
+    return (this.apiCache ??= loadProjectApis(this.root))
   }
 
   /** Route patterns for checking `<Link to>`; undefined when the project has no pages folder. */
@@ -142,10 +150,15 @@ export class Project {
     this.routeCache = undefined
   }
 
+  resetApis(): void {
+    this.apiCache = undefined
+  }
+
   resetAll(): void {
     this.resetTokens()
     this.resetComponents()
     this.resetRoutes()
+    this.resetApis()
   }
 
   /** The path of a file relative to the project root, as diagnostics and the baseline name it. */
@@ -192,6 +205,7 @@ export class Project {
       autoImports: this.options.config?.autoImports,
       routes: this.routePatterns(),
       layouts: this.layoutNames(),
+      apis: this.apis().apis,
       tokens: loaded?.ok ? loaded.tokens : undefined,
       config: this.options.config,
       today: this.today,

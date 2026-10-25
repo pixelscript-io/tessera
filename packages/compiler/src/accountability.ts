@@ -17,6 +17,7 @@ export const VIOLATION_CODES: ReadonlySet<string> = new Set([
   'T2107', // contrast
   'T2108', // malformed raw()
   'T2114', // unknown variant value in a selector
+  'W4105', // data that can fail, shown without loading or error (a warning; a severity rule can make it an error)
 ])
 
 /** Never baselined or downgraded: an expired escape must be dealt with, and contracts must be valid. */

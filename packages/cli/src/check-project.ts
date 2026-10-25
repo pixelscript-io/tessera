@@ -67,6 +67,12 @@ export function checkProject(project: Project, options: { baseline?: null } = {}
     else files.push({ file: d.file, diagnostics: [d] })
   }
 
+  for (const d of project.apis().diagnostics) {
+    const existing = files.find((f) => f.file === d.file)
+    if (existing) existing.diagnostics.push(d)
+    else files.push({ file: d.file, diagnostics: [d] })
+  }
+
   for (const path of appScripts(project.root)) {
     const file = project.display(path)
     const problems = checkPlainScriptAutoImports(readFileSync(path, 'utf8'), file)

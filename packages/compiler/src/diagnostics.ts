@@ -32,6 +32,8 @@ export const COMPILER_CODES = {
   T5001: 'Duplicate component name',
   T5002: 'Auto-import used outside a .tess file',
   T5003: 'Script API not imported with auto-imports off',
+  T5004: 'Unknown API',
+  T5005: 'Invalid API file name',
   T6001: 'Route conflict',
   T6002: 'Invalid page file name',
   T6003: 'Unknown layout',
@@ -42,6 +44,7 @@ export const COMPILER_CODES = {
   W4102: 'Dynamic class names are not scoped',
   W4103: 'Deprecated component used',
   W4104: 'Deprecated variant value used',
+  W4105: 'Data that can fail is shown without loading or error',
 } as const
 
 export type CompilerCode = keyof typeof COMPILER_CODES

@@ -15,6 +15,8 @@ export interface ServiceOptions {
   components?: ComponentResolver
   /** Every component in the project, so tags resolve without imports. */
   registry?: CompileOptions['registry']
+  /** The apis of the project (`app/apis`), so a script can name one without importing it. */
+  apis?: CompileOptions['apis']
   /** Absolute path of the document, to compute imports relative to it. */
   path?: string
   autoImports?: boolean
@@ -48,6 +50,7 @@ export function getDiagnostics(source: string, options: ServiceOptions): EditorD
     kind: kindFromPath(options.file),
     components: options.components,
     registry: options.registry,
+    apis: options.apis,
     path: options.path,
     autoImports: options.autoImports,
     tokens: options.tokens,

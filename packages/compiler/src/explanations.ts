@@ -18,6 +18,8 @@ export type Example =
       components?: Array<{ name: string; source: string }>
       /** Tokens to treat as deprecated in this example, by path. */
       deprecatedTokens?: string[]
+      /** Names of the apis the project has (files in `app/apis`), such as `github`. */
+      apis?: string[]
       options?: {
         routes?: string[]
         layouts?: string[]
@@ -29,6 +31,7 @@ export type Example =
   | { kind: 'tokens'; base: Array<[string, unknown]>; themes?: Array<[string, unknown]> }
   | { kind: 'import'; files: Array<[string, unknown]> }
   | { kind: 'routes'; files: string[] }
+  | { kind: 'apis'; files: string[] }
   | { kind: 'ts'; file: string; source: string }
   | { kind: 'config'; config: Record<string, unknown> }
   | { kind: 'registry'; files: Array<{ file: string; source: string }> }
@@ -645,6 +648,22 @@ export const EXPLANATIONS: Record<string, Explanation> = {
     ),
   },
 
+  T5004: {
+    cause:
+      'A script calls `name.get(...)`, `name.post(...)` or another data call on a name that is not an api, and is close to the name of one. It is probably a typo, and would fail when the page runs, with a ReferenceError.',
+    fix: 'Use the name the hint gives. An api is a file in `app/apis`, named after the file.',
+    example: tess(
+      '<contract>\n{ "name": "Card", "role": "group", "parts": ["root"] }\n</contract>\n<script>\nconst user = gihub.get(\'/users/octocat\')\n</script>\n<template><div class="root">{user.data}</div></template>\n',
+      { apis: ['github'] },
+    ),
+  },
+  T5005: {
+    cause:
+      'A file in `app/apis` is an api, named after the file, so the file name has to be a name a script can use: letters, numbers and underscores, starting with a letter, and not a word JavaScript reserves or one Tessera already uses (`get`, `post`, `state`, ...).',
+    fix: 'Rename the file, for example `my-api.ts` to `myApi.ts`.',
+    example: { kind: 'apis', files: ['my-api.ts'] },
+  },
+
   // --- pages, routing, layouts ------------------------------------------------------------------------
   T6001: {
     cause:
@@ -707,6 +726,16 @@ export const EXPLANATIONS: Record<string, Explanation> = {
     example: tess(
       '<contract>\n{ "name": "Card", "role": "group", "parts": ["root"] }\n</contract>\n<script>\nconst c = state("a")\n</script>\n<template><div class="root" :class="c"></div></template>\n',
     ),
+  },
+  W4105: {
+    cause:
+      'A template shows the data of a read (`get`) but never shows `loading` or `error` (or one of them). A read is empty while the answer is on its way, and `error` is set when it fails, so a page that shows neither is blank while it waits and says nothing when the server does not answer.',
+    fix: 'Show the state, usually before the data: `<p if="tasks.loading">Loading...</p>` and `<p else-if="tasks.error">Could not load.</p>`. If a path is not ready to handle it, a severity rule in `tessera.config.ts` can turn the warning off for it, with a reason and an expiry, or make it an error that a baseline can hold.',
+    example: tess(
+      '<contract>\n{ "name": "Card", "role": "group", "parts": ["root"] }\n</contract>\n<script>\nconst tasks = get(\'/tasks\')\n</script>\n<template><div class="root">{tasks.data}</div></template>\n',
+    ),
+    fixed:
+      '<template>\n  <div class="root">\n    <p if="tasks.loading">Loading...</p>\n    <p else-if="tasks.error">Could not load.</p>\n    <p else>{tasks.data}</p>\n  </div>\n</template>',
   },
   W4103: {
     cause:
@@ -802,6 +831,8 @@ export function exampleSource(example: Example): string {
         .join('\n\n')
     case 'routes':
       return example.files.map((f) => `app/pages/${f}`).join('\n')
+    case 'apis':
+      return example.files.map((f) => `app/apis/${f}`).join('\n')
     case 'config':
       return `export default ${JSON.stringify(example.config, null, 2)}`
     case 'registry':

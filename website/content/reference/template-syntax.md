@@ -23,9 +23,11 @@ A template has exactly one root element, which carries `class="root"`. The root 
 
 A name in an expression must be declared in `<script>` or be an `each` variable ([T4006](/reference/errors/T4006)). Signals are unwrapped only when they are top-level bindings; `{state.field}` where `field` is a signal is [T4012](/reference/errors/T4012).
 
+A read made with `get` (`const tasks = get('/tasks')`) and a write made with `post`, `put`, `patch` or `del` are known to the template: `tasks.data`, `tasks.error`, `tasks.loading` and `tasks.refreshing`, and `add.pending`, `add.error` and `add.data`, are read for their values. See [Fetching data](/guide/data#in-a-tess-file).
+
 ## Always available in a script
 
-`state`, `derived`, `effect`, `onCleanup`, `onMount`, `props`, `emit`, and in pages and components `useRoute` and `navigate`. They need no import in a `.tess` file; see [Auto-imports](/guide/auto-imports).
+`state`, `derived`, `effect`, `onCleanup`, `onMount`, `props`, `emit`, `get`, `post`, `put`, `patch` and `del`, any API in `app/apis` by its file name, and in pages and components `useRoute` and `navigate`. They need no import in a `.tess` file; see [Auto-imports](/guide/auto-imports).
 
 ## The blocks
 

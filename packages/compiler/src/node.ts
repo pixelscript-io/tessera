@@ -6,6 +6,7 @@ import { buildTokens, type TokenDiagnostic, type TokenManifest } from '@tessera/
 import { loadTokenDir } from '@tessera/tokens/node'
 import type { ComponentInfo, ComponentResolver } from './codegen'
 import { extractContract, listImports } from './compile'
+import { buildApiList, type ApiDiagnostic, type ProjectApi } from './apis'
 import { ComponentRegistry, type RegistryFile } from './registry'
 import { StyleTokens } from './style/tokens'
 
@@ -149,6 +150,25 @@ export function routerComponentsDir(root: string): string | null {
     }
   }
   return null
+}
+
+export interface ProjectApis {
+  apis: ProjectApi[]
+  /** Files in the folder that cannot be an api, and why. */
+  diagnostics: ApiDiagnostic[]
+  /** The apis folder, which may not exist. */
+  dir: string
+}
+
+/** The apis of a project: the script files in `app/apis`, each named after its file. */
+export function loadProjectApis(root: string, dir = join(root, 'app', 'apis')): ProjectApis {
+  const display = (file: string) => relative(root, file).replaceAll('\\', '/')
+  const files = existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isFile())
+        .map((e) => join(dir, e.name))
+    : []
+  return { ...buildApiList(files, display), dir: dir.replaceAll('\\', '/') }
 }
 
 export interface ProjectRoutes {

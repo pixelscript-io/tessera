@@ -1,0 +1,20 @@
+<contract>
+{
+  "name": "Quote",
+  "role": "generic",
+  "description": "A line from the default api, taken apart with destructuring.",
+  "parts": ["root", "message", "text"]
+}
+</contract>
+
+<script>
+const { data: quote, loading, error } = get('/quote')
+</script>
+
+<template>
+  <div class="root">
+    <p class="message" if="loading">Loading...</p>
+    <p class="message" else-if="error">No quote: {error.message}</p>
+    <p class="text" else>{quote.text}</p>
+  </div>
+</template>

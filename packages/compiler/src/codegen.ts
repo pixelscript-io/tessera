@@ -1,6 +1,6 @@
 import { nearest, type Contract } from '@tessera/contract'
 import type { Reporter } from './diagnostics'
-import { rewriteExpression, type ExprScope } from './expr'
+import { rewriteExpression, type ExprScope, type TemplateReads } from './expr'
 import { BEHAVIOR_ATTACH, BEHAVIOR_EVENTS, BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
 import { unknownRoute } from './routes'
 import type { Binding } from './script'
@@ -34,6 +34,8 @@ export interface GenerateContext {
   classPrefix: string
   /** Route patterns (`/blog/:slug`). When given, a literal `to` on `<Link>` must match one. */
   routes?: readonly string[]
+  /** Filled in with what the template reads of the script's bindings. */
+  reads?: TemplateReads
 }
 
 export interface Generated {
@@ -123,7 +125,11 @@ export function generateTemplate(
       .map((c) => ctx.classPrefix + c)
       .join(' ')
 
-  const exprScope = (locals: Locals): ExprScope => ({ bindings: ctx.bindings, locals })
+  const exprScope = (locals: Locals): ExprScope => ({
+    bindings: ctx.bindings,
+    locals,
+    reads: ctx.reads,
+  })
 
   /** Rewrite an attribute's expression. Reports and returns undefined on a problem. */
   function attrExpr(attr: Attr, locals: Locals, mode: 'expr' | 'handler' = 'expr') {

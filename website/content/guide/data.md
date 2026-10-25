@@ -1,6 +1,6 @@
 # Fetching data
 
-Introduced in v0.6 (Milestone 27).
+Introduced in v0.6 (Milestones 27 and 28).
 
 `get` reads from a server, and `post`, `put`, `patch` and `del` write to it. There is nothing to set up and nothing to name: the request is the key.
 
@@ -17,7 +17,114 @@ const add = post('/todos')
 await add({ title: 'Buy milk' })
 ```
 
-This is the runtime. It works in any script today, and `.tess` files will get `get`, `post` and the rest without imports in the next milestone, with their results unwrapped in templates like any other signal. Until then, import them as above. The things that make it smarter than a fetch helper (checking endpoints against your API description at compile time, prerendering the data) come in the milestones after that, and are listed [at the end](#what-is-not-built-yet).
+That is how it looks in any script. In a `.tess` file you do not import anything, and the template reads the results directly: see [In a `.tess` file](#in-a-tess-file). The things that make it smarter than a fetch helper (checking endpoints against a description of your API at compile time, prerendering the data) come in later milestones, and are listed [at the end](#what-is-not-built-yet).
+
+## In a `.tess` file
+
+`get`, `post`, `put`, `patch` and `del` need no import, like `state` and `derived`. A read or a write you keep in a `const` is known to the template, so its signals are unwrapped:
+
+```xml tess
+<contract>
+{ "name": "TaskList", "role": "generic", "parts": ["root", "message", "list", "item", "reload"] }
+</contract>
+
+<script>
+const tasks = get('/tasks')
+</script>
+
+<template>
+  <div class="root">
+    <p class="message" if="tasks.loading">Loading tasks...</p>
+    <p class="message" else-if="tasks.error">Could not load the tasks: {tasks.error.message}</p>
+    <ul class="list" else>
+      <li class="item" each="task in tasks.data" key="task.id">{task.title}</li>
+    </ul>
+    <button class="reload" type="button" @click="tasks.refresh()">Reload</button>
+  </div>
+</template>
+```
+
+`tasks.data`, `tasks.error`, `tasks.loading` and `tasks.refreshing` are signals, and the template reads their values for you, the way it reads `count` for a `state(0)`. `tasks.refresh` is a function and is left alone. For a write, `add.pending`, `add.error` and `add.data` are the signals, and `add({ ... })` is the call.
+
+You can also take a read apart, and each name is a signal as well:
+
+```text
+const { data: tasks, loading, error, refresh } = get('/tasks')
+```
+
+A type argument works (`get<Task[]>('/tasks')`). A read you hand to a function as a whole (`describe(tasks)`) is handed over as it is.
+
+Only a call written as `get(...)`, `post(...)`, and so on is a read or a write. If the script defines its own `get`, or imports one, it is yours, and nothing here applies to it. `cache.get('x')` on a `Map` is not a read either: it is not one of Tessera's names.
+
+### What to show: loading and error
+
+A read is empty while its answer is on its way, and `error` is set when it fails. A page that shows the data and never shows either looks blank while it waits and says nothing when the server does not answer. So the compiler **warns** when a template shows the data of a read and does not show `loading` or `error` ([W4105](/reference/errors/W4105)):
+
+```text
+WARNING  W4105  app/pages/tasks.tess:3:15
+  get('/tasks') can be slow and can fail, but this template never shows loading or error.
+```
+
+It is a warning, not an error: the page works. It is not raised when the template does not show the data (a button that only calls `refresh()`), or when the read is handed on as a whole, because what the receiver does with it is not known. To turn it off for a folder you are not ready to change, use a severity rule in `tessera.config.ts`, with a reason and an expiry like the style rules:
+
+```ts
+export default defineConfig({
+  severity: [
+    {
+      files: 'app/pages/legacy/**',
+      rules: 'W4105',
+      level: 'off',
+      reason: 'Moving to loading states in Q1',
+      expires: '2027-03-31',
+    },
+  ],
+})
+```
+
+Setting `level: 'error'` makes it an error, and then `tessera baseline` can record the ones that exist today so that only new ones fail.
+
+## Several APIs: `app/apis`
+
+Most apps call more than one server, and usually not their own. A script file in `app/apis` is an **API**, named after the file. It needs no import in a `.tess` file:
+
+```ts
+// app/apis/github.ts
+import { createApi } from '@pixelscriptio/tessera/core'
+
+export default createApi({
+  base: 'https://api.github.com',
+  headers: { accept: 'application/vnd.github+json' },
+})
+```
+
+```text
+<script>
+const { data: user, loading, error } = github.get('/users/:name', { name: 'octocat' })
+</script>
+```
+
+Each API has its own base URL, headers, retries and cache, with every option of [`configureApi`](#setting-it-up). The file name is the name: `weather.ts` is `weather`, and it must be a name a script can use ([T5005](/reference/errors/T5005)). Declaration files, tests (`github.test.ts`) and anything that is not a script (`github.api.json`, a README) are left out. A mistyped name is caught when it is close to an API that exists ([T5004](/reference/errors/T5004)):
+
+```text
+ERROR  T5004  app/pages/index.tess:3:14
+  "gihub" is not an API.
+  Did you mean "github"?
+```
+
+A file named `default.ts` is the API that plain `get`, `post`, `put`, `patch` and `del` use. With one, a script that calls `get('/tasks')` uses it, so an app with one server needs no name at all:
+
+```ts
+// app/apis/default.ts
+import { createApi } from '@pixelscriptio/tessera/core'
+
+export default createApi({ base: import.meta.env.VITE_API_URL })
+```
+
+Without a `default.ts`, plain `get` and the rest use the shared API that [`configureApi`](#setting-it-up) sets up, or a full URL in the path.
+
+### Keys and domains
+
+The base URL and keys are best taken from environment variables, which Vite reads from `.env` files and from your host's build settings, so staging and production differ without code changes. Anything in a variable that starts with `VITE_` is in the built page, so **it is public**. A key that must stay private cannot be in a browser call at all, in any framework: it has to be added by a server. When the API you call needs a secret, or does not allow browsers to call it (CORS), put a small proxy that you control in front of it.
 
 ## Reading: `get`
 
@@ -165,7 +272,7 @@ const add = post('/todos', { invalidates: ['/stats'] })
 
 ## Setting it up
 
-Without any set-up, paths are used as they are. To set a base URL, headers or your own `fetch`, once, at the start of the app:
+Without any set-up, paths are used as they are. To set a base URL, headers or your own `fetch` for the shared API (the one plain `get` and `post` use when there is no `app/apis/default.ts`), once, at the start of the app:
 
 ```ts
 import { configureApi } from '@pixelscriptio/tessera/core'
@@ -230,9 +337,7 @@ const user = api.get('/users/1')
 
 ## What is not built yet
 
-- **In `.tess` files**: `get` and the others without imports, and results unwrapped in templates (the next milestone).
 - **A description of your API**: checking at compile time that the endpoint exists, that its parameters are right and that the fields you read are in the response, with a suggestion when they are not; types from it; the endpoints in the manifest for AI tools.
-- **A warning for a template that fetches but never handles the loading and error states.**
 - **Optimistic updates**: showing the result of a write before the server has answered.
 - **Data for a page**: starting the fetch when you navigate, and prerendering a page with its data in it. For now a read that runs while a page is prerendered has no base to use for a relative path.
 - **Development mocks** from the description, and loading and error states in the docs app and the accessibility tests.

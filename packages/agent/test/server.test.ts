@@ -103,9 +103,11 @@ describe('components', () => {
       'Counter',
       'Dialog',
       'Link',
+      'Quote',
       'Select',
       'SiteNav',
       'Switch',
+      'TaskList',
       'TextField',
     ])
   })
@@ -133,7 +135,7 @@ describe('components', () => {
     const r = call('get_component', { name: 'Buton' })
     expect(r.isError).toBe(true)
     expect(r.text).toBe(
-      'There is no component named Buton. Components: Accordion, AccordionItem, Button, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Link, Select, SiteNav, Switch, TextField.',
+      'There is no component named Buton. Components: Accordion, AccordionItem, Button, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Link, Quote, Select, SiteNav, Switch, TaskList, TextField.',
     )
     expect(call('get_component', { name: 'Conf' }).text).toContain('Did you mean ConfirmBar?')
     expect(call('get_component', {}).text).toBe('"name" is required and must be a string.')

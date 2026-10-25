@@ -3,9 +3,10 @@ import {
   findUp,
   loadComponentRegistry,
   loadDesignTokens,
+  loadProjectApis,
   resolveImportedComponents,
 } from '@tessera/compiler/node'
-import type { ComponentRegistry, StyleTokens } from '@tessera/compiler'
+import type { ComponentRegistry, ProjectApi, StyleTokens } from '@tessera/compiler'
 import { getDiagnostics, type EditorDiagnostic } from './service'
 
 /**
@@ -18,6 +19,7 @@ import { getDiagnostics, type EditorDiagnostic } from './service'
 export class EditorProject {
   private readonly tokenCache = new Map<string, StyleTokens | null>()
   private readonly registryCache = new Map<string, ComponentRegistry>()
+  private readonly apiCache = new Map<string, ProjectApi[]>()
 
   constructor(readonly root: string) {}
 
@@ -49,9 +51,23 @@ export class EditorProject {
     return registry
   }
 
+  /** The apis of the project a file belongs to: the script files in its `app/apis`. */
+  apis(file: string): ProjectApi[] {
+    const app =
+      findUp(dirname(file), join('app', 'components')) ?? findUp(dirname(file), join('app', 'apis'))
+    const projectRoot = app ? dirname(dirname(app)) : this.root
+    let apis = this.apiCache.get(projectRoot)
+    if (!apis) {
+      apis = loadProjectApis(projectRoot).apis
+      this.apiCache.set(projectRoot, apis)
+    }
+    return apis
+  }
+
   invalidate(): void {
     this.tokenCache.clear()
     this.registryCache.clear()
+    this.apiCache.clear()
   }
 
   diagnose(path: string, text: string): EditorDiagnostic[] {
@@ -61,6 +77,7 @@ export class EditorProject {
       path: path.replaceAll('\\', '/'),
       components: resolver,
       registry: this.registry(path),
+      apis: this.apis(path),
       tokens: this.tokens(path),
     })
   }

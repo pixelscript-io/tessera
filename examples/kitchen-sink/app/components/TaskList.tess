@@ -1,0 +1,37 @@
+<contract>
+{
+  "name": "TaskList",
+  "role": "generic",
+  "description": "The tasks on a server, with a field to add one. Shows that it is loading, and that it could not load.",
+  "parts": ["root", "message", "list", "item", "field", "add", "reload"]
+}
+</contract>
+
+<script>
+const tasks = backend.get('/tasks')
+const add = backend.post('/tasks')
+const title = state('')
+
+async function submit() {
+  if (!title.value) return
+  try {
+    await add({ title: title.value })
+    title.value = ''
+  } catch {
+    // add.error says why
+  }
+}
+</script>
+
+<template>
+  <div class="root">
+    <p class="message" if="tasks.loading">Loading tasks...</p>
+    <p class="message" else-if="tasks.error">Could not load the tasks: {tasks.error.message}</p>
+    <ul class="list" else>
+      <li class="item" each="task in tasks.data" key="task.id">{task.title}</li>
+    </ul>
+    <input class="field" aria-label="New task" bind:value="title" />
+    <button class="add" type="button" :disabled="add.pending" @click="submit">Add</button>
+    <button class="reload" type="button" @click="tasks.refresh()">Reload</button>
+  </div>
+</template>

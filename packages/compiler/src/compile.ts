@@ -7,14 +7,16 @@ import {
   type BehaviorRequirements,
   type Contract,
 } from '@tessera/contract'
+import { DATA_APIS, DEFAULT_API, type ProjectApi } from './apis'
 import { generateTemplate, type ComponentInfo, type ComponentResolver } from './codegen'
+import type { TemplateReads } from './expr'
 import { Reporter, type CompilerDiagnostic } from './diagnostics'
 import { analyzeScript, type Binding } from './script'
 import { parseSfc } from './sfc'
 import { BEHAVIOR_ATTACH, BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
 import { isBaselineable } from './accountability'
 import { resolveConfig, type TesseraConfig } from './config'
-import type { ComponentRegistry } from './registry'
+import { relativeImport, type ComponentRegistry } from './registry'
 import { checkContrast } from './style/contrast'
 import { processStyle, type StyleStats } from './style/enforce'
 import { StyleTokens } from './style/tokens'
@@ -39,6 +41,11 @@ export interface CompileOptions {
   registry?: ComponentRegistry
   /** Absolute path of the file, to compute imports relative to it. Defaults to `file`. */
   path?: string
+  /**
+   * The apis of the project (`app/apis`). With `autoImports`, a script that names one needs no import, and one named
+   * `default` is what `get`, `post`, `put`, `patch` and `del` use.
+   */
+  apis?: readonly ProjectApi[]
   /**
    * `true` (default): components and the script APIs (`state`, `derived`, `effect`, `onCleanup`, `onMount`) need
    * no import in a `.tess` file. `false`: every name must be imported, and a missing one is an error.
@@ -234,7 +241,11 @@ export function compile(source: string, options: CompileOptions): CompileResult 
 
   // Script.
   const scriptBlock = blocks.get('script')
-  const script = scriptBlock ? analyzeScript(scriptBlock.content) : analyzeScript('')
+  const apiFiles = new Map((options.apis ?? []).map((api) => [api.name, api.file]))
+  const apiNames = new Set([...apiFiles.keys()].filter((name) => name !== DEFAULT_API))
+  const script = scriptBlock
+    ? analyzeScript(scriptBlock.content, { apis: apiNames })
+    : analyzeScript('')
   const base = scriptBlock?.contentStart ?? 0
   for (const issue of script.impure) {
     report.warn(
@@ -254,6 +265,30 @@ export function compile(source: string, options: CompileOptions): CompileResult 
           close ? `Did you mean "${close}"?` : `Add "${emit.name}" to "events" in <contract>.`,
         )
       }
+    }
+  }
+
+  // `gihub.get(...)`: a name that is not an api, and is close to one that is.
+  for (const call of script.apiCalls) {
+    if (script.bindings.has(call.name) || apiNames.has(call.name)) continue
+    const close = nearest(call.name, [...apiNames])
+    if (close)
+      report.error(
+        'T5004',
+        base + call.offset,
+        `"${call.name}" is not an API.`,
+        `Did you mean "${close}"?`,
+      )
+  }
+  if (options.autoImports === false) {
+    for (const name of DATA_APIS) {
+      if (script.bindings.has(name) || !script.calls.has(name)) continue
+      report.error(
+        'T5003',
+        base + script.calls.get(name)!,
+        `"${name}" is not defined. Auto-imports are off, so it must be imported.`,
+        `Add: import { ${name} } from "${PUBLIC_PACKAGES.core}"`,
+      )
     }
   }
 
@@ -292,8 +327,10 @@ export function compile(source: string, options: CompileOptions): CompileResult 
       'Add <slot /> where the page should appear.',
     )
   }
+  const reads: TemplateReads = { names: new Set(), bare: new Set(), members: new Map() }
   const generated = generateTemplate(nodes, source, {
     report,
+    reads,
     bindings,
     contract,
     templateStart: templateBlock.contentStart,
@@ -307,6 +344,8 @@ export function compile(source: string, options: CompileOptions): CompileResult 
       script.imports.flatMap((i) => i.entries.map((e) => e.local)),
     ),
   })
+
+  if (generated) warnUnhandledData(report, script, reads, base)
 
   if (generated && parsedContract?.contract) {
     report.diagnostics.push(
@@ -329,6 +368,63 @@ export function compile(source: string, options: CompileOptions): CompileResult 
     ),
     contract,
   )
+}
+
+/**
+ * A read whose data the template shows, in a template that does not show `loading`, `error` or both. It is a warning:
+ * the page works, but it is empty while the data comes and silent when it does not. A read that is handed on as a whole
+ * is not judged, since what the receiver does with it is not known here.
+ */
+function warnUnhandledData(
+  report: Reporter,
+  script: ReturnType<typeof analyzeScript>,
+  reads: TemplateReads,
+  base: number,
+): void {
+  for (const call of script.dataCalls) {
+    if (call.kind !== 'resource') continue
+    let shown: boolean
+    let loading: boolean
+    let error: boolean
+    let name: string
+    let loadingName: string
+    let errorName: string
+    if (call.binding) {
+      if (reads.bare.has(call.binding)) continue
+      const members = reads.members.get(call.binding) ?? new Set<string>()
+      shown = members.has('data')
+      loading = members.has('loading')
+      error = members.has('error')
+      name = call.binding
+      loadingName = `${name}.loading`
+      errorName = `${name}.error`
+    } else {
+      const local = (key: string) => call.members?.find((m) => m.key === key)?.local
+      const taken = (key: string) => {
+        const l = local(key)
+        return l !== undefined && reads.names.has(l)
+      }
+      shown = taken('data')
+      loading = taken('loading')
+      error = taken('error')
+      name = local('data') ?? 'data'
+      loadingName = local('loading') ?? 'loading'
+      errorName = local('error') ?? 'error'
+    }
+    if (!shown) continue
+    const missing = [!loading && 'loading', !error && 'error'].filter(Boolean) as string[]
+    if (!missing.length) continue
+    report.warn(
+      'W4105',
+      base + call.offset,
+      `${call.call} can be slow and can fail, but this template never shows ${missing.join(' or ')}.`,
+      call.binding
+        ? `Add <p if="${loadingName}">Loading...</p> and <p else-if="${errorName}">Could not load.</p> before the data. ` +
+            'It is a warning, and can be turned off for a path with a severity rule in tessera.config.ts.'
+        : `Take ${missing.join(' and ')} too (const { data: ${name}, loading, error } = ...) and show them before the data. ` +
+            'It is a warning, and can be turned off for a path with a severity rule in tessera.config.ts.',
+    )
+  }
 }
 
 /** Imported names are valid tags even when the resolver does not know them; the resolver supplies their contracts. */
@@ -360,6 +456,8 @@ function withImports(
   }
 }
 
+const autoOn = (options: CompileOptions) => options.autoImports !== false
+
 function assemble(
   options: CompileOptions,
   contract: Contract | undefined,
@@ -375,6 +473,21 @@ function assemble(
   const name = contract?.name ?? baseName
   const variants = contract ? variantDefaults(contract) : {}
 
+  // `get`, `post` and the rest come from the shared api in `core`, unless the project has an api named `default`.
+  const apiFiles = new Map((options.apis ?? []).map((api) => [api.name, api.file]))
+  const importer = options.path ?? options.file
+  const named = autoOn(options)
+    ? [...apiFiles.keys()].filter(
+        (name) => name !== DEFAULT_API && script.firstUse.has(name) && !script.bindings.has(name),
+      )
+    : []
+  const dataVerbs = autoOn(options)
+    ? DATA_APIS.filter((verb) => script.calls.has(verb) && !script.bindings.has(verb))
+    : []
+  const defaultApi = apiFiles.get(DEFAULT_API)
+  const useDefault = defaultApi !== undefined && dataVerbs.length > 0
+  const coreData = useDefault ? [] : dataVerbs
+
   const coreImports = [
     'defineComponent as $defineComponent',
     'getRenderer as $getRenderer',
@@ -382,6 +495,7 @@ function assemble(
     'derived as $derived',
     'unwrap as $u',
     ...used(CORE_APIS),
+    ...coreData,
   ]
   const routerImports = used(ROUTER_APIS)
 
@@ -423,11 +537,19 @@ function assemble(
       : []),
     ...hoisted,
     ...componentImports,
+    ...named.map(
+      (name) =>
+        `import ${name} from ${JSON.stringify(relativeImport(importer, apiFiles.get(name)!))}`,
+    ),
+    ...(useDefault
+      ? [`import $defaultApi from ${JSON.stringify(relativeImport(importer, defaultApi!))}`]
+      : []),
     '',
     `export default $defineComponent(${JSON.stringify(name)}, ${JSON.stringify(variants)}, ($ctx: import("${PUBLIC_PACKAGES.core}").ComponentContext) => {`,
     '  const $r = $getRenderer()',
     '  const props = $ctx.props',
     '  const emit = $ctx.emit',
+    ...(useDefault ? [`  const { ${dataVerbs.join(', ')} } = $defaultApi`] : []),
     body,
     `  return $ctx.root(${generated.root}${generated.rootClass ? `, ${JSON.stringify(generated.rootClass)}` : ''})`,
     `}${hmr ? `, ${JSON.stringify(options.hmrId)}` : ''})`,

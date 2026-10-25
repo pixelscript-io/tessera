@@ -11,7 +11,7 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 ## Data fetching, in order
 
-The runtime is built ([Fetching data](/guide/data)). The rest, in order: `get` and `post` without imports in `.tess` files, with a warning for a template that never handles loading or errors; a description of your API (OpenAPI, or a small format of our own) so endpoints, parameters and the fields you read are checked at compile time; optimistic updates; data for a page, started when you navigate and prerendered; development mocks and loading and error states in the docs app and the accessibility tests.
+The runtime, the calls in `.tess` files and the `app/apis` folder are built ([Fetching data](/guide/data)). The rest, in order: a description of your API (OpenAPI, or a small format of our own) so endpoints, parameters and the fields you read are checked at compile time; optimistic updates; data for a page, started when you navigate and prerendered; development mocks and loading and error states in the docs app and the accessibility tests; a recipe for a proxy that adds a key and handles CORS.
 
 ## Later
 

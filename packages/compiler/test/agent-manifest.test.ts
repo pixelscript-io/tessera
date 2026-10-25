@@ -18,9 +18,11 @@ describe('the agent manifest: components', () => {
       'Counter',
       'Dialog',
       'Link',
+      'Quote',
       'Select',
       'SiteNav',
       'Switch',
+      'TaskList',
       'TextField',
     ])
     expect(manifest.version).toBe(1)

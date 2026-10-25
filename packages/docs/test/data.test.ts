@@ -22,9 +22,11 @@ describe('the docs data', () => {
       ['Counter', 'app'],
       ['Dialog', 'system'],
       ['Link', 'router'],
+      ['Quote', 'app'],
       ['Select', 'system'],
       ['SiteNav', 'app'],
       ['Switch', 'system'],
+      ['TaskList', 'app'],
       ['TextField', 'system'],
     ])
     expect(data.hasTokens).toBe(true)

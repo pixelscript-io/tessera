@@ -600,6 +600,20 @@ describe('what a write makes stale', () => {
     expect(r.data.value).toEqual({ seen: 2 })
   })
 
+  it('compares paths without the base, so an api with a base URL still refreshes', async () => {
+    const s = server((call) => (call.method === 'GET' ? { url: call.url } : { ok: true }))
+    const client = api(s, { base: 'https://example.com/api', staleAfter: 60_000 })
+    client.get('/todos')
+    client.get('/users')
+    await settle()
+    s.calls.length = 0
+    await client.post('/todos')({ title: 'x' })
+    await settle()
+    expect(s.calls.filter((c) => c.method === 'GET').map((c) => c.url)).toEqual([
+      'https://example.com/api/todos',
+    ])
+  })
+
   it('can be asked directly, with invalidate() and clear()', async () => {
     const { s, client, list } = await setup()
     client.invalidate('/todos')

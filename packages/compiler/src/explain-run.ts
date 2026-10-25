@@ -7,6 +7,7 @@ import { buildRouteManifest } from '@tessera/router/manifest'
 import { formatDiagnostic } from '@tessera/contract'
 import { compile, extractContract, kindFromPath } from './compile'
 import { validateConfig, type TesseraConfig } from './config'
+import { buildApiList } from './apis'
 import { checkPlainScriptAutoImports } from './autoimport-ts'
 import type { ComponentResolver } from './codegen'
 import type { Example } from './explanations'
@@ -78,6 +79,7 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
             )
           : env.tokens,
         today: '2026-10-22',
+        apis: (example.apis ?? []).map((name) => ({ name, file: `/app/apis/${name}.ts` })),
         ...example.options,
       })
       return out(result.diagnostics.map((d) => ({ code: d.code, text: formatDiagnostic(d) })))
@@ -105,6 +107,13 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
         })),
       )
     }
+    case 'apis':
+      return out(
+        buildApiList(example.files.map((f) => `app/apis/${f}`)).diagnostics.map((d) => ({
+          code: d.code,
+          text: `ERROR  ${d.code}  ${d.file}\n  ${d.message}\n  ${d.hint}\n  Run \`tessera explain ${d.code}\` for details.`,
+        })),
+      )
     case 'ts':
       return out(
         checkPlainScriptAutoImports(example.source, example.file).map((d) => ({

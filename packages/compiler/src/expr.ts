@@ -1,7 +1,7 @@
 import * as acorn from 'acorn'
 import { nearest } from '@tessera/contract'
 import type { Reporter } from './diagnostics'
-import type { Binding } from './script'
+import { READ_SIGNALS, WRITE_SIGNALS, type Binding } from './script'
 
 /** Names a template expression can use without declaring them. */
 const GLOBALS = new Set([
@@ -32,11 +32,23 @@ const GLOBALS = new Set([
   'console',
 ])
 
+/** What a template reads of the script's bindings, so the compiler can tell what a template does with a read. */
+export interface TemplateReads {
+  /** Every script binding the template names. */
+  names: Set<string>
+  /** A read or a write the template uses as a whole (passes it on, calls a function with it), not by its members. */
+  bare: Set<string>
+  /** For a read or a write: the members the template uses (`data`, `loading`, ...). */
+  members: Map<string, Set<string>>
+}
+
 export interface ExprScope {
   /** Top-level bindings of the script. */
   bindings: ReadonlyMap<string, Binding>
   /** Names from `each` (a signal in the render function, a plain value in `key`). */
   locals: ReadonlyMap<string, 'signal' | 'plain'>
+  /** Filled in as expressions are rewritten. */
+  reads?: TemplateReads
 }
 
 export interface RewriteResult {
@@ -155,6 +167,12 @@ export function rewriteExpression(
     }
     const binding = scope.bindings.get(name)
     if (binding) {
+      scope.reads?.names.add(name)
+      // A read or a write is an object, not a signal: its members are what unwrap.
+      if (binding.signal === 'resource' || binding.signal === 'action') {
+        if (!write) scope.reads?.bare.add(name)
+        return
+      }
       if (write) {
         if (
           binding.kind === 'function' ||
@@ -241,6 +259,32 @@ export function rewriteExpression(
         if (node.object.type === 'Identifier' && !isLocal(node.object.name)) {
           const binding = scope.bindings.get(node.object.name)
           const key = memberKey(node)
+          if (
+            binding &&
+            !scope.locals.has(node.object.name) &&
+            (binding.signal === 'resource' || binding.signal === 'action')
+          ) {
+            const reads = scope.reads
+            if (key === undefined) {
+              reads?.names.add(node.object.name)
+              reads?.bare.add(node.object.name)
+              visit(node.property)
+              return
+            }
+            reads?.names.add(node.object.name)
+            const seen = reads?.members.get(node.object.name) ?? new Set<string>()
+            seen.add(key)
+            reads?.members.set(node.object.name, seen)
+            // `tasks.data` is a signal: read its value. `tasks.refresh` is a function: leave it.
+            const signals = binding.signal === 'resource' ? READ_SIGNALS : WRITE_SIGNALS
+            if (signals.has(key))
+              edits.push({
+                start: node.start,
+                end: node.end,
+                text: `${node.object.name}.${key}.value`,
+              })
+            return
+          }
           if (binding && !scope.locals.has(node.object.name) && key !== undefined) {
             const holdsSignal = binding.signal === 'props' || binding.nestedSignals?.has(key)
             if (holdsSignal) {
