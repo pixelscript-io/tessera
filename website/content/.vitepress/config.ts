@@ -17,6 +17,7 @@ const guide = [
   { text: 'The design system docs', link: '/guide/docs-app' },
   { text: 'Custom elements and React', link: '/guide/elements' },
   { text: 'Linting any project', link: '/guide/lint' },
+  { text: 'Fetching data', link: '/guide/data' },
   { text: 'Tokens in the docs', link: '/guide/system-manager' },
   { text: 'Editor support', link: '/guide/editor' },
   { text: 'AI coding tools', link: '/guide/agents' },

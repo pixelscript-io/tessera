@@ -83,7 +83,7 @@ Tessera is at v0.5: the pieces in this site exist and are tested, and the packag
 - A full-stack or backend framework.
 - Native mobile targets.
 - A visual editor or Figma plugin. Tokens move in and out as files.
-- A global store or data-fetching layer. Routing and single-level layouts are included; nested routes, guards and data loaders are not.
+- A global store. Routing and single-level layouts are included, and so is [fetching data](/guide/data) (the runtime: it is not yet checked by the compiler); nested routes, guards and data loaders are not.
 
 ## Next steps
 

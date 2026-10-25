@@ -38,3 +38,22 @@ export {
   serializeNode,
   type StringNode,
 } from './string-adapter'
+export {
+  ApiError,
+  clearApi,
+  configureApi,
+  createApi,
+  del,
+  get,
+  invalidate,
+  patch,
+  post,
+  put,
+  type Action,
+  type Api,
+  type ApiOptions,
+  type Params,
+  type ReadOptions,
+  type Resource,
+  type WriteOptions,
+} from './data'

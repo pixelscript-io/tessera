@@ -9,13 +9,17 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 - **More behaviors and components:** menu, listbox and tooltip, and a `Tabs` component (the `tabs` behavior is built).
 - **Hydration** for prerendered pages. `tessera build --prerender` writes static HTML today, and the router replaces it when the app starts.
 
+## Data fetching, in order
+
+The runtime is built ([Fetching data](/guide/data)). The rest, in order: `get` and `post` without imports in `.tess` files, with a warning for a template that never handles loading or errors; a description of your API (OpenAPI, or a small format of our own) so endpoints, parameters and the fields you read are checked at compile time; optimistic updates; data for a page, started when you navigate and prerendered; development mocks and loading and error states in the docs app and the accessibility tests.
+
 ## Later
 
 - Vue and Svelte wrappers for the custom elements (React exists), and watching slot content for changes.
 - Linting Sass, Less and Stylus, and a Stylelint plugin built on the same rules as `tessera lint`.
 - A draft `.tess` generator from Figma components: variants, tokens and structure, not behavior.
 - A Zed language extension.
-- A global store and data-fetching layer.
+- A global store.
 - An in-browser playground and versioned docs. The compiler core is browser-safe so the playground does not need a rewrite.
 - Type-checking of templates (`tessera check --types`) and source maps.
 
