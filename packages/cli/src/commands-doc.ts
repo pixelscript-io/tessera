@@ -229,6 +229,20 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'api import',
+    usage: 'tessera api import <file or web address> [--name <name>] [--force]',
+    summary: 'Describe an API from its OpenAPI file, so calls on it are checked',
+    details:
+      'Reads an OpenAPI 3 description (JSON, from a file or a web address) and writes the small description the compiler checks calls against, `app/apis/<name>.api.json`: the endpoints with their parameters, body and answer, and the named types. It also writes `app/apis/<name>.ts` (the API itself, with its base URL) if there is not one. After that a call on it in a `.tess` script, such as `name.get("/path")`, is checked: an endpoint the description does not have (T5006), a parameter it does not take (T5007), and in a template a field the answer does not have (T5008). What the importer does not read (`oneOf`, `anyOf`, a body that is not JSON) is listed and typed as unknown. It never overwrites a description without `--force`, and it says what a new import changes: what is removed or now needs a value (breaking), and what is new (additive). YAML is not read: convert it to JSON first.',
+    options: [
+      {
+        flag: '--name <name>',
+        description: 'The name of the API in scripts. Default: made from the title in the file.',
+      },
+      { flag: '--force', description: 'Replace a description that already exists.' },
+    ],
+  },
+  {
     name: 'tokens export',
     usage: 'tessera tokens export [--format dtcg|tokens-studio] [--out <folder>]',
     summary: 'Write the tokens as strict DTCG or as Tokens Studio sets',

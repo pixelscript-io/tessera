@@ -9,7 +9,28 @@ export {
 } from './compile'
 export type { ComponentInfo, ComponentResolver } from './codegen'
 export { COMPILER_CODES, type CompilerCode, type CompilerDiagnostic } from './diagnostics'
-export { formatDiagnostic } from '@tessera/contract'
+export { formatDiagnostic, nearest } from '@tessera/contract'
+export {
+  describeType,
+  diffDescriptions,
+  fieldOf,
+  matchEndpoint,
+  METHOD_OF_VERB,
+  parseApiDescription,
+  parseTypeString,
+  resolveType,
+  typeToText,
+  type ApiDescription,
+  type ApiType,
+  type DescriptionChange,
+  type DescriptionDiagnostic,
+  type Endpoint,
+  type Field,
+  type Match,
+  type Method,
+} from './api-description'
+export { convertOpenApi, type DescriptionJson, type OpenApiResult } from './openapi'
+export { generateApisDts } from './apis'
 export { analyzeScript } from './script'
 export { componentProps, type PropInfo } from './props'
 export {
@@ -76,9 +97,12 @@ export {
 } from './explanations'
 export { runExample, type ExampleEnv, type ExampleOutput } from './explain-run'
 export {
+  apisOf,
   buildAgentManifest,
   type AgentManifest,
   type ManifestComponent,
+  type ManifestApi,
+  type ManifestEndpoint,
   type ManifestRoutes,
   type ManifestRules,
   type ManifestTokens,

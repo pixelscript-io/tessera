@@ -66,6 +66,8 @@ describe('tessera init --preset tessera', () => {
       'app/main.ts',
       'app/layouts/default.tess',
       'app/pages/index.tess',
+      'app/apis/default.ts',
+      'app/apis/default.api.json',
     ])) {
       expect(there, String(file)).toBe(true)
     }

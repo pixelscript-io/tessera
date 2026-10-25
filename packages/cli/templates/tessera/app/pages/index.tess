@@ -4,6 +4,8 @@
 
 <script>
 const clicks = state(0)
+// Data from an API: one line. app/apis/default.ts says which server.
+const devices = get('/objects')
 
 function bump() {
   clicks.value++
@@ -49,6 +51,21 @@ function bump() {
         <h2 class="name">Docs that stay current</h2>
         <p class="body">Run <code>npx tessera docs</code>: every component and token, generated from the system.</p>
       </div>
+    </section>
+
+    <section class="data" aria-labelledby="data-title">
+      <h2 class="name" id="data-title">Data from an API</h2>
+      <p class="body">
+        <code>get('/objects')</code> in this page's script lists the devices below, from
+        <code>app/apis/default.ts</code>. Loading, errors and refreshing are handled.
+      </p>
+      <p class="body" if="devices.loading">Loading...</p>
+      <p class="body" else-if="devices.error">Could not load the devices: {devices.error.message}</p>
+      <ul class="devices" else>
+        <li class="device" each="device in devices.data" key="device.id">
+          <Badge>{device.id}</Badge> {device.name}
+        </li>
+      </ul>
     </section>
 
     <p class="note">Edit this page and save: it updates without a reload.</p>
@@ -162,6 +179,30 @@ function bump() {
   color: $color.text.muted;
   font-size: $font.size.sm;
   line-height: 1.55;
+}
+
+.data {
+  display: flex;
+  flex-direction: column;
+  gap: $space.3;
+  padding-top: $space.12;
+  border-top: 1px solid $color.border.default;
+}
+
+.devices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr));
+  gap: $space.2;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.device {
+  display: flex;
+  align-items: center;
+  gap: $space.2;
+  font-size: $font.size.sm;
 }
 
 .note {

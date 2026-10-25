@@ -15,6 +15,7 @@ import { lint } from './commands/lint'
 import { newCommand } from './commands/new'
 import { report } from './commands/report'
 import { build, dev, preview } from './commands/serve'
+import { api } from './commands/api'
 import { tokens } from './commands/tokens'
 import { renderCommandHelp, renderHelp } from './help'
 import { Cancelled, CliError, processIo, type Io } from './io'
@@ -34,6 +35,7 @@ const COMMANDS: Record<string, Command> = {
   baseline,
   report,
   tokens,
+  api,
   new: newCommand,
   eject,
   explain,

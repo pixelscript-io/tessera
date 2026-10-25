@@ -13,6 +13,7 @@ const WITH_VALUE = new Set([
   'prefix',
   'tokens',
   'var-prefix',
+  'name',
   'format',
   'to',
   'version',

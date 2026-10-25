@@ -1,6 +1,7 @@
 import * as acorn from 'acorn'
 import { nearest } from '@tessera/contract'
 import type { Reporter } from './diagnostics'
+import { resolveType, type ApiDescription, type ApiType } from './api-description'
 import { READ_SIGNALS, WRITE_SIGNALS, type Binding } from './script'
 
 /** Names a template expression can use without declaring them. */
@@ -42,6 +43,22 @@ export interface TemplateReads {
   members: Map<string, Set<string>>
 }
 
+/** A type from an API's description, with the description it is read in (a name in a type is one of its types). */
+export interface StaticType {
+  type: ApiType
+  description: ApiDescription
+}
+
+/** What the compiler knows of the types in a template: the answers of reads, and the items of lists. */
+export interface TypeEnv {
+  /** A read kept as one name: what its `data` and its `error` are. */
+  reads: Map<string, { data?: StaticType; error: StaticType }>
+  /** A name that is the data or the error of a read taken apart. */
+  names: Map<string, StaticType>
+  /** The variables of `each`, with the type of an item. It changes as the template is generated. */
+  locals: Map<string, StaticType>
+}
+
 export interface ExprScope {
   /** Top-level bindings of the script. */
   bindings: ReadonlyMap<string, Binding>
@@ -49,6 +66,81 @@ export interface ExprScope {
   locals: ReadonlyMap<string, 'signal' | 'plain'>
   /** Filled in as expressions are rewritten. */
   reads?: TemplateReads
+  /** Types from the descriptions of APIs, so a field that is not there can be found. */
+  types?: TypeEnv
+}
+
+/** `a`, `a and b`, `a, b and c`. */
+export const words = (items: string[]): string =>
+  items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`
+
+const memberKeyOf = (node: Record<string, any>): string | undefined => {
+  if (!node.computed && node.property.type === 'Identifier') return node.property.name
+  if (node.computed && node.property.type === 'Literal' && typeof node.property.value === 'string')
+    return node.property.value
+  return undefined
+}
+
+/** An object type that may also be empty: `T | null` is `T` for the purpose of reading a field. */
+function withoutNull(description: ApiDescription, type: ApiType): ApiType {
+  const resolved = resolveType(description, type)
+  if (resolved.kind === 'union') {
+    const rest = resolved.of.filter((t) => t.kind !== 'null')
+    if (rest.length === 1) return resolveType(description, rest[0]!)
+  }
+  return resolved
+}
+
+/**
+ * The type of an expression, when the description says: a read's `data` and `error`, what is taken apart from one, an
+ * item of a list of them, a field of any of these. Anything else (a call, a condition) is not known, and is not judged.
+ */
+function typeOfNode(
+  node: Record<string, any>,
+  scope: ExprScope,
+  isLocal: (name: string) => boolean,
+): StaticType | undefined {
+  const env = scope.types
+  if (!env) return undefined
+  if (node.type === 'ChainExpression') return typeOfNode(node.expression, scope, isLocal)
+  if (node.type === 'Identifier') {
+    if (isLocal(node.name)) return undefined
+    return scope.locals.has(node.name) ? env.locals.get(node.name) : env.names.get(node.name)
+  }
+  if (node.type !== 'MemberExpression') return undefined
+  const key = memberKeyOf(node)
+  if (
+    node.object.type === 'Identifier' &&
+    !isLocal(node.object.name) &&
+    !scope.locals.has(node.object.name)
+  ) {
+    const read = env.reads.get(node.object.name)
+    if (read) return key === 'data' ? read.data : key === 'error' ? read.error : undefined
+  }
+  const object = typeOfNode(node.object, scope, isLocal)
+  if (!object) return undefined
+  const resolved = withoutNull(object.description, object.type)
+  if (resolved.kind === 'fields') {
+    const field = key === undefined ? undefined : resolved.fields[key]
+    return field ? { type: field.type, description: object.description } : undefined
+  }
+  if (resolved.kind === 'array') {
+    if (key === 'length') return { type: { kind: 'number' }, description: object.description }
+    if (node.computed && key === undefined)
+      return { type: resolved.of, description: object.description }
+  }
+  return undefined
+}
+
+/** The type of an expression written as text, such as the list of an `each`. Nothing is reported. */
+export function staticTypeOf(source: string, scope: ExprScope): StaticType | undefined {
+  let ast: Node
+  try {
+    ast = acorn.parseExpressionAt(source, 0, { ecmaVersion: 'latest' }) as Node
+  } catch {
+    return undefined
+  }
+  return typeOfNode(ast, scope, () => false)
 }
 
 export interface RewriteResult {
@@ -256,6 +348,28 @@ export function rewriteExpression(
         reference(node, false)
         return
       case 'MemberExpression': {
+        // A field the description of the API does not have.
+        const wanted = memberKey(node)
+        if (scope.types && wanted !== undefined) {
+          const object = typeOfNode(node.object, scope, isLocal)
+          const resolved = object ? withoutNull(object.description, object.type) : undefined
+          if (object && resolved?.kind === 'fields' && !(wanted in resolved.fields)) {
+            const have = Object.keys(resolved.fields)
+            const close = nearest(wanted, have)
+            const named = object.type.kind === 'ref' ? `"${object.type.name}"` : 'This object'
+            fail(
+              'T5008',
+              node.property.start,
+              `${named} has no field "${wanted}".`,
+              close
+                ? `Did you mean "${close}"?`
+                : have.length
+                  ? `It has ${words(have.slice(0, 8))}.`
+                  : undefined,
+            )
+            return
+          }
+        }
         if (node.object.type === 'Identifier' && !isLocal(node.object.name)) {
           const binding = scope.bindings.get(node.object.name)
           const key = memberKey(node)

@@ -8,6 +8,7 @@
     <StartCards />
     <CodeShowcase />
     <FeatureGrid />
+    <DataCall />
     <AnyFramework />
     <PackageExplorer />
     <DocsDemo />

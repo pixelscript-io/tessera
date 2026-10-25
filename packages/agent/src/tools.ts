@@ -3,8 +3,11 @@ import { join } from 'node:path'
 import {
   explainText,
   formatDiagnostic,
+  matchEndpoint,
+  nearest,
   type AgentManifest,
   type CompilerDiagnostic,
+  type Method,
 } from '@tessera/compiler'
 import type { Project } from '@tessera/compiler/project'
 
@@ -292,6 +295,79 @@ export const TOOLS: Tool[] = [
       'List the routes (from app/pages), the not-found page and the layouts a page can choose with `layout` in its <page> block.',
     inputSchema: { type: 'object', properties: {} },
     run: (_args, { manifest }) => manifest().routes,
+  },
+  {
+    name: 'list_apis',
+    description:
+      'List the APIs the project calls (the script files in app/apis, each named after the file), whether each has a description, and the endpoints a description has. A call on a described API is checked at compile time.',
+    inputSchema: { type: 'object', properties: {} },
+    run: (_args, { manifest }) =>
+      manifest().apis.map((a) => ({
+        name: a.name,
+        file: a.file,
+        described: a.described,
+        ...(a.base ? { base: a.base } : {}),
+        ...(a.description ? { description: a.description } : {}),
+        endpoints: a.endpoints.map((e) => `${e.method} ${e.path}`),
+      })),
+  },
+  {
+    name: 'get_endpoint',
+    description:
+      'One endpoint of a described API: its parameters, the body it takes, what it answers with (types written out), the statuses that can go wrong, and how to call it in a .tess script. The path may name a parameter (/users/:name) or give a value (/users/octocat).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        api: {
+          type: 'string',
+          description: 'The API name: the file name in app/apis, such as github.',
+        },
+        path: { type: 'string', description: 'The path, such as /users/:name.' },
+        method: {
+          type: 'string',
+          description: 'GET (the default), POST, PUT, PATCH or DELETE.',
+          enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        },
+      },
+      required: ['api', 'path'],
+    },
+    run: (args, { project, manifest }) => {
+      const name = str(args.api, 'api')
+      const path = str(args.path, 'path')
+      const method = (typeof args.method === 'string' ? args.method.toUpperCase() : 'GET') as Method
+      const listed = manifest().apis
+      const api = project.apis().apis.find((a) => a.name === name)
+      if (!api) {
+        const close = nearest(
+          name,
+          listed.map((a) => a.name),
+        )
+        throw new ToolError(
+          `There is no API named "${name}". APIs: ${listed.map((a) => a.name).join(' and ') || 'none'}.${close ? ` Did you mean "${close}"?` : ''}`,
+        )
+      }
+      if (!api.description)
+        throw new ToolError(
+          `The API "${name}" has no description (app/apis/${name}.api.json), so there are no endpoints to look up.`,
+        )
+      const match = matchEndpoint(api.description, method, path)
+      if (match.kind === 'outside')
+        throw new ToolError(
+          'A full URL is not an endpoint of this API. Give a path such as /users/:name.',
+        )
+      if (match.kind === 'none')
+        throw new ToolError(
+          `The description of "${name}" has no ${method} ${path}.${match.nearest ? ` Did you mean "${match.nearest}"?` : ''}`,
+        )
+      if (match.kind === 'method')
+        throw new ToolError(
+          `The description of "${name}" has no ${method} ${path}. ${match.path} has ${match.has.join(match.has.length > 2 ? ', ' : ' and ')}.`,
+        )
+      const wanted = listed
+        .find((a) => a.name === name)!
+        .endpoints.find((e) => e.method === method && e.path === match.endpoint.path)!
+      return { api: name, ...wanted, types: listed.find((a) => a.name === name)!.types }
+    },
   },
   {
     name: 'get_rules',

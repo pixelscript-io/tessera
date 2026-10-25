@@ -48,6 +48,8 @@ describe('the MCP protocol', () => {
       'resolve_value',
       'validate_snippet',
       'list_routes',
+      'list_apis',
+      'get_endpoint',
       'get_rules',
       'explain_error',
     ])
@@ -217,6 +219,56 @@ describe('validating code', () => {
   it('rejects a kind it does not know, and never writes a file', () => {
     expect(call('validate_snippet', { source: 'x', kind: 'nope' }).text).toBe(
       '"kind" must be component, page or layout.',
+    )
+  })
+})
+
+describe('apis', () => {
+  it('lists each api, whether it has a description, and its endpoints', () => {
+    const apis = call('list_apis').json as Array<Record<string, unknown>>
+    expect(apis.map((a) => a.name)).toEqual(['backend', 'default'])
+    expect(apis[0]).toMatchObject({
+      name: 'backend',
+      file: 'app/apis/backend.ts',
+      described: true,
+      base: 'https://example.com/api',
+      endpoints: ['GET /tasks', 'POST /tasks'],
+    })
+    expect(apis[1]).toMatchObject({ name: 'default', described: false, endpoints: [] })
+  })
+
+  it('gives an endpoint: what it takes, what it answers with, the types it uses and how to call it', () => {
+    const read = call('get_endpoint', { api: 'backend', path: '/tasks' }).json
+    expect(read).toMatchObject({
+      api: 'backend',
+      method: 'GET',
+      path: '/tasks',
+      returns: 'Task[]',
+      description: 'Every task.',
+      usage: "const { data, loading, error } = backend.get('/tasks')",
+    })
+    expect(read.types).toEqual({
+      Task: '{ id: number; title: string }',
+      NewTask: '{ title: string }',
+    })
+    const write = call('get_endpoint', { api: 'backend', path: '/tasks', method: 'POST' }).json
+    expect(write).toMatchObject({ method: 'POST', body: 'NewTask', returns: 'Task' })
+    expect(write.usage).toBe("const run = backend.post('/tasks')\nawait run({ title })")
+  })
+
+  it('finds an endpoint from a path with a value in it, and says what is wrong with a call', () => {
+    expect(call('get_endpoint', { api: 'backend', path: '/tasks?x=1' }).json.path).toBe('/tasks')
+    expect(call('get_endpoint', { api: 'backnd', path: '/tasks' }).text).toBe(
+      'There is no API named "backnd". APIs: backend and default. Did you mean "backend"?',
+    )
+    expect(call('get_endpoint', { api: 'default', path: '/tasks' }).text).toBe(
+      'The API "default" has no description (app/apis/default.api.json), so there are no endpoints to look up.',
+    )
+    expect(call('get_endpoint', { api: 'backend', path: '/task' }).text).toBe(
+      'The description of "backend" has no GET /task. Did you mean "/tasks"?',
+    )
+    expect(call('get_endpoint', { api: 'backend', path: '/tasks', method: 'DELETE' }).text).toBe(
+      'The description of "backend" has no DELETE /tasks. /tasks has GET and POST.',
     )
   })
 })

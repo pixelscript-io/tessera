@@ -21,6 +21,7 @@ const GROUPS: Array<{ title: string; commands: string[] }> = [
       'format',
     ],
   },
+  { title: 'Data', commands: ['api import'] },
   { title: 'Docs and AI tools', commands: ['docs', 'elements', 'manifest', 'mcp', 'agent-files'] },
 ]
 

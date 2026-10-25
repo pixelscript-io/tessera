@@ -1,5 +1,7 @@
 # Describing an API to Tessera: two formats to choose between
 
+> **Decided and built in Milestone 29: both.** The small format is `app/apis/<name>.api.json` (next to the API file, not in `system/`, because an API is named by its file), and `tessera api import` makes it from OpenAPI 3 in JSON. The comparison below is kept for the reasoning; the guide page "Fetching data" has what was built, and SPEC.md the decisions.
+
 Milestone 29 of the data work (see SPEC.md, "Data: calling APIs") needs the compiler to know your API: which endpoints exist, what parameters they take and what they return. Then `get('/todos/:id')` can be checked at compile time ("Did you mean `/todos/:id`?"), `todo.title` can be checked against the response, and AI tools can ask which endpoints exist.
 
 There are two ways to give it that, and the decision is open. Neither blocks Milestones 27 and 28.

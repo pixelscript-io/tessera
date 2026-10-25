@@ -7,6 +7,7 @@ import { checkPlainScriptAutoImports } from './autoimport-ts'
 import { loadConfigFile } from './config-file'
 import { Project } from './project'
 import { validateConfig, type TesseraConfig } from './config'
+import { generateApisDts } from './apis'
 import { generateComponentsDts } from './dts'
 import { generateRoutesDts, generateRoutesModule, routeDiagnostics } from './routes'
 import { type DesignTokens, type ProjectComponents, type ProjectRoutes } from './node'
@@ -93,6 +94,17 @@ export function tessera(options: TesseraOptions = {}): Plugin {
     writeFileSync(path, text)
   }
 
+  /** Write `.tessera/apis.d.ts`, the types of the APIs that have a description, only when it changed. */
+  const writeApiTypes = () => {
+    const path = join(root, '.tessera', 'apis.d.ts')
+    const described = project.apis().apis.filter((a) => a.description)
+    if (!described.length) return
+    const text = generateApisDts(described)
+    if (existsSync(path) && readFileSync(path, 'utf8') === text) return
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, text)
+  }
+
   const loadRoutes = (): ProjectRoutes => project.routes()
   const apiErrors = (): string => project.apis().diagnostics.map(formatDiagnostic).join('\n\n')
 
@@ -141,6 +153,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       project.resetRoutes()
       project.resetApis()
       writeComponentTypes()
+      writeApiTypes()
       writeRouteTypes()
       writeManifest()
       // A build fails on a route conflict even if nothing imports the routes; the dev server shows it on load.
@@ -207,15 +220,17 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       }
 
       const inApis = (file: string) =>
-        /\.(?:ts|js|mts|mjs)$/.test(file) &&
+        /\.(?:ts|js|mts|mjs|json)$/.test(file) &&
         file.replaceAll('\\', '/').startsWith(`${project.apis().dir}/`)
 
-      /** An api was added or removed: scripts that name it, or no longer can, must compile again. */
+      /** An api or a description was added, removed or changed: scripts that use it must compile again. */
       const refreshApis = () => {
-        const names = () => JSON.stringify(project.apis().apis.map((a) => a.name))
-        const before = names()
+        const snapshot = () => JSON.stringify([project.apis().apis, project.apis().diagnostics])
+        const before = snapshot()
         project.resetApis()
-        if (names() === before) return
+        if (snapshot() === before) return
+        writeApiTypes()
+        writeManifest()
         for (const module of server.moduleGraph.idToModuleMap.values()) {
           if (module.file?.endsWith('.tess') && !module.id?.includes('type=style')) {
             server.moduleGraph.invalidateModule(module)
@@ -241,6 +256,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
           const module = server.moduleGraph.getModuleById(RESOLVED_TOKENS_ID)
           if (module) void server.reloadModule(module)
         } else if (inComponents(file)) refreshComponents()
+        else if (file.endsWith('.api.json') && inApis(file)) refreshApis()
       })
     },
 

@@ -18,8 +18,8 @@ export type Example =
       components?: Array<{ name: string; source: string }>
       /** Tokens to treat as deprecated in this example, by path. */
       deprecatedTokens?: string[]
-      /** Names of the apis the project has (files in `app/apis`), such as `github`. */
-      apis?: string[]
+      /** The apis the project has (files in `app/apis`): a name, or a name with its description (`github.api.json`). */
+      apis?: Array<string | { name: string; description: string }>
       options?: {
         routes?: string[]
         layouts?: string[]
@@ -32,6 +32,7 @@ export type Example =
   | { kind: 'import'; files: Array<[string, unknown]> }
   | { kind: 'routes'; files: string[] }
   | { kind: 'apis'; files: string[] }
+  | { kind: 'description'; file: string; source: string }
   | { kind: 'ts'; file: string; source: string }
   | { kind: 'config'; config: Record<string, unknown> }
   | { kind: 'registry'; files: Array<{ file: string; source: string }> }
@@ -664,6 +665,67 @@ export const EXPLANATIONS: Record<string, Explanation> = {
     example: { kind: 'apis', files: ['my-api.ts'] },
   },
 
+  T5006: {
+    cause:
+      'A call is made on an API that has a description (`app/apis/todos.api.json`), and the description has no such endpoint: the path is not in it, or the path is there without that method. Only a path written as plain text in the call is checked, and a full URL is not.',
+    fix: 'Use the path the hint gives, or add the endpoint to the description if the API really has it. `tessera api import` makes the description from an OpenAPI file.',
+    example: pageExample(
+      "<script>\nconst items = todos.get('/todo')\n</script>\n<template><main>{items.data}</main></template>\n",
+      {
+        apis: [
+          {
+            name: 'todos',
+            description: '{ "paths": { "/todos": { "get": { "returns": "string[]" } } } }',
+          },
+        ],
+      },
+    ),
+  },
+  T5007: {
+    cause:
+      'A read is given a parameter that the endpoint does not take, or is missing one it needs: a `:name` in the path, or a query parameter that the description does not mark optional. Only parameters written as an object in the call are checked: a function, a variable or a spread cannot be.',
+    fix: 'Use the parameter the hint names, add the value that is missing, or fix the description if the API takes it.',
+    example: pageExample(
+      "<script>\nconst items = todos.get('/todos', { pge: 1 })\n</script>\n<template><main>{items.data}</main></template>\n",
+      {
+        apis: [
+          {
+            name: 'todos',
+            description:
+              '{ "paths": { "/todos": { "get": { "query": { "page": "number?" }, "returns": "string[]" } } } }',
+          },
+        ],
+      },
+    ),
+  },
+  T5008: {
+    cause:
+      'A template reads a field of the data of a read, or of an item of a list of it, and the description says the type has no such field. A mistyped field is `undefined` at run time, so the page shows nothing and does not say why.',
+    fix: 'Use the field the hint names, or fix the description if the API sends it. The types of an API are in its description, and `.tessera/apis.d.ts` has them for TypeScript.',
+    example: pageExample(
+      '<script>\nconst todos = backend.get(\'/todos\')\n</script>\n<template><main><ul><li each="t in todos.data" key="t.id">{t.titel}</li></ul></main></template>\n',
+      {
+        apis: [
+          {
+            name: 'backend',
+            description:
+              '{ "types": { "Todo": { "id": "number", "title": "string" } }, "paths": { "/todos": { "get": { "returns": "Todo[]" } } } }',
+          },
+        ],
+      },
+    ),
+  },
+  T5009: {
+    cause:
+      'An API description (`app/apis/github.api.json`) is not valid: it is not JSON, it has a part that is not one of the description (a mistyped key), a method or path that cannot be read, a type that does not exist, or a description with no API beside it.',
+    fix: 'Follow the message: it names the place and, for a mistyped name, the one that was probably meant.',
+    example: {
+      kind: 'description',
+      file: 'app/apis/github.api.json',
+      source: '{ "pahts": {} }',
+    },
+  },
+
   // --- pages, routing, layouts ------------------------------------------------------------------------
   T6001: {
     cause:
@@ -813,9 +875,12 @@ export function explainText(code: string): string | undefined {
 export function exampleSource(example: Example): string {
   switch (example.kind) {
     case 'tess':
-      return example.components?.length
+      return example.components?.length || example.apis?.some((a) => typeof a !== 'string')
         ? [
-            ...example.components.map((c) => `// ${c.name}.tess\n${c.source}`),
+            ...(example.components ?? []).map((c) => `// ${c.name}.tess\n${c.source}`),
+            ...(example.apis ?? []).flatMap((a) =>
+              typeof a === 'string' ? [] : [`// app/apis/${a.name}.api.json\n${a.description}`],
+            ),
             `// ${example.file}\n${example.source}`,
           ].join('\n')
         : example.source
@@ -833,6 +898,8 @@ export function exampleSource(example: Example): string {
       return example.files.map((f) => `app/pages/${f}`).join('\n')
     case 'apis':
       return example.files.map((f) => `app/apis/${f}`).join('\n')
+    case 'description':
+      return `// ${example.file}\n${example.source}`
     case 'config':
       return `export default ${JSON.stringify(example.config, null, 2)}`
     case 'registry':

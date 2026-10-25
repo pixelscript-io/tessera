@@ -1,0 +1,14 @@
+{
+  "base": "https://example.com/api",
+  "description": "A server of tasks, for the kitchen-sink app.",
+  "types": {
+    "Task": { "id": "number", "title": "string" },
+    "NewTask": { "title": "string" }
+  },
+  "paths": {
+    "/tasks": {
+      "get": { "returns": "Task[]", "description": "Every task." },
+      "post": { "body": "NewTask", "returns": "Task", "description": "Add a task." }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { applyBaseline, applySeverity, type Baseline, type BaselineResult } from './accountability'
-import { buildAgentManifest, type AgentManifest } from './agent-manifest'
+import { apisOf, buildAgentManifest, type AgentManifest } from './agent-manifest'
 import { compile, kindFromPath, type CompileResult, type FileKind } from './compile'
 import type { TesseraConfig } from './config'
 import type { CompilerDiagnostic } from './diagnostics'
@@ -126,6 +126,7 @@ export class Project {
       routes: existsSync(routes.dir) ? routes.manifest : undefined,
       layouts: routes.layouts,
       config: this.options.config,
+      apis: apisOf(this.apis().apis, (file) => this.display(file)),
     })
   }
 

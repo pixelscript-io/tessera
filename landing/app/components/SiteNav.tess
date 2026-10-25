@@ -24,6 +24,7 @@ import { links } from '../links'
       </a>
       <div class="links">
         <a class="link" :href="links.docs">Docs</a>
+        <a class="link" href="#data">Data</a>
         <a class="link" href="#packages">Packages</a>
         <a class="link" href="#anywhere">Any framework</a>
         <a class="link" href="#interchange">Tokens</a>
@@ -135,7 +136,7 @@ import { links } from '../links'
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 800px) {
   .bar {
     flex-wrap: wrap;
     gap: $space.4 $space.12;

@@ -61,6 +61,29 @@ describe('the agent manifest: components', () => {
   })
 })
 
+describe('the agent manifest: apis', () => {
+  it('lists the apis of the project, with what each describes', () => {
+    expect(manifest.apis.map((a) => [a.name, a.file, a.described])).toEqual([
+      ['backend', 'app/apis/backend.ts', true],
+      ['default', 'app/apis/default.ts', false],
+    ])
+    const backend = manifest.apis[0]!
+    expect(backend.base).toBe('https://example.com/api')
+    expect(backend.types.Task).toBe('{ id: number; title: string }')
+    expect(backend.endpoints.map((e) => `${e.method} ${e.path}`)).toEqual([
+      'GET /tasks',
+      'POST /tasks',
+    ])
+    expect(backend.endpoints[0]).toMatchObject({
+      params: [],
+      query: {},
+      returns: 'Task[]',
+      usage: "const { data, loading, error } = backend.get('/tasks')",
+    })
+    expect(backend.endpoints[1]).toMatchObject({ body: 'NewTask', returns: 'Task' })
+  })
+})
+
 describe('the agent manifest: tokens, routes and rules', () => {
   it('lists tokens with tier, type, CSS variable and a value in every scope', () => {
     expect(manifest.tokens.themes.map((t) => t.name).sort()).toEqual(['compact', 'dark'])

@@ -1,6 +1,12 @@
 import { nearest, type Contract } from '@tessera/contract'
 import type { Reporter } from './diagnostics'
-import { rewriteExpression, type ExprScope, type TemplateReads } from './expr'
+import {
+  rewriteExpression,
+  staticTypeOf,
+  type ExprScope,
+  type TemplateReads,
+  type TypeEnv,
+} from './expr'
 import { BEHAVIOR_ATTACH, BEHAVIOR_EVENTS, BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
 import { unknownRoute } from './routes'
 import type { Binding } from './script'
@@ -36,6 +42,8 @@ export interface GenerateContext {
   routes?: readonly string[]
   /** Filled in with what the template reads of the script's bindings. */
   reads?: TemplateReads
+  /** The types the descriptions of APIs give to what a template reads, so a field that is not there is found. */
+  types?: TypeEnv
 }
 
 export interface Generated {
@@ -129,6 +137,7 @@ export function generateTemplate(
     bindings: ctx.bindings,
     locals,
     reads: ctx.reads,
+    types: ctx.types,
   })
 
   /** Rewrite an attribute's expression. Reports and returns undefined on a problem. */
@@ -295,6 +304,15 @@ export function generateTemplate(
       return undefined
     }
     const items = rewriteExpression(match[2]!, itemsStart, 'expr', exprScope(locals), report)
+    // What a list of an API's answer is a list of, so the item has the fields of that type.
+    const listType = ctx.types ? staticTypeOf(match[2]!, exprScope(locals)) : undefined
+    const itemType = listType && listType.type.kind === 'array' ? listType.type.of : undefined
+    const earlier = ctx.types?.locals.get(item)
+    if (ctx.types) {
+      if (itemType && listType)
+        ctx.types.locals.set(item, { type: itemType, description: listType.description })
+      else ctx.types.locals.delete(item)
+    }
     const key = keyAttr.value
       ? rewriteExpression(
           keyAttr.value,
@@ -310,6 +328,10 @@ export function generateTemplate(
         ),
         undefined)
     const body = genNode(stripped(node), new Map([...locals, [item, 'signal']]))
+    if (ctx.types) {
+      if (earlier) ctx.types.locals.set(item, earlier)
+      else ctx.types.locals.delete(item)
+    }
     if (!items || !key || !body) return undefined
     return `$r.each(() => (${items.code}), (${item}) => (${key.code}), (${item}) => ${body})`
   }

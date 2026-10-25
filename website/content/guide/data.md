@@ -1,6 +1,6 @@
 # Fetching data
 
-Introduced in v0.6 (Milestones 27 and 28).
+Introduced in v0.6 (Milestones 27, 28 and 29).
 
 `get` reads from a server, and `post`, `put`, `patch` and `del` write to it. There is nothing to set up and nothing to name: the request is the key.
 
@@ -17,7 +17,7 @@ const add = post('/todos')
 await add({ title: 'Buy milk' })
 ```
 
-That is how it looks in any script. In a `.tess` file you do not import anything, and the template reads the results directly: see [In a `.tess` file](#in-a-tess-file). The things that make it smarter than a fetch helper (checking endpoints against a description of your API at compile time, prerendering the data) come in later milestones, and are listed [at the end](#what-is-not-built-yet).
+That is how it looks in any script. In a `.tess` file you do not import anything, and the template reads the results directly: see [In a `.tess` file](#in-a-tess-file). What makes it smarter than a fetch helper is that the compiler can check each call against a [description of your API](#describing-an-api-checked-calls). Prerendering the data comes later, and is listed [at the end](#what-is-not-built-yet).
 
 ## In a `.tess` file
 
@@ -125,6 +125,82 @@ Without a `default.ts`, plain `get` and the rest use the shared API that [`confi
 ### Keys and domains
 
 The base URL and keys are best taken from environment variables, which Vite reads from `.env` files and from your host's build settings, so staging and production differ without code changes. Anything in a variable that starts with `VITE_` is in the built page, so **it is public**. A key that must stay private cannot be in a browser call at all, in any framework: it has to be added by a server. When the API you call needs a secret, or does not allow browsers to call it (CORS), put a small proxy that you control in front of it.
+
+## Describing an API: checked calls
+
+Next to an API file, a **description** says what the server has. It is a small JSON file named the same, `app/apis/github.api.json`, and with it the compiler checks every call on `github` before the app runs: that the endpoint exists, that the parameters are right, and that the fields a template reads are in the answer.
+
+```json
+{
+  "base": "https://api.github.com",
+  "types": {
+    "User": { "login": "string", "name": "string | null", "followers": "number", "bio": "string?" }
+  },
+  "paths": {
+    "/users/:name": {
+      "get": { "returns": "User", "errors": { "404": "No such user" } }
+    },
+    "/users": {
+      "get": { "query": { "since": "number?" }, "returns": "User[]" },
+      "post": { "body": { "login": "string" }, "returns": "User" }
+    }
+  }
+}
+```
+
+A mistake is an error with the fix suggested, in the editor, in `tessera check` and in the build:
+
+```text
+ERROR  T5006  app/pages/index.tess:2:14
+  The description of "github" has no GET /user/:name.
+  Did you mean "/users/:name"?
+
+ERROR  T5008  app/pages/index.tess:7:21
+  "user.logn" is not a field of User.
+  Did you mean "login"?
+```
+
+**What it holds.**
+
+| Key           | Meaning                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------ |
+| `base`        | The server's URL (the API file's `base` is what the app uses; this one is for documentation and tools).      |
+| `description` | One line about the API.                                                                                      |
+| `types`       | Named types, used by name below: `"Todo": { "id": "number", "title": "string" }`.                            |
+| `paths`       | Each path, with `:name` for a part that varies, then each method: `get`, `post`, `put`, `patch` or `delete`. |
+
+An endpoint has these keys, all optional: `query` (the parameters after the `?`), `body` (what a write sends), `returns` (the answer), `errors` (statuses that can go wrong, with a message) and `description`.
+
+**Writing a type.** A type is a string, or an object of fields:
+
+- `string`, `number`, `boolean`, `null`, `object` (any object) and `unknown` (anything; nothing is checked inside it).
+- A name from `types`: `Todo`. A list: `Todo[]`.
+- A choice: `'open' | 'done'` or `string | null`.
+- An optional field has a `?` after its type (`"bio": "string?"`) or its name (`"bio?": "string"`).
+- Objects can be written in place: `{ "id": "number", "owner": { "login": "string" } }`.
+
+**What is checked.** A call on a described API is checked when its path is plain text (`github.get('/users/:name')`), and a parameter object is checked when it is written in the call (`{ name }`). A path built from a variable, a full URL, or an object that is a variable or a spread is left alone: the check only says what it knows. The fields are checked where a template reads them (`user.data.login`, or `each="u in users.data"` then `u.login`). In an API with no description nothing is checked, and a description does not change what is sent: it only lets the compiler help.
+
+| Code                             | Meaning                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| [T5006](/reference/errors/T5006) | The endpoint is not in the description.                                  |
+| [T5007](/reference/errors/T5007) | A parameter the endpoint does not take, or one it needs that is missing. |
+| [T5008](/reference/errors/T5008) | A field the answer does not have.                                        |
+| [T5009](/reference/errors/T5009) | The description itself is not valid.                                     |
+
+### Making the description: `tessera api import`
+
+Most APIs publish an OpenAPI file (a JSON file called `openapi.json` or `swagger.json`, often linked from their docs). Import it:
+
+```text
+tessera api import https://petstore3.swagger.io/api/v3/openapi.json --name pets
+```
+
+It writes `app/apis/pets.api.json`, and `app/apis/pets.ts` with the base URL if there is not one yet. Importing again later does not overwrite your description: it lists what changed (`breaking  POST /pets was removed`, `additive  GET /owners is new`) and replaces the file only with `--force`. What it cannot read, such as `oneOf`, becomes `unknown` and is listed. Only OpenAPI 3 in JSON is read: convert YAML or Swagger 2 first, which most API tools do in one step. The file is yours to edit, so you can also write a description by hand when the API has no OpenAPI file.
+
+### For editors and AI tools
+
+The compiler writes the types of every described API to `.tessera/apis.d.ts`, so TypeScript knows them too. The agent manifest (`.tessera/manifest.json`) lists each API with its endpoints, and the MCP server has two tools, `list_apis` and `get_endpoint`, that give an AI tool the exact path, parameters and answer type before it writes the call.
 
 ## Reading: `get`
 
@@ -337,10 +413,10 @@ const user = api.get('/users/1')
 
 ## What is not built yet
 
-- **A description of your API**: checking at compile time that the endpoint exists, that its parameters are right and that the fields you read are in the response, with a suggestion when they are not; types from it; the endpoints in the manifest for AI tools.
 - **Optimistic updates**: showing the result of a write before the server has answered.
 - **Data for a page**: starting the fetch when you navigate, and prerendering a page with its data in it. For now a read that runs while a page is prerendered has no base to use for a relative path.
-- **Development mocks** from the description, and loading and error states in the docs app and the accessibility tests.
+- **Checking the body of a write** against the description, and development mocks made from it.
+- **Loading and error states** in the docs app and the accessibility tests.
 - **Pagination and infinite lists, GraphQL and WebSockets.** `parse` and your own `fetch` cover a lot of GraphQL today.
 
 The plan for all of these is in the [roadmap](/releases/roadmap).

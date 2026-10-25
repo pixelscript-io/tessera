@@ -7,6 +7,8 @@ import { loadTokenDir } from '@tessera/tokens/node'
 import type { ComponentInfo, ComponentResolver } from './codegen'
 import { extractContract, listImports } from './compile'
 import { buildApiList, type ApiDiagnostic, type ProjectApi } from './apis'
+import { parseApiDescription, type DescriptionDiagnostic } from './api-description'
+import { nearest } from '@tessera/contract'
 import { ComponentRegistry, type RegistryFile } from './registry'
 import { StyleTokens } from './style/tokens'
 
@@ -154,8 +156,8 @@ export function routerComponentsDir(root: string): string | null {
 
 export interface ProjectApis {
   apis: ProjectApi[]
-  /** Files in the folder that cannot be an api, and why. */
-  diagnostics: ApiDiagnostic[]
+  /** Files in the folder that cannot be an api, and descriptions that are wrong, and why. */
+  diagnostics: Array<ApiDiagnostic | DescriptionDiagnostic>
   /** The apis folder, which may not exist. */
   dir: string
 }
@@ -168,7 +170,33 @@ export function loadProjectApis(root: string, dir = join(root, 'app', 'apis')): 
         .filter((e) => e.isFile())
         .map((e) => join(dir, e.name))
     : []
-  return { ...buildApiList(files, display), dir: dir.replaceAll('\\', '/') }
+  const listed = buildApiList(files, display)
+  const diagnostics: ProjectApis['diagnostics'] = [...listed.diagnostics]
+  const apis = listed.apis.map((api) => {
+    const beside = api.file.replace(/\.(?:ts|js|mts|mjs)$/, '.api.json')
+    if (!existsSync(beside)) return api
+    const parsed = parseApiDescription(readFileSync(beside, 'utf8'), display(beside))
+    diagnostics.push(...parsed.diagnostics)
+    return parsed.description ? { ...api, description: parsed.description } : api
+  })
+  // A description with no api beside it: probably a name that is a little different.
+  const names = apis.map((a) => a.name)
+  for (const file of files) {
+    const base = file.replaceAll('\\', '/').split('/').pop()!
+    const match = /^(.+)\.api\.json$/.exec(base)
+    if (!match || names.includes(match[1]!)) continue
+    const close = nearest(match[1]!, names)
+    diagnostics.push({
+      code: 'T5009',
+      severity: 'error',
+      file: display(file),
+      line: 1,
+      column: 1,
+      message: `There is no API for this description: app/apis/${match[1]}.ts does not exist.`,
+      ...(close ? { hint: `Did you mean "${close}"?` } : {}),
+    })
+  }
+  return { apis, diagnostics, dir: dir.replaceAll('\\', '/') }
 }
 
 export interface ProjectRoutes {

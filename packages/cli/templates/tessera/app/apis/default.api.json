@@ -1,0 +1,12 @@
+{
+  "base": "https://api.restful-api.dev",
+  "description": "A free test API (restful-api.dev). Delete this file to stop the compiler checking calls.",
+  "types": {
+    "Device": { "id": "string", "name": "string", "data": "object | null" }
+  },
+  "paths": {
+    "/objects": {
+      "get": { "returns": "Device[]", "description": "Some devices, to list." }
+    }
+  }
+}

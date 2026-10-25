@@ -1,0 +1,85 @@
+<contract>
+{
+  "name": "DataCall",
+  "role": "generic",
+  "description": "The section that shows how little it takes to call an API: the call, the file that names the server, and what the compiler says about a mistake.",
+  "parts": ["root", "inner", "notes", "note", "noteTitle", "noteBody"],
+  "contrast": [
+    { "foreground": "noteTitle", "background": "root" },
+    { "foreground": "noteBody", "background": "root" }
+  ]
+}
+</contract>
+
+<script>
+import { DATA_NOTES, DATA_PANES, DATA_TABS } from '../data/data-call'
+</script>
+
+<template>
+  <section class="root" id="data">
+    <div class="inner">
+      <SectionHeader>
+        <span slot="eyebrow">Data</span>
+        <span slot="title">An API call is one line.</span>
+        Name the server once in app/apis, then call it in a page. There is no query key, no provider and no loading flag to write by hand.
+      </SectionHeader>
+      <CodeTabs :tabs="DATA_TABS" :panes="DATA_PANES" label="Calling an API" name="data" />
+      <div class="notes">
+        <div class="note" each="n in DATA_NOTES" key="n.title">
+          <span class="noteTitle">{n.title}</span>
+          <p class="noteBody">{n.body}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.80 $space.24;
+}
+
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: $space.24;
+  padding-top: $space.16;
+  border-top: 1px solid $color.border.default;
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: $space.6;
+}
+
+.noteTitle {
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.noteBody {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .inner {
+    gap: $space.24;
+    padding: $space.56 $space.16;
+  }
+}
+</style>

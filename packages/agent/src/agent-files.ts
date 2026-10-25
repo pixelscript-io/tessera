@@ -20,6 +20,20 @@ function componentLine(c: AgentManifest['components'][number]): string {
   return `\`${c.name}\`${parts.length ? ` — ${parts.join('. ')}` : ''}`
 }
 
+/** The APIs of the project, if it has any: what a call may use, and the tool that gives the details. */
+function apisSection(manifest: AgentManifest, ticks: boolean): string {
+  if (!manifest.apis.length) return ''
+  const name = (n: string) => (ticks ? `\`${n}\`` : n)
+  const lines = manifest.apis.map((a) => {
+    const endpoints = a.endpoints.map((e) => `${e.method} ${e.path}`).join(', ')
+    return `${name(a.name)}: ${endpoints || 'no description, so calls are not checked'}`
+  })
+  const how = ticks
+    ? `\nCall them as \`<name>.get('/path')\`, \`<name>.post('/path')\` and so on (plain \`get\` is the \`default\` API). A call on an API that has a description is checked by the compiler; \`get_endpoint\` in \`npx tessera mcp\` gives an endpoint's parameters and answer.\n`
+    : ''
+  return `\n## APIs\n\n${list(lines)}\n${how}`
+}
+
 /** AGENTS.md: the rules an AI coding tool must follow in this project, and where the facts are. */
 export function agentsMd(manifest: AgentManifest): string {
   const governed = Object.keys(manifest.rules.governed)
@@ -51,7 +65,7 @@ Run \`npx tessera check\` after every change. It prints the same errors the buil
 ## Components
 
 ${list(manifest.components.map(componentLine))}
-`
+${apisSection(manifest, true)}`
 }
 
 /** llms.txt: the same facts as a short index for language models, in the llms.txt convention. */
@@ -72,5 +86,5 @@ ${list(manifest.components.map((c) => `${c.name}: ${c.description ?? c.role}. Us
 ## Routes
 
 ${list(manifest.routes.routes.map((r) => `${r.path} (${r.file})`)) || '- (none)'}
-`
+${apisSection(manifest, false)}`
 }

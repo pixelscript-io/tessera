@@ -3,6 +3,8 @@ import type { RouteManifest } from '@tessera/router/manifest'
 import type { TokenManifest } from '@tessera/tokens'
 import { tokenLifecycle } from './style/tokens'
 import { resolveConfig, type Accept, type TesseraConfig } from './config'
+import { resolveType, typeToText } from './api-description'
+import { DEFAULT_API, type ProjectApi } from './apis'
 
 /**
  * The machine-readable truth about a project: its components, design tokens, routes and rules. AI coding tools
@@ -16,6 +18,38 @@ export interface AgentManifest {
   tokens: ManifestTokens
   routes: ManifestRoutes
   rules: ManifestRules
+  /** The APIs in `app/apis`, and what each says it has. */
+  apis: ManifestApi[]
+}
+
+export interface ManifestApi {
+  /** The name a script uses: `github` for `app/apis/github.ts`. `default` is what plain `get` and `post` use. */
+  name: string
+  file: string
+  /** Whether there is a description (`github.api.json`). Without one the compiler does not check calls on it. */
+  described: boolean
+  base?: string
+  description?: string
+  /** Each named type, written out: `Todo: { id: number; title: string }`. */
+  types: Record<string, string>
+  endpoints: ManifestEndpoint[]
+}
+
+export interface ManifestEndpoint {
+  method: string
+  /** With `:name` for each parameter in the path. */
+  path: string
+  /** The `:name`s of the path, which a call gives values for. */
+  params: string[]
+  /** The query parameters, by name, with their type (a `?` after the name when optional). */
+  query: Record<string, string>
+  body?: string
+  /** What the answer is. Missing when it is empty. */
+  returns?: string
+  errors?: Record<string, string>
+  description?: string
+  /** How to call it, to copy and adapt. */
+  usage: string
 }
 
 export interface ManifestComponent {
@@ -187,6 +221,65 @@ export function rulesOf(config: TesseraConfig | undefined): ManifestRules {
   }
 }
 
+const VERB_OF_METHOD: Record<string, string> = {
+  GET: 'get',
+  POST: 'post',
+  PUT: 'put',
+  PATCH: 'patch',
+  DELETE: 'del',
+}
+
+/** The APIs of a project as the manifest shows them. `display` turns a file into the path the project shows. */
+export function apisOf(
+  apis: readonly ProjectApi[],
+  display: (file: string) => string,
+): ManifestApi[] {
+  return apis.map((api) => {
+    const d = api.description
+    const prefix = api.name === DEFAULT_API ? '' : `${api.name}.`
+    return {
+      name: api.name,
+      file: display(api.file),
+      described: !!d,
+      ...(d?.base ? { base: d.base } : {}),
+      ...(d?.description ? { description: d.description } : {}),
+      types: Object.fromEntries(
+        Object.entries(d?.types ?? {}).map(([name, type]) => [name, typeToText(type)]),
+      ),
+      endpoints: (d?.endpoints ?? []).map((e) => {
+        const params = [...e.path.matchAll(/\/:([A-Za-z_]\w*)/g)].map((m) => m[1]!)
+        const query = Object.fromEntries(
+          Object.entries(e.query).map(([key, f]) => [
+            `${key}${f.optional ? '?' : ''}`,
+            typeToText(f.type),
+          ]),
+        )
+        const verb = VERB_OF_METHOD[e.method]!
+        const queryKeys = Object.keys(e.query)
+        const body = e.body && d ? resolveType(d, e.body) : undefined
+        const bodyKeys = body?.kind === 'fields' ? Object.keys(body.fields) : []
+        const writeKeys = [...params, ...bodyKeys]
+        const usage =
+          e.method === 'GET'
+            ? `const { data, loading, error } = ${prefix}get('${e.path}'${params.length + queryKeys.length ? `, { ${[...params, ...queryKeys].join(', ')} }` : ''})`
+            : `const run = ${prefix}${verb}('${e.path}')
+await run(${writeKeys.length ? `{ ${writeKeys.join(', ')} }` : ''})`
+        return {
+          method: e.method,
+          path: e.path,
+          params,
+          query,
+          ...(e.body ? { body: typeToText(e.body) } : {}),
+          ...(e.returns ? { returns: typeToText(e.returns) } : {}),
+          ...(e.errors ? { errors: e.errors } : {}),
+          ...(e.description ? { description: e.description } : {}),
+          usage,
+        }
+      }),
+    }
+  })
+}
+
 /** Assemble the manifest from what a project already knows. Pure: the caller supplies the pieces. */
 export function buildAgentManifest(input: {
   components: Iterable<{ name: string; file: string; contract: Contract }>
@@ -194,6 +287,7 @@ export function buildAgentManifest(input: {
   routes: RouteManifest | undefined
   layouts: string[]
   config: TesseraConfig | undefined
+  apis?: ManifestApi[]
 }): AgentManifest {
   return {
     version: 1,
@@ -202,5 +296,6 @@ export function buildAgentManifest(input: {
     tokens: tokensOf(input.tokens),
     routes: routesOf(input.routes, input.layouts),
     rules: rulesOf(input.config),
+    apis: input.apis ?? [],
   }
 }

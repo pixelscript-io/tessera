@@ -7,7 +7,8 @@ import { buildRouteManifest } from '@tessera/router/manifest'
 import { formatDiagnostic } from '@tessera/contract'
 import { compile, extractContract, kindFromPath } from './compile'
 import { validateConfig, type TesseraConfig } from './config'
-import { buildApiList } from './apis'
+import { buildApiList, type ProjectApi } from './apis'
+import { parseApiDescription } from './api-description'
 import { checkPlainScriptAutoImports } from './autoimport-ts'
 import type { ComponentResolver } from './codegen'
 import type { Example } from './explanations'
@@ -79,7 +80,14 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
             )
           : env.tokens,
         today: '2026-10-22',
-        apis: (example.apis ?? []).map((name) => ({ name, file: `/app/apis/${name}.ts` })),
+        apis: (example.apis ?? []).map((api): ProjectApi => {
+          const name = typeof api === 'string' ? api : api.name
+          const description =
+            typeof api === 'string'
+              ? undefined
+              : parseApiDescription(api.description, `${name}.api.json`).description
+          return { name, file: `/app/apis/${name}.ts`, ...(description ? { description } : {}) }
+        }),
         ...example.options,
       })
       return out(result.diagnostics.map((d) => ({ code: d.code, text: formatDiagnostic(d) })))
@@ -112,6 +120,13 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
         buildApiList(example.files.map((f) => `app/apis/${f}`)).diagnostics.map((d) => ({
           code: d.code,
           text: `ERROR  ${d.code}  ${d.file}\n  ${d.message}\n  ${d.hint}\n  Run \`tessera explain ${d.code}\` for details.`,
+        })),
+      )
+    case 'description':
+      return out(
+        parseApiDescription(example.source, example.file).diagnostics.map((d) => ({
+          code: d.code,
+          text: `ERROR  ${d.code}  ${d.file}:${d.line}:${d.column}\n  ${d.message}${d.hint ? `\n  ${d.hint}` : ''}\n  Run \`tessera explain ${d.code}\` for details.`,
         })),
       )
     case 'ts':

@@ -232,6 +232,17 @@ export interface DataCall {
   binding?: string
   /** For a destructured one: each member taken, and the name it is taken as. */
   members?: Array<{ key: string; local: string }>
+  /** The path, when the call's first argument is a plain string: `/users/:name`. */
+  path?: { value: string; offset: number }
+  /** For a read: the parameters given, when they are written as an object right there. */
+  params?: {
+    /** Whether there is a second argument at all. */
+    given: boolean
+    /** The keys of an object written in place. */
+    keys: Array<{ key: string; offset: number }>
+    /** The parameters are not an object written in place (a function, a variable, a spread): they cannot be judged. */
+    opaque: boolean
+  }
 }
 
 const isId = (t: Token | undefined, value?: string) =>
@@ -319,17 +330,61 @@ function dataCall(
   const close = matching(tokens, j)
   if (close + 1 < to) return undefined
   const first = tokens[j + 1]
-  const argument =
-    first?.type === 'str' && (isP(tokens[j + 2], ',') || isP(tokens[j + 2], ')'))
-      ? first.value
-      : '…'
+  const literal = first?.type === 'str' && (isP(tokens[j + 2], ',') || isP(tokens[j + 2], ')'))
+  const argument = literal ? first!.value : '…'
   return {
+    ...(literal ? { path: { value: first!.value.slice(1, -1), offset: first!.start } } : {}),
+    ...(verb === 'get' ? { params: readParams(tokens, j, close) } : {}),
     kind: verb === 'get' ? 'resource' : 'action',
     verb,
     ...(api ? { api } : {}),
     call: `${api ? `${api}.` : ''}${verb}(${argument})`,
     offset: tokens[from]!.start,
   }
+}
+
+/** The second argument of a call: an object written in place gives its keys; anything else cannot be judged. */
+function readParams(tokens: Token[], open: number, close: number): NonNullable<DataCall['params']> {
+  // Find the comma after the first argument.
+  let depth = 0
+  let comma = -1
+  for (let j = open + 1; j < close; j++) {
+    const t = tokens[j]!
+    if (t.type === 'p' && OPEN.has(t.value)) depth++
+    else if (t.type === 'p' && CLOSE.has(t.value)) depth--
+    else if (depth === 0 && isP(t, ',')) {
+      comma = j
+      break
+    }
+  }
+  if (comma < 0 || comma + 1 >= close) return { given: false, keys: [], opaque: false }
+  const start = comma + 1
+  if (!isP(tokens[start], '{')) return { given: true, keys: [], opaque: true }
+  const end = matching(tokens, start)
+  // Whatever follows the object (`, options`, or the end of the call) must not be part of the same value.
+  if (end + 1 < close && !isP(tokens[end + 1], ',')) return { given: true, keys: [], opaque: true }
+  const keys: Array<{ key: string; offset: number }> = []
+  let opaque = false
+  let entry = start + 1
+  let d = 0
+  for (let j = start + 1; j <= end; j++) {
+    const t = tokens[j]!
+    if (t.type === 'p' && OPEN.has(t.value) && j < end) d++
+    else if (t.type === 'p' && CLOSE.has(t.value) && j < end) d--
+    else if (d === 0 && (j === end || isP(t, ','))) {
+      const key = tokens[entry]
+      if (key && j > entry) {
+        if (isP(key, '...') || isP(key, '[')) opaque = true
+        else if (isId(key) || key.type === 'str')
+          keys.push({
+            key: key.type === 'str' ? key.value.slice(1, -1) : key.value,
+            offset: key.start,
+          })
+      }
+      entry = j + 1
+    }
+  }
+  return { given: true, keys, opaque }
 }
 
 /** The members an object pattern takes, and the names it takes them as: `{ data: tasks, loading }`. */

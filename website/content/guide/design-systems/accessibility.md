@@ -14,7 +14,7 @@ For every rule that sets a text token and a background token, and every pairing 
 
 ## 3. Generated tests, in a real browser
 
-Tests are generated from the contract and run with axe-core in a real browser, per theme: every combination of variant values and every declared state the test can create, using real mouse and keyboard input; the role; disabled semantics; and, for behaviors, a visible focus outline and a conformance suite. See [Accessibility tests](/tutorial/08-accessibility).
+Tests are generated from the contract and run with axe-core in a real browser, per theme: every combination of variant values and every declared state the test can create, using real mouse and keyboard input; the role; disabled semantics; and, for behaviors, a visible focus outline and a conformance suite. See [Accessibility tests](/tutorial/09-accessibility).
 
 ## What none of it covers
 

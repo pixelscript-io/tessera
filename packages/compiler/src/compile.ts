@@ -8,6 +8,7 @@ import {
   type Contract,
 } from '@tessera/contract'
 import { DATA_APIS, DEFAULT_API, type ProjectApi } from './apis'
+import { checkDataCalls } from './data-checks'
 import { generateTemplate, type ComponentInfo, type ComponentResolver } from './codegen'
 import type { TemplateReads } from './expr'
 import { Reporter, type CompilerDiagnostic } from './diagnostics'
@@ -328,9 +329,12 @@ export function compile(source: string, options: CompileOptions): CompileResult 
     )
   }
   const reads: TemplateReads = { names: new Set(), bare: new Set(), members: new Map() }
+  // The calls against the descriptions of the APIs, and what the answers of the reads are.
+  const types = checkDataCalls(script, options.apis ?? [], report, base)
   const generated = generateTemplate(nodes, source, {
     report,
     reads,
+    types,
     bindings,
     contract,
     templateStart: templateBlock.contentStart,

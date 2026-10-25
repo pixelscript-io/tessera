@@ -71,6 +71,26 @@ describe('tessera agent-files', () => {
     expect(second.out).toContain('Up to date: AGENTS.md')
   })
 
+  it('lists the APIs, and how to call them, when the project has any', async () => {
+    const plain = project(files())
+    await run(plain, 'agent-files')
+    expect(read(plain, 'AGENTS.md')).not.toContain('## APIs')
+    const root = project({
+      ...files(),
+      'app/apis/pets.ts': 'export default {}\n',
+      'app/apis/pets.api.json': JSON.stringify({
+        paths: { '/pets': { get: { returns: 'string[]' } } },
+      }),
+    })
+    await run(root, 'agent-files')
+    const agents = read(root, 'AGENTS.md')
+    expect(agents).toContain('## APIs')
+    expect(agents).toContain('`pets`: GET /pets')
+    expect(agents).toContain('get_endpoint')
+    expect(read(root, 'llms.txt')).toContain('## APIs')
+    expect(read(root, 'llms.txt')).toContain('pets: GET /pets')
+  })
+
   it('does not overwrite a file the person wrote, unless told to', async () => {
     const root = project(files())
     write(root, 'AGENTS.md', '# My own rules\n')

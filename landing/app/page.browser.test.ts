@@ -52,6 +52,21 @@ describe('the page', () => {
       expect(root.querySelector(a.getAttribute('href')!), a.getAttribute('href')!).not.toBeNull()
   })
 
+  it('shows an API call, the file that names the server, and the compiler check, in tabs', async () => {
+    const data = section('data')
+    expect(data.querySelector('h2')!.textContent).toBe('An API call is one line.')
+    const tabs = [...data.querySelectorAll('[role=tab]')].map((t) => t.textContent!.trim())
+    expect(tabs).toEqual(['profile.tess', 'app/apis/github.ts', 'tessera check'])
+    expect(data.textContent).toContain('github.get(')
+    await userEvent.click(button(data, 'tessera check'))
+    flush()
+    const visible = [...data.querySelectorAll<HTMLElement>('[role=tabpanel]')].find(
+      (p) => !p.hidden,
+    )!
+    expect(visible.textContent).toContain('T5006')
+    expect(visible.textContent).toContain('Did you mean')
+  })
+
   it('sends the docs links to the docs site', () => {
     const hrefs = [...root.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '')
     expect(hrefs).toContain('https://tessera-docs.pixelscript.io/quick-start')
