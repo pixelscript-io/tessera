@@ -1,6 +1,6 @@
 {
   "name": "@pixelscriptio/tessera",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "A design-system-first frontend framework: tokens, accessibility, variants and docs built in and enforced at compile time.",
   "type": "module",
   "bin": {
@@ -66,7 +66,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "vite build && node scripts/types.mjs && node scripts/components.mjs"
+    "build": "vite build && node scripts/types.mjs && node scripts/components.mjs && node scripts/docs.mjs"
   },
   "dependencies": {
     "acorn": "^8.14.0",

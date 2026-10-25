@@ -4,8 +4,10 @@ import type { Args } from '../args'
 import { flag } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
+import { openProjectAt } from '../project'
 import type { Ui } from '../ui'
 import { VERSION } from '../version'
+import { agentFileContents } from './agent'
 
 export const PRESETS = ['tessera', 'tailwind', 'none'] as const
 export type Preset = (typeof PRESETS)[number]
@@ -91,6 +93,17 @@ const PRETTIER_CONFIGS = [
 const PRETTIERRC = JSON.stringify({ plugins: ['@pixelscriptio/tessera/prettier'] }, null, 2) + '\n'
 
 const GITIGNORE_LINES = ['node_modules', 'dist', '.tessera']
+
+/** Claude Code reads CLAUDE.md, and other tools read AGENTS.md: this one line makes them the same file. */
+const CLAUDE_MD = '@AGENTS.md\n'
+
+/** Starts the Tessera MCP server for a tool that reads `.mcp.json`, so it can look up components, tokens, APIs and state. */
+const MCP_JSON =
+  JSON.stringify(
+    { mcpServers: { tessera: { command: 'npx', args: ['tessera', 'mcp'] } } },
+    null,
+    2,
+  ) + '\n'
 
 /** Where the package comes from: a `link:` to a checkout (`--link`, for working on Tessera itself) or its version. */
 function dependency(target: string, link: string | undefined): string {
@@ -226,6 +239,22 @@ export async function init(args: Args, io: Io): Promise<number> {
   if (!PRETTIER_CONFIGS.some((name) => existsSync(join(target, name)))) {
     put('.prettierrc.json', PRETTIERRC)
   }
+
+  // For an AI tool: what the project is and how it is written, and a way to look things up. A model should be able to
+  // build in this folder without searching for Tessera first.
+  try {
+    const generated = agentFileContents(await openProjectAt(target))
+    for (const [file, text] of generated.files) put(file, text)
+    mkdirSync(join(target, '.tessera'), { recursive: true })
+    if (!existsSync(join(target, '.tessera', 'manifest.json')))
+      writeFileSync(join(target, '.tessera', 'manifest.json'), generated.manifest)
+  } catch {
+    io.out(
+      'Could not write AGENTS.md and llms.txt. Run npx tessera agent-files once the project builds.',
+    )
+  }
+  put('CLAUDE.md', CLAUDE_MD)
+  put('.mcp.json', MCP_JSON)
 
   // .gitignore: add what is missing, never remove.
   const ignorePath = join(target, '.gitignore')

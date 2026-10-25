@@ -22,6 +22,7 @@ import { COMMANDS_DOC, GLOBAL_OPTIONS } from '@tessera/cli'
 import { contractSchema } from '@tessera/contract'
 import { buildTokens, SUPPORTED_TYPES } from '@tessera/tokens'
 import { loadTokenDir } from '@tessera/tokens/node'
+import { buildLlms } from './llms.mjs'
 import { documentExports, documentInterface } from './tsdoc'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -410,6 +411,22 @@ function api() {
   write('api/index.md', index.join('\n'))
 }
 
+/** llms.txt and llms-full.txt for AI tools, served from the root of the docs site. */
+function llms() {
+  const contentDir = join(here, '..', 'content')
+  const pkg = JSON.parse(
+    readFileSync(join(here, '..', '..', 'packages', 'tessera', 'package.json'), 'utf8'),
+  ) as { version: string }
+  const built = buildLlms({
+    contentDir,
+    version: pkg.version,
+    base: 'https://tessera-docs.pixelscript.io',
+  })
+  mkdirSync(join(contentDir, 'public'), { recursive: true })
+  writeFileSync(join(contentDir, 'public', 'llms.txt'), built.index)
+  writeFileSync(join(contentDir, 'public', 'llms-full.txt'), built.full)
+}
+
 themeTokens()
 errors()
 cli()
@@ -418,4 +435,5 @@ config()
 contract()
 tokens()
 api()
+llms()
 console.log('Generated the reference pages.')

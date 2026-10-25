@@ -49,7 +49,7 @@ function stateSection(manifest: AgentManifest, ticks: boolean): string {
 }
 
 /** AGENTS.md: the rules an AI coding tool must follow in this project, and where the facts are. */
-export function agentsMd(manifest: AgentManifest): string {
+export function agentsMd(manifest: AgentManifest, options: { guide?: string } = {}): string {
   const governed = Object.keys(manifest.rules.governed)
   const themes = manifest.tokens.themes.map((t) => t.name)
   return `${GENERATED_MARKER}
@@ -58,7 +58,7 @@ export function agentsMd(manifest: AgentManifest): string {
 This is a Tessera project. The compiler rejects UI that is off the design system, so build from what exists
 and check your work.
 
-## Rules
+${options.guide ? `${options.guide.trim()}\n\n` : ''}## Rules
 
 - Use the components below. Do not invent a component, and do not use a variant, slot or event a component does not declare.
 - In \`<style>\`, write design tokens (\`$space.4\`, \`$color.surface.default\`), never raw values. These properties must use tokens: ${governed.join(', ') || '(none configured)'}.
@@ -73,6 +73,7 @@ Run \`npx tessera check\` after every change. It prints the same errors the buil
 
 ## Where the facts are
 
+- \`node_modules/@pixelscriptio/tessera/dist/docs/llms-full.txt\`: the whole Tessera documentation as one Markdown file, offline. Search it (for a component, an error code or a feature) before guessing or going online; each page starts with a line \`<!-- page: path -->\`.
 - \`.tessera/manifest.json\`: every component's contract, every token with its value in every theme, and the routes. Read it instead of guessing.
 - \`npx tessera mcp\`: a read-only MCP server for the same facts: search components, get a contract, resolve a raw value to a token, and validate a snippet.
 

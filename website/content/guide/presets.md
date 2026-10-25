@@ -4,6 +4,8 @@ Introduced in v0.1 (Milestone 12b).
 
 `tessera init` starts a project from one of three presets. You choose when you run it: in a terminal it asks, and `--preset tessera`, `--preset tailwind` or `--preset none` answers it. The choice is made in `init`, not when you run `npm install`, because install scripts cannot prompt reliably (pnpm skips them by default, as do `--ignore-scripts` and most CI). With no terminal and no flag, `init` uses `tessera` and says so.
 
+Every preset also writes `AGENTS.md`, `llms.txt`, `CLAUDE.md` and `.mcp.json`, so a model can build in the new folder without looking Tessera up ([AI coding tools](/guide/agents#a-new-project-is-ready-for-an-ai-tool)).
+
 Either way the project is yours: `init` writes ordinary files, never overwrites one, and does not leave Tessera or Tailwind configuration you cannot see.
 
 ## `tessera`

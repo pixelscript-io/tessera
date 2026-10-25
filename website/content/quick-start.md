@@ -59,6 +59,9 @@ my-app/
   package.json            scripts: dev, build, preview, check
   tessera.config.ts       style rules and exemptions (empty to start)
   tsconfig.json
+  AGENTS.md               for an AI tool: the rules, and how a Tessera app is written
+  CLAUDE.md, llms.txt     the same, for Claude Code and for tools that read llms.txt
+  .mcp.json               starts tessera mcp, so a tool can look up components and tokens
   system/                 the design system (tessera or tailwind preset)
     tokens/               colors, scale, effects, layout, semantic colors, themes/dark
     components/           Button, Card, Badge
@@ -67,6 +70,8 @@ my-app/
     layouts/default.tess  wraps every page
     pages/index.tess      the page at /
 ```
+
+The four files for AI tools mean you can start a model in this folder and ask it to build something: it has the rules, the language and where the documentation is ([AI coding tools](/guide/agents#a-new-project-is-ready-for-an-ai-tool)).
 
 There is no `vite.config.ts` and no `index.html`: `tessera dev`, `build` and `preview` supply them. Add either file to the project and yours is used instead.
 

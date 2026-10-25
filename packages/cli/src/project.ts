@@ -27,13 +27,20 @@ export function findProjectRoot(cwd: string, args: Args): string {
   )
 }
 
+/** Open the project in a folder, with its `tessera.config.ts` if it has one. */
+export async function openProjectAt(
+  root: string,
+  overrides: ProjectOptions = {},
+): Promise<Project> {
+  const loaded = await loadConfigFile(root)
+  return new Project(root, { ...loaded?.options, ...overrides })
+}
+
 /** Open a project with its `tessera.config.ts`, if it has one. */
 export async function openProject(
   cwd: string,
   args: Args,
   overrides: ProjectOptions = {},
 ): Promise<Project> {
-  const root = findProjectRoot(cwd, args)
-  const loaded = await loadConfigFile(root)
-  return new Project(root, { ...loaded?.options, ...overrides })
+  return openProjectAt(findProjectRoot(cwd, args), overrides)
 }

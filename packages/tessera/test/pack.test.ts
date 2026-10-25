@@ -154,6 +154,8 @@ describe('the packed package', () => {
       'package/dist/cli.js',
       'package/dist/prettier.js',
       'package/dist/components/Link.tess',
+      'package/dist/docs/llms-full.txt',
+      'package/dist/docs/llms.txt',
       'package/dist/docs-client/main.ts',
       'package/dist/docs-client/style.ts',
       'package/dist/docs-client/editor.ts',
@@ -627,5 +629,20 @@ describe('@pixelscriptio/create-tessera, as `npm create @pixelscriptio/tessera` 
     const manifest = JSON.parse(readFileSync(join(dir, 'my-site', 'package.json'), 'utf8'))
     expect(manifest.dependencies['@pixelscriptio/tessera']).toMatch(/^\^\d/)
     expect(manifest.scripts.dev).toBe('tessera dev')
+    // What a model needs to build here is already in the folder: the rules and the language, and where the docs are.
+    for (const file of ['AGENTS.md', 'llms.txt', 'CLAUDE.md', '.mcp.json'])
+      expect(existsSync(join(dir, 'my-site', file)), file).toBe(true)
+    const agents = readFileSync(join(dir, 'my-site', 'AGENTS.md'), 'utf8')
+    expect(agents).toContain('## How a Tessera app is written')
+    // The documentation it names ships in the package (the tarball list above has it), and is the whole documentation.
+    const docs = readFileSync(
+      join(repo, 'packages', 'tessera', 'dist', 'docs', 'llms-full.txt'),
+      'utf8',
+    )
+    expect(agents).toContain('node_modules/@pixelscriptio/tessera/dist/docs/llms-full.txt')
+    expect(docs).toContain('# Tessera documentation')
+    expect(docs).toContain('<!-- page: guide/shared-state.md -->')
+    expect(docs).toContain('<!-- page: tutorial/08-data.md -->')
+    expect(docs).not.toContain('---\ntitle:')
   }, 180_000)
 })

@@ -49,6 +49,23 @@ It runs in the project it is started in, or the one named with `--root`. What a 
 
 Every tool, with its arguments, is in the [MCP server reference](/reference/mcp).
 
+## A new project is ready for an AI tool
+
+`tessera init`, and `npm create @pixelscriptio/tessera@latest` which runs it, write four files for every preset, so you can start a model in the new folder and ask it to build something:
+
+| File        | What it is for                                                                                                                                                                                                                                                                           |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md` | The rules, **and how a Tessera app is written**: a component with its contract, the template syntax, tokens in styles, pages and routing, data (`get`, `post`, `app/apis`) and shared state (`app/state`), then the project's own components, APIs and state. Most tools read this name. |
+| `CLAUDE.md` | One line, `@AGENTS.md`, because Claude Code reads `CLAUDE.md` and not `AGENTS.md`.                                                                                                                                                                                                       |
+| `llms.txt`  | The same facts as a short index.                                                                                                                                                                                                                                                         |
+| `.mcp.json` | Starts [`tessera mcp`](/reference/mcp) for a tool that reads this file, so it can look up components, tokens, APIs and state instead of guessing.                                                                                                                                        |
+
+The language guide in `AGENTS.md` is the part a model cannot know: `.tess` is not in any training data. Its samples are compiled by the test suite, so they work. It is written once and is the same in every project.
+
+**The documentation, offline.** The package contains the whole documentation as one Markdown file, `node_modules/@pixelscriptio/tessera/dist/docs/llms-full.txt` (the tutorial, the guides, the template syntax and the cookbook; each page starts with a line `<!-- page: guide/data.md -->`). `AGENTS.md` tells the model to search it before guessing or going online. The same two files are on the docs site, as `/llms.txt` (an index with a link and a sentence for each page) and `/llms-full.txt`, for a tool that browses.
+
+`init` never overwrites a file you already have: an existing `AGENTS.md` is left alone and reported. A project that changes (a new component, an API, a piece of state) refreshes the generated parts with `npx tessera agent-files`.
+
 ## AGENTS.md and llms.txt
 
 ```bash
@@ -57,7 +74,7 @@ npx tessera agent-files
 
 writes `AGENTS.md` (what to do and not do in this project, and its components) and `llms.txt` (the same facts as a short index). Both are generated from the manifest and say so on their first line. Run the command again and a file Tessera wrote is refreshed; a file you wrote yourself is left alone unless you pass `--force`.
 
-These are the cheap part. They help a tool that cannot run an MCP server, and they are no substitute for the compiler: `AGENTS.md` asks the tool to run `npx tessera check`, and the check is what decides.
+The files `init` writes are the same ones. These are the cheap part. They help a tool that cannot run an MCP server, and they are no substitute for the compiler: `AGENTS.md` asks the tool to run `npx tessera check`, and the check is what decides.
 
 ## Does it help?
 
