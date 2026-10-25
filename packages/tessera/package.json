@@ -1,6 +1,6 @@
 {
   "name": "@pixelscriptio/tessera",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "A design-system-first frontend framework: tokens, accessibility, variants and docs built in and enforced at compile time.",
   "type": "module",
   "bin": {
