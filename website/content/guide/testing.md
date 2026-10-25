@@ -43,7 +43,7 @@ The kitchen-sink app in the repository has working examples (`examples/kitchen-s
 
 ## Accessibility: generated
 
-`defineA11ySuites` (from `@pixelscriptio/tessera/a11y`) generates a suite per component from its contract. Run `npx tessera a11y` to set it up in your project: a test file in each components folder, a Vitest browser-mode configuration and the dev dependencies. See [Accessibility tests](/tutorial/09-accessibility) and [Behaviors and accessibility tests](/guide/behaviors).
+`defineA11ySuites` (from `@pixelscriptio/tessera/a11y`) generates a suite per component from its contract. Run `npx tessera a11y` to set it up in your project: a test file in each components folder, a Vitest browser-mode configuration and the dev dependencies. See [Accessibility tests](/tutorial/10-accessibility) and [Behaviors and accessibility tests](/guide/behaviors).
 
 ## Validation: `tessera check`
 

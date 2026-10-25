@@ -5,6 +5,7 @@ import { tokenLifecycle } from './style/tokens'
 import { resolveConfig, type Accept, type TesseraConfig } from './config'
 import { resolveType, typeToText } from './api-description'
 import { DEFAULT_API, type ProjectApi } from './apis'
+import type { ProjectState, StateMemberKind } from './shared-state'
 
 /**
  * The machine-readable truth about a project: its components, design tokens, routes and rules. AI coding tools
@@ -20,6 +21,15 @@ export interface AgentManifest {
   rules: ManifestRules
   /** The APIs in `app/apis`, and what each says it has. */
   apis: ManifestApi[]
+  /** The shared state in `app/state`: what each file exports. */
+  state: ManifestState[]
+}
+
+export interface ManifestState {
+  /** The name a script or template uses: `cart` for `app/state/cart.ts`. */
+  name: string
+  file: string
+  members: Array<{ name: string; kind: StateMemberKind; usage: string }>
 }
 
 export interface ManifestApi {
@@ -280,6 +290,27 @@ await run(${writeKeys.length ? `{ ${writeKeys.join(', ')} }` : ''})`
   })
 }
 
+/** The shared state of a project as the manifest shows it. `display` turns a file into the path the project shows. */
+export function stateOf(
+  states: readonly ProjectState[],
+  display: (file: string) => string,
+): ManifestState[] {
+  return states.map((state) => ({
+    name: state.name,
+    file: display(state.file),
+    members: Object.entries(state.members).map(([name, kind]) => ({
+      name,
+      kind,
+      usage:
+        kind === 'signal'
+          ? `{${state.name}.${name}} in a template, ${state.name}.${name}.value in a script`
+          : kind === 'function'
+            ? `${state.name}.${name}()`
+            : `${state.name}.${name}`,
+    })),
+  }))
+}
+
 /** Assemble the manifest from what a project already knows. Pure: the caller supplies the pieces. */
 export function buildAgentManifest(input: {
   components: Iterable<{ name: string; file: string; contract: Contract }>
@@ -288,6 +319,7 @@ export function buildAgentManifest(input: {
   layouts: string[]
   config: TesseraConfig | undefined
   apis?: ManifestApi[]
+  state?: ManifestState[]
 }): AgentManifest {
   return {
     version: 1,
@@ -297,5 +329,6 @@ export function buildAgentManifest(input: {
     routes: routesOf(input.routes, input.layouts),
     rules: rulesOf(input.config),
     apis: input.apis ?? [],
+    state: input.state ?? [],
   }
 }

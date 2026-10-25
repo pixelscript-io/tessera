@@ -67,7 +67,7 @@ export function checkProject(project: Project, options: { baseline?: null } = {}
     else files.push({ file: d.file, diagnostics: [d] })
   }
 
-  for (const d of project.apis().diagnostics) {
+  for (const d of [...project.apis().diagnostics, ...project.state().diagnostics]) {
     const existing = files.find((f) => f.file === d.file)
     if (existing) existing.diagnostics.push(d)
     else files.push({ file: d.file, diagnostics: [d] })

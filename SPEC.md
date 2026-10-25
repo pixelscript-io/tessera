@@ -972,6 +972,51 @@ Scope: REST over `fetch`. Pagination and infinite lists, GraphQL and WebSockets 
 - **Done when:** (a) every point has a test, with the exact messages; (b) an OpenAPI file with refs, enums, nullable and merged schemas converts and the result is valid; (c) the error reference has T5006 to T5009 with examples that really produce them; (d) the guide, the tutorial and the landing page document it, and every sample compiles.
 - **Not built:** the body of a write checked against `body`; types for `data` in a TypeScript script block of a `.tess` file (the types are in `apis.d.ts` for `.ts` files); OpenAPI in YAML or Swagger 2; `oneOf` (it is `unknown`); mocks (Milestone 32).
 
+### Shared state (Milestones 34 to 37)
+
+Added after Milestone 29, at the author's request: components need to share data, and the way other frameworks do it is a store. React has Context with a reducer (every consumer renders again), Redux Toolkit (slices, actions, a provider), Zustand and Jotai (a library with its own model); Vue has `provide`/`inject` (untyped unless symbols are used) and Pinia (`defineStore`, an id, and `storeToRefs` so that destructuring does not lose reactivity); Svelte has three systems (stores, runes in `.svelte.ts` files, which cannot export a primitive that is reassigned, and context); Angular has injectable services and NgRx; Solid has module signals, `createStore` and context. They share the same problems: ceremony; destructuring that loses reactivity; global and scoped state as different APIs; server data mixed with interface state; persistence, URL state and reset in tests as plugins; and nothing checks that the state a component reads is there, or says who changes it.
+
+Tessera already has most of it: a signal made in a module is shared by every importer, and server data is shared and cached by `get` (Milestone 27), so **shared state is for what is not server data**: a cart, a draft, a filter, whether a drawer is open.
+
+The design is the one of `app/apis`: **a file in `app/state/` is shared state, named after the file and available in every `.tess` script without an import.** It is an ordinary script file of signals (`state`, `derived`, imported from `@pixelscriptio/tessera/core` as in any `.ts` file, since auto-imports are for `.tess` files) and functions. There is no store class, no provider, no id and no action syntax.
+
+```ts
+// app/state/cart.ts
+import { state, derived } from '@pixelscriptio/tessera/core'
+
+export const items = state<CartItem[]>([])
+export const count = derived(() => items.value.reduce((n, i) => n + i.qty, 0))
+export function add(product: Product) {
+  items.value = [...items.value, { ...product, qty: 1 }]
+}
+```
+
+```text
+<p>{cart.count} items</p>
+<button @click="cart.add(product)">Add</button>
+```
+
+What the compiler does with it: **it reads the file, so `cart.count` is unwrapped in a template** (the nested-signal papercut of section 6 does not apply to a state file, because the compiler knows which exports are signals) and destructuring (`const { count } = cart`) keeps working; **a member that is not in the file is an error with "Did you mean?"**; and **state is read-only outside its own file**: a component that assigns `cart.items = []`, changes it with `cart.items.push(x)` or assigns `cart.items.value` is an error that names the functions the file has. Changes to a piece of state are therefore all in one file, with the rules about the data (a cap on a quantity, clearing the coupon with the cart), and the compiler can say who changes what. There is no per-state opt-out: a flag such as "drawer open" gets a small function (`toggle()`).
+
+| Milestone | What |
+| --------- | ---- |
+| 34 | **Built.** The `app/state/` folder, availability without an import, member unwrapping and destructuring, the checks (an unknown member, a write from outside, a name that is not usable or is used by an api too), `.tessera/state.d.ts`, the manifest, the MCP tools `list_state` and `get_state`, the dev server and the build, and the documentation (guide and tutorial step; the landing page waits for the author). |
+| 35 | Options of a piece of state: `persist` (`localStorage`, with a version and a migration), `url` (kept in step with a query parameter), `resetState()` for tests, and state that survives a hot update in the dev server. |
+| 36 | Scoped state: one copy per subtree (per list item, per dialog), which is what context is for in other frameworks. Later, and only if real use needs it. |
+| 37 | Who reads and who changes each piece of state, in `tessera report` and the docs app, with a warning for state nobody reads or nobody changes. |
+
+### Milestone 34 — The `app/state` folder
+
+- A script file in `app/state` is shared state named after the file (`cart.ts` is `cart`; `.d.ts`, `.test.` and `.spec.` files and files that are not scripts are not). The name rules are the ones for an api (a name a script can use, not a JavaScript reserved word, not a name Tessera gives a script), and a name used by both an api and a state file is an error. `default` is not allowed: there is no plain way to use it.
+- A `.tess` script that names it needs no import: `import * as cart from "../state/cart.ts"` is added, as for apis. The members are the file's exports. A script that defines a name itself is not affected.
+- The compiler knows each export's kind from the file (`state` and `derived` are signals, a function or class is callable, anything else is a plain value). In a template and in a handler a signal member is read as `.value`; a function is left alone; `const { count, add } = cart` makes `count` a signal and `add` a function.
+- **Read-only outside the file.** In a `.tess` script or template, assigning a member (`cart.items = x`, `cart.items.value = x`, `cart.count++`) or calling a method that changes an array on it (`push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) is an error that lists the functions the file exports. It is a check at compile time: a plain `.ts` file can still write, and reading is never restricted.
+- An unknown member is an error with the nearest name.
+- `.tessera/state.d.ts` declares each state name for TypeScript. The manifest has `state` (each file with its members and their kinds); the MCP server has `list_state` and `get_state`; AGENTS.md and llms.txt list the state files.
+- **Done when:** (a) every point has a compiler test with the exact messages; (b) in a real browser, through the Vite plugin, two components that share `cart` update together, a destructured signal stays reactive, and a state file edited in the dev server is seen by the components that use it; (c) the error reference has the new codes with examples that really produce them; (d) the guide and the tutorial document it, and every sample compiles (the docs build compiles them against the kitchen-sink app, which has a `cart`).
+- **Found while building it:** the template-only case. A component that only shows `{cart.count}` has no mention of `cart` in its script, so the import is added when the script names it or the template reads it (the read is recorded while the expressions are rewritten, as for W4105).
+- **Not built:** the landing page section (not asked for yet); auto-imports of `state` and `derived` inside `app/state` files; a change through a destructured signal (`const { items } = cart; items.value = []`); persistence, URL state and reset (35); scoped state (36); the read and write graph (37); a check that the state file itself only writes where it should (everything in the file is allowed to change its own state).
+
 ### Security hardening
 
 After Milestone 20 a review of the docs write API, token import, CLI and MCP server found nothing serious and four things to tighten, each fixed with a test: an empty edit secret refuses every request; the key, host and origin are checked before any of the request body is read; a Resolver's `$ref` is followed only inside its own folder; and `tessera diff` passes git commit ids, never the text of a ref. See the Decisions log.
@@ -1189,6 +1234,10 @@ _(Claude Code appends entries here: date, decision, rationale.)_
 - **2026-10-25, Milestone 29: OpenAPI is read as JSON only.** YAML needs a parser, which is a dependency (CLAUDE.md: ask first), and every API tool exports JSON. `$ref`, `allOf` (merged), `enum`, `nullable` and `type: [x, 'null']` are read; `oneOf` and `anyOf` of different kinds, and `multipart` bodies, become `unknown` and are listed in the import's notes. An inline list item type is named `<OperationId>Item`.
 - **2026-10-25, Milestone 29: the default page uses restful-api.dev.** The author asked for an example call to https://restful-api.dev/ in the default `tessera` page. It sends `access-control-allow-origin: *`, so a browser can call it, and `GET /objects` is a plain list. The page also gets a `default.api.json` so that the first project already shows a checked call; the file says it can be deleted. The `tailwind` and `none` presets are unchanged.
 - **2026-10-25, Milestone 29: the nav breakpoint.** The landing page's nav had no room for a sixth link between 720px and 800px, so its phone layout starts at 800px. Nothing else on the page moved.
+- **2026-10-25, Milestone 34: read-only outside the file, with no opt-out.** The author compared two options (the state file is the only place that may change a piece of state, or any component may assign) and chose the first. A middle option (a `writable: true` marker on a signal, for small flags) was offered and not taken: one rule is simpler to teach and to check, and the compiler's read and write graph (Milestone 37) needs it to be true everywhere. A small flag gets a small function. The check is at compile time: assignment (`cart.items = x`, `cart.items.value = x`), increment, a method that changes an array in place (`push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`, `fill`, `copyWithin`) and `bind:value` to a member are T5011, in a template and in the script. A write through a destructured signal is not caught.
+- **2026-10-25, Milestone 34: how the compiler knows a file's members.** The state file is analyzed by the script analyzer already used for `.tess` scripts (it reads exports, and `state` and `derived` make a signal, a function or class is a function, anything else is a value), not by a TypeScript parse, so no dependency is added and the rule for "what is a signal" is the same in both places. A member that is a signal made another way (a function that returns one) is a value and is not unwrapped. The members are read when the project loads and again when the dev server sees a file in `app/state` change what it exports.
+- **2026-10-25, Milestone 34: names.** The same rules as an API's, and a name may not be both a state file and an API (T5010), since `github.get` and `github.items` would be ambiguous. `default` is not allowed, unlike for apis: there is no plain use of it. A script that declares or imports the name itself keeps it, as for apis. With `autoImports: false` shared state is not available by name.
+- **2026-10-25, Milestone 34: imports.** A `.tess` file gets `import * as cart from "../state/cart.ts"`, relative to the file and with the extension, as components do. A state file must import `state` and `derived` itself: auto-imports exist only in `.tess` files (T5002) and the author did not ask to change that. The kitchen-sink app has the `cart` state and two components (`CartCount`, `CartAdd`), with a browser test that mounts them together.
 - **2026-10-22, Milestone 4: dev-server port.** The kitchen-sink app runs on port 5290 (`pnpm --filter kitchen-sink dev`), because 5173 was taken on this machine; `.claude/launch.json` points at it.
 
 ---

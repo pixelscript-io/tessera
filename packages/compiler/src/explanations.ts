@@ -20,6 +20,8 @@ export type Example =
       deprecatedTokens?: string[]
       /** The apis the project has (files in `app/apis`): a name, or a name with its description (`github.api.json`). */
       apis?: Array<string | { name: string; description: string }>
+      /** The shared state the project has (files in `app/state`): a name and the source of its file. */
+      state?: Array<{ name: string; source: string }>
       options?: {
         routes?: string[]
         layouts?: string[]
@@ -32,6 +34,7 @@ export type Example =
   | { kind: 'import'; files: Array<[string, unknown]> }
   | { kind: 'routes'; files: string[] }
   | { kind: 'apis'; files: string[] }
+  | { kind: 'state'; files: string[] }
   | { kind: 'description'; file: string; source: string }
   | { kind: 'ts'; file: string; source: string }
   | { kind: 'config'; config: Record<string, unknown> }
@@ -726,6 +729,47 @@ export const EXPLANATIONS: Record<string, Explanation> = {
     },
   },
 
+  T5010: {
+    cause:
+      'A file in `app/state` is shared state, named after the file, so the file name has to be a name a script can use: letters, numbers and underscores, starting with a letter, not a word JavaScript reserves, not one Tessera already uses (`state`, `get`, ...), and not the name of an API.',
+    fix: 'Rename the file, for example `my-cart.ts` to `myCart.ts`.',
+    example: { kind: 'state', files: ['my-cart.ts'] },
+  },
+  T5011: {
+    cause:
+      'A component assigns to a piece of shared state, or changes its list in place (`push`, `splice`...), outside the file that owns it. Shared state is read-only outside its file, so that every change to it, and every rule about it, is in one place.',
+    fix: 'Add a function to the state file that makes the change, and call it from the component (`cart.clear()`). The hint names the functions the file has.',
+    example: pageExample(
+      '<script>\n</script>\n<template><button class="root" @click="cart.items = []">Empty</button></template>\n',
+      {
+        state: [
+          {
+            name: 'cart',
+            source:
+              "import { state } from '@pixelscriptio/tessera/core'\nexport const items = state([])\nexport function clear() { items.value = [] }\n",
+          },
+        ],
+      },
+    ),
+  },
+  T5012: {
+    cause:
+      'A script or a template reads a member of a piece of shared state that its file does not export. A mistyped member is `undefined` when the page runs, so nothing shows and nothing says why.',
+    fix: 'Use the member the hint names, or export it from the state file.',
+    example: pageExample(
+      '<script>\n</script>\n<template><p class="root">{cart.cout}</p></template>\n',
+      {
+        state: [
+          {
+            name: 'cart',
+            source:
+              "import { state, derived } from '@pixelscriptio/tessera/core'\nexport const items = state([])\nexport const count = derived(() => items.value.length)\n",
+          },
+        ],
+      },
+    ),
+  },
+
   // --- pages, routing, layouts ------------------------------------------------------------------------
   T6001: {
     cause:
@@ -875,9 +919,12 @@ export function explainText(code: string): string | undefined {
 export function exampleSource(example: Example): string {
   switch (example.kind) {
     case 'tess':
-      return example.components?.length || example.apis?.some((a) => typeof a !== 'string')
+      return example.components?.length ||
+        example.state?.length ||
+        example.apis?.some((a) => typeof a !== 'string')
         ? [
             ...(example.components ?? []).map((c) => `// ${c.name}.tess\n${c.source}`),
+            ...(example.state ?? []).map((st) => `// app/state/${st.name}.ts\n${st.source}`),
             ...(example.apis ?? []).flatMap((a) =>
               typeof a === 'string' ? [] : [`// app/apis/${a.name}.api.json\n${a.description}`],
             ),
@@ -898,6 +945,8 @@ export function exampleSource(example: Example): string {
       return example.files.map((f) => `app/pages/${f}`).join('\n')
     case 'apis':
       return example.files.map((f) => `app/apis/${f}`).join('\n')
+    case 'state':
+      return example.files.map((f) => `app/state/${f}`).join('\n')
     case 'description':
       return `// ${example.file}\n${example.source}`
     case 'config':

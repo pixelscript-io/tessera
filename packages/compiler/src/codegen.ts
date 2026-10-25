@@ -383,7 +383,17 @@ export function generateTemplate(
         const prop = name.slice(5)
         const target = attr.value?.trim() ?? ''
         const binding = ctx.bindings.get(target)
-        if (prop !== 'value' || !BINDABLE.has(el.tag)) {
+        const shared = /^([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)$/.exec(target)
+        const state = shared ? ctx.bindings.get(shared[1]!) : undefined
+        if (prop === 'value' && BINDABLE.has(el.tag) && shared && state?.signal === 'state') {
+          report.error(
+            'T5011',
+            attr.valueStart,
+            `bind:value would change "${target}", which can only be changed inside ${state.state!.file}.`,
+            `Keep the text in a state() of this component, or show it with :value and change it from a function in ${state.state!.file}.`,
+          )
+          ok = false
+        } else if (prop !== 'value' || !BINDABLE.has(el.tag)) {
           report.error(
             'T4011',
             attr.nameStart,

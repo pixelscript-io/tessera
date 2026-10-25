@@ -44,6 +44,7 @@ It runs in the project it is started in, or the one named with `--root`. What a 
 - **Use the right token.** `list_tokens` filters by tier, type or path, and `resolve_value` takes a raw value the model was about to write, such as `13px` for `padding`, and answers with the tokens to use, or says it is already valid. It runs the compiler's own style check, so the answer is what the build would accept.
 - **Check before answering.** `validate_snippet` compiles a `.tess` file or fragment in the context of the project and returns exactly the errors `tessera check` would print, each with its hint and fix.
 - **Call the right endpoint.** `list_apis` and `get_endpoint` give the path, parameters and answer type of an API that has a [description](/guide/data#describing-an-api-checked-calls).
+- **Share state the right way.** `list_state` and `get_state` say what shared state exists and which functions change it.
 - **Look up the rest.** `list_routes`, `get_rules` and `explain_error`.
 
 Every tool, with its arguments, is in the [MCP server reference](/reference/mcp).

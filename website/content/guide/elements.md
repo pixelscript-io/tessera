@@ -85,7 +85,7 @@ Svelte needs nothing. In Angular, add `CUSTOM_ELEMENTS_SCHEMA` to the `schemas` 
 
 `tessera elements` compiles each component the way the app does, with the contract, the token checks and the contrast checks, then registers it with `defineElement` and bundles the lot with the runtime. `defineElement(tag, component, spec)` is in `@pixelscriptio/tessera/core` if you want to register a single component yourself. The spec is the contract's variants, events and slots, and the props the component's script names with their defaults.
 
-Every component that passes the [generated accessibility tests](/tutorial/09-accessibility) in an app is the same component here: the elements page of the repository's tests runs axe on the built elements in light and dark.
+Every component that passes the [generated accessibility tests](/tutorial/10-accessibility) in an app is the same component here: the elements page of the repository's tests runs axe on the built elements in light and dark.
 
 ## What it does not do
 

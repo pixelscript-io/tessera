@@ -12,6 +12,8 @@ describe('the agent manifest: components', () => {
       'Accordion',
       'AccordionItem',
       'Button',
+      'CartAdd',
+      'CartCount',
       'Checkbox',
       'Combobox',
       'ConfirmBar',
@@ -58,6 +60,21 @@ describe('the agent manifest: components', () => {
 
   it('is plain JSON', () => {
     expect(JSON.parse(JSON.stringify(manifest))).toEqual(manifest)
+  })
+})
+
+describe('the agent manifest: shared state', () => {
+  it('lists the state of the project, with what each file exports', () => {
+    expect(manifest.state.map((s) => [s.name, s.file])).toEqual([['cart', 'app/state/cart.ts']])
+    expect(manifest.state[0]!.members.map((m) => [m.name, m.kind])).toEqual([
+      ['items', 'signal'],
+      ['count', 'signal'],
+      ['add', 'function'],
+      ['clear', 'function'],
+    ])
+    expect(manifest.state[0]!.members[1]!.usage).toBe(
+      '{cart.count} in a template, cart.count.value in a script',
+    )
   })
 })
 

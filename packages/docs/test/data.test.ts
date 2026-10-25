@@ -16,6 +16,8 @@ describe('the docs data', () => {
       ['Accordion', 'system'],
       ['AccordionItem', 'system'],
       ['Button', 'system'],
+      ['CartAdd', 'app'],
+      ['CartCount', 'app'],
       ['Checkbox', 'system'],
       ['Combobox', 'system'],
       ['ConfirmBar', 'app'],

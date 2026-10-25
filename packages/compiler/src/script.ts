@@ -167,7 +167,26 @@ function skipTemplate(code: string, i: number): number {
 }
 
 export type SignalKind =
-  'signal' | 'props' | 'plain' | 'callable' | 'unknown' | 'resource' | 'action'
+  'signal' | 'props' | 'plain' | 'callable' | 'unknown' | 'resource' | 'action' | 'state'
+
+/** What an export of a shared state file is: a signal, a function (or class), or a plain value. */
+export type StateMemberKind = 'signal' | 'function' | 'value'
+
+/** A name of shared state (`app/state/cart.ts` is `cart`) and what its file exports. */
+export type StateMembers = Readonly<Record<string, StateMemberKind>>
+
+/** The methods that change an array in place. */
+export const MUTATORS: ReadonlySet<string> = new Set([
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse',
+  'fill',
+  'copyWithin',
+])
 
 export interface Binding {
   name: string
@@ -179,8 +198,13 @@ export interface Binding {
    * `unknown`: anything else, unwrapped at runtime.
    * `resource`: what `get()` returns, whose `data`, `error`, `loading` and `refreshing` are signals.
    * `action`: what `post()`, `put()`, `patch()` and `del()` return, a function whose `pending`, `error` and `data` are signals.
+   * `state`: a piece of shared state (`app/state`), whose members are what its file exports (see `state`).
    */
   signal: SignalKind
+  /** For `state`: the name's members, and where the file is, as the project shows it. */
+  state?: { members: StateMembers; file: string }
+  /** Whether the declaration is exported, which is what a shared state file offers. */
+  exported?: boolean
   /** For an object literal holding signals: the keys that hold them. */
   nestedSignals?: Set<string>
   start: number
@@ -216,6 +240,20 @@ export interface ScriptAnalysis {
   apiCalls: Array<{ name: string; verb: string; offset: number }>
   /** Each `const x = get(...)` and the like that was kept as a read or a write. */
   dataCalls: DataCall[]
+  /** Each use of the name of a piece of shared state: `cart.items.value = x` is a write of `items`. */
+  stateUses: StateUse[]
+}
+
+export interface StateUse {
+  /** The name of the state, as the script wrote it. */
+  name: string
+  /** The member, when the use is `name.member`. */
+  member?: string
+  /** Where the name and the member start. */
+  offset: number
+  memberOffset?: number
+  /** The member is assigned, incremented, or changed in place (`push`, `splice`...). */
+  write: boolean
 }
 
 /** A call to `get`, `post`, `put`, `patch` or `del` (on the shared api or on a named one) whose result is kept. */
@@ -691,7 +729,7 @@ function parseImport(tokens: Token[], from: number, to: number): ImportStatement
 
 export function analyzeScript(
   code: string,
-  options: { apis?: ReadonlySet<string> } = {},
+  options: { apis?: ReadonlySet<string>; state?: ReadonlyMap<string, StateMembers> } = {},
 ): ScriptAnalysis {
   const tokens = tokenize(code)
   const result: ScriptAnalysis = {
@@ -704,6 +742,7 @@ export function analyzeScript(
     impure: [],
     apiCalls: [],
     dataCalls: [],
+    stateUses: [],
   }
 
   for (const [i, t] of tokens.entries()) {
@@ -720,6 +759,27 @@ export function analyzeScript(
       (isP(tokens[i + 3], '(') || isP(tokens[i + 3], '<'))
     )
       result.apiCalls.push({ name: t.value, verb: tokens[i + 2]!.value, offset: t.start })
+    if (options.state?.has(t.value)) {
+      const use: StateUse = { name: t.value, offset: t.start, write: false }
+      if (isP(tokens[i + 1], '.') && isId(tokens[i + 2])) {
+        use.member = tokens[i + 2]!.value
+        use.memberOffset = tokens[i + 2]!.start
+        // `cart.items = x`, `cart.items.value = x`, `cart.count++`, `cart.items.value.push(x)`.
+        let k = i + 3
+        if (isP(tokens[k], '.') && isId(tokens[k + 1], 'value')) k += 2
+        const after = tokens[k]
+        use.write =
+          (after?.type === 'p' &&
+            (ASSIGN.has(after.value) || after.value === '++' || after.value === '--')) ||
+          isP(tokens[i - 1], '++') ||
+          isP(tokens[i - 1], '--') ||
+          (isP(after, '.') &&
+            isId(tokens[k + 1]) &&
+            MUTATORS.has(tokens[k + 1]!.value) &&
+            isP(tokens[k + 2], '('))
+      }
+      result.stateUses.push(use)
+    }
     if (t.value === 'emit' && isP(tokens[i + 1], '(')) {
       const arg = tokens[i + 2]
       if (arg?.type === 'str')
@@ -773,7 +833,8 @@ export function analyzeScript(
     }
 
     let k = i
-    if (isId(tokens[k], 'export')) k++
+    const isExport = isId(tokens[k], 'export')
+    if (isExport) k++
     if (isId(tokens[k], 'declare')) {
       i = end
       continue
@@ -837,6 +898,16 @@ export function analyzeScript(
             ...(members ? { members } : {}),
           })
         }
+        const stateName =
+          initTo === initFrom + 1 &&
+          isId(tokens[initFrom]) &&
+          options.state?.has(tokens[initFrom]!.value)
+            ? tokens[initFrom]!.value
+            : undefined
+        const stateMembers =
+          stateName && isP(tokens[patternStart], '{')
+            ? objectPatternMembers(tokens, patternStart, pEnd)
+            : undefined
         const signalMembers = data?.kind === 'resource' ? READ_SIGNALS : WRITE_SIGNALS
         for (const { name, start } of names) {
           let signal: SignalKind = info.signal
@@ -849,11 +920,24 @@ export function analyzeScript(
               signal = member ? (signalMembers.has(member.key) ? 'signal' : 'callable') : 'unknown'
             }
           }
+          if (stateName && stateMembers) {
+            const member = stateMembers.find((m) => m.local === name)
+            const kindOf = member ? options.state!.get(stateName)![member.key] : undefined
+            signal =
+              kindOf === 'signal'
+                ? 'signal'
+                : kindOf === 'function'
+                  ? 'callable'
+                  : kindOf
+                    ? 'plain'
+                    : 'unknown'
+          }
           result.bindings.set(name, {
             name,
             kind,
             signal,
             ...(info.nested && !isDestructured ? { nestedSignals: info.nested } : {}),
+            ...(isExport ? { exported: true } : {}),
             start,
           })
         }
@@ -874,6 +958,7 @@ export function analyzeScript(
           name: tokens[n]!.value,
           kind,
           signal: 'callable',
+          ...(isExport ? { exported: true } : {}),
           start: tokens[n]!.start,
         })
       }

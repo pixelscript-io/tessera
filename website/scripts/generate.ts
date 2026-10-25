@@ -86,7 +86,10 @@ function errors() {
     const needsOptions =
       (!!options && (options.autoImports !== undefined || options.contract !== undefined)) ||
       (e.example.kind === 'tess' &&
-        (!!e.example.components || !!e.example.deprecatedTokens || !!e.example.apis))
+        (!!e.example.components ||
+          !!e.example.deprecatedTokens ||
+          !!e.example.apis ||
+          !!e.example.state))
     const fence =
       e.example.kind === 'tess' && !needsOptions
         ? `xml tess error=${c} file=${e.example.file}`

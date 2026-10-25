@@ -2,7 +2,8 @@ import * as acorn from 'acorn'
 import { nearest } from '@tessera/contract'
 import type { Reporter } from './diagnostics'
 import { resolveType, type ApiDescription, type ApiType } from './api-description'
-import { READ_SIGNALS, WRITE_SIGNALS, type Binding } from './script'
+import { MUTATORS, READ_SIGNALS, WRITE_SIGNALS, type Binding } from './script'
+import { changeHint } from './shared-state'
 
 /** Names a template expression can use without declaring them. */
 const GLOBALS = new Set([
@@ -261,7 +262,11 @@ export function rewriteExpression(
     if (binding) {
       scope.reads?.names.add(name)
       // A read or a write is an object, not a signal: its members are what unwrap.
-      if (binding.signal === 'resource' || binding.signal === 'action') {
+      if (
+        binding.signal === 'resource' ||
+        binding.signal === 'action' ||
+        binding.signal === 'state'
+      ) {
         if (!write) scope.reads?.bare.add(name)
         return
       }
@@ -341,6 +346,36 @@ export function rewriteExpression(
     return undefined
   }
 
+  /** `cart.items`, `cart.items.value`, `cart.items[0]`: the piece of shared state at the root of a chain, and its member. */
+  function stateRoot(node: Node): { name: string; key: string; binding: Binding } | undefined {
+    let member: Node | undefined
+    let current: Node = node
+    while (current.type === 'MemberExpression') {
+      member = current
+      current = current.object
+    }
+    if (current.type !== 'Identifier' || !member || isLocal(current.name)) return undefined
+    if (scope.locals.has(current.name)) return undefined
+    const binding = scope.bindings.get(current.name)
+    const key = memberKey(member)
+    if (binding?.signal !== 'state' || key === undefined) return undefined
+    return { name: current.name, key, binding }
+  }
+
+  /** A change to shared state from outside its file. Reports it and says so. */
+  function refuseWrite(node: Node): boolean {
+    const root = stateRoot(node)
+    if (!root) return false
+    const { members, file } = root.binding.state!
+    fail(
+      'T5011',
+      node.start,
+      `"${root.name}.${root.key}" can only be changed inside ${file}.`,
+      changeHint(root.name, members),
+    )
+    return true
+  }
+
   function visit(node: Node | null): void {
     if (!node || failed) return
     switch (node.type) {
@@ -399,6 +434,38 @@ export function rewriteExpression(
               })
             return
           }
+          if (binding && !scope.locals.has(node.object.name) && binding.signal === 'state') {
+            const reads = scope.reads
+            reads?.names.add(node.object.name)
+            if (key === undefined) {
+              reads?.bare.add(node.object.name)
+              visit(node.property)
+              return
+            }
+            const { members } = binding.state!
+            if (!(key in members)) {
+              const have = Object.keys(members)
+              const close = nearest(key, have)
+              fail(
+                'T5012',
+                node.property.start,
+                `"${node.object.name}" has no "${key}".`,
+                close
+                  ? `Did you mean "${close}"?`
+                  : have.length
+                    ? `It has ${words(have.slice(0, 8))}.`
+                    : undefined,
+              )
+              return
+            }
+            if (members[key] === 'signal')
+              edits.push({
+                start: node.start,
+                end: node.end,
+                text: `${node.object.name}.${key}.value`,
+              })
+            return
+          }
           if (binding && !scope.locals.has(node.object.name) && key !== undefined) {
             const holdsSignal = binding.signal === 'props' || binding.nestedSignals?.has(key)
             if (holdsSignal) {
@@ -433,12 +500,35 @@ export function rewriteExpression(
         visit(node.value)
         return
       case 'AssignmentExpression':
+        if (node.left.type === 'MemberExpression' && refuseWrite(node.left)) return
         if (node.left.type === 'Identifier') reference(node.left, true)
         else if (node.left.type === 'MemberExpression') visit(node.left)
         else visitPattern(node.left)
         visit(node.right)
         return
+      case 'CallExpression': {
+        // `cart.items.push(x)` changes the list of a piece of shared state.
+        const callee = node.callee
+        if (
+          callee.type === 'MemberExpression' &&
+          memberKey(callee) !== undefined &&
+          MUTATORS.has(memberKey(callee)!) &&
+          callee.object.type === 'MemberExpression'
+        ) {
+          const root = stateRoot(callee.object)
+          if (
+            root &&
+            root.binding.state!.members[root.key] !== 'function' &&
+            refuseWrite(callee.object)
+          )
+            return
+        }
+        visit(node.callee)
+        for (const argument of node.arguments) visit(argument)
+        return
+      }
       case 'UpdateExpression':
+        if (node.argument.type === 'MemberExpression' && refuseWrite(node.argument)) return
         if (node.argument.type === 'Identifier') reference(node.argument, true)
         else visit(node.argument)
         return

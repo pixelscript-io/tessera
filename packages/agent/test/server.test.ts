@@ -50,6 +50,8 @@ describe('the MCP protocol', () => {
       'list_routes',
       'list_apis',
       'get_endpoint',
+      'list_state',
+      'get_state',
       'get_rules',
       'explain_error',
     ])
@@ -99,6 +101,8 @@ describe('components', () => {
       'Accordion',
       'AccordionItem',
       'Button',
+      'CartAdd',
+      'CartCount',
       'Checkbox',
       'Combobox',
       'ConfirmBar',
@@ -137,7 +141,7 @@ describe('components', () => {
     const r = call('get_component', { name: 'Buton' })
     expect(r.isError).toBe(true)
     expect(r.text).toBe(
-      'There is no component named Buton. Components: Accordion, AccordionItem, Button, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Link, Quote, Select, SiteNav, Switch, TaskList, TextField.',
+      'There is no component named Buton. Components: Accordion, AccordionItem, Button, CartAdd, CartCount, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Link, Quote, Select, SiteNav, Switch, TaskList, TextField.',
     )
     expect(call('get_component', { name: 'Conf' }).text).toContain('Did you mean ConfirmBar?')
     expect(call('get_component', {}).text).toBe('"name" is required and must be a string.')
@@ -269,6 +273,47 @@ describe('apis', () => {
     )
     expect(call('get_endpoint', { api: 'backend', path: '/tasks', method: 'DELETE' }).text).toBe(
       'The description of "backend" has no DELETE /tasks. /tasks has GET and POST.',
+    )
+  })
+})
+
+describe('shared state', () => {
+  it('lists each piece of state, its file and what its file exports', () => {
+    const states = call('list_state').json as Array<Record<string, unknown>>
+    expect(states).toEqual([
+      {
+        name: 'cart',
+        file: 'app/state/cart.ts',
+        members: ['items', 'count', 'add()', 'clear()'],
+      },
+    ])
+  })
+
+  it('gives one piece of state with what each member is and how to use it', () => {
+    const cart = call('get_state', { name: 'cart' }).json
+    expect(cart).toMatchObject({ name: 'cart', file: 'app/state/cart.ts' })
+    expect(cart.members).toEqual([
+      {
+        name: 'items',
+        kind: 'signal',
+        usage: '{cart.items} in a template, cart.items.value in a script',
+      },
+      {
+        name: 'count',
+        kind: 'signal',
+        usage: '{cart.count} in a template, cart.count.value in a script',
+      },
+      { name: 'add', kind: 'function', usage: 'cart.add()' },
+      { name: 'clear', kind: 'function', usage: 'cart.clear()' },
+    ])
+    expect(cart.readOnly).toBe(
+      'Only app/state/cart.ts changes cart: a component calls cart.add() or cart.clear().',
+    )
+  })
+
+  it('says what is wrong with a name', () => {
+    expect(call('get_state', { name: 'crt' }).text).toBe(
+      'There is no shared state named "crt". State: cart. Did you mean "cart"?',
     )
   })
 })

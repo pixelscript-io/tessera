@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { applyBaseline, applySeverity, type Baseline, type BaselineResult } from './accountability'
-import { apisOf, buildAgentManifest, type AgentManifest } from './agent-manifest'
+import { apisOf, buildAgentManifest, stateOf, type AgentManifest } from './agent-manifest'
 import { compile, kindFromPath, type CompileResult, type FileKind } from './compile'
 import type { TesseraConfig } from './config'
 import type { CompilerDiagnostic } from './diagnostics'
@@ -11,12 +11,14 @@ import {
   loadDesignTokens,
   loadProjectApis,
   loadProjectRoutes,
+  loadProjectState,
   resolveImportedComponents,
   scanComponentFiles,
   type DesignTokens,
   type ProjectApis,
   type ProjectComponents,
   type ProjectRoutes,
+  type ProjectStates,
 } from './node'
 
 export interface ProjectOptions {
@@ -59,6 +61,7 @@ export class Project {
   private componentCache: ProjectComponents | undefined
   private routeCache: ProjectRoutes | undefined
   private apiCache: ProjectApis | undefined
+  private stateCache: ProjectStates | undefined
 
   constructor(
     readonly root: string,
@@ -100,6 +103,14 @@ export class Project {
     return (this.apiCache ??= loadProjectApis(this.root))
   }
 
+  /** The shared state of the project: the script files in `app/state`, each named after its file. */
+  state(): ProjectStates {
+    return (this.stateCache ??= loadProjectState(
+      this.root,
+      this.apis().apis.map((a) => a.name),
+    ))
+  }
+
   /** Route patterns for checking `<Link to>`; undefined when the project has no pages folder. */
   routePatterns(): string[] | undefined {
     const routes = this.routes()
@@ -127,6 +138,7 @@ export class Project {
       layouts: routes.layouts,
       config: this.options.config,
       apis: apisOf(this.apis().apis, (file) => this.display(file)),
+      state: stateOf(this.state().states, (file) => this.display(file)),
     })
   }
 
@@ -153,6 +165,11 @@ export class Project {
 
   resetApis(): void {
     this.apiCache = undefined
+    this.stateCache = undefined
+  }
+
+  resetState(): void {
+    this.stateCache = undefined
   }
 
   resetAll(): void {
@@ -207,6 +224,7 @@ export class Project {
       routes: this.routePatterns(),
       layouts: this.layoutNames(),
       apis: this.apis().apis,
+      state: this.state().states,
       tokens: loaded?.ok ? loaded.tokens : undefined,
       config: this.options.config,
       today: this.today,

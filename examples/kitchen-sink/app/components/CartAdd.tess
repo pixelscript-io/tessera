@@ -1,0 +1,21 @@
+<contract>
+{
+  "name": "CartAdd",
+  "role": "generic",
+  "description": "Buttons that add to and empty the shared cart, through the functions of app/state/cart.ts.",
+  "parts": ["root", "add", "clear"]
+}
+</contract>
+
+<script>
+function addOne() {
+  cart.add('Item ' + (cart.count.value + 1))
+}
+</script>
+
+<template>
+  <div class="root">
+    <button class="add" type="button" @click="addOne()">Add to cart</button>
+    <button class="clear" type="button" @click="cart.clear()">Empty the cart</button>
+  </div>
+</template>

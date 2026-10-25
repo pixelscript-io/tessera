@@ -370,6 +370,58 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'list_state',
+    description:
+      'List the shared state of the project (the script files in app/state, each named after the file): its file and what the file exports. A component or template names it without an import (cart.count) and can only change it through the functions of its file.',
+    inputSchema: { type: 'object', properties: {} },
+    run: (_args, { manifest }) =>
+      manifest().state.map((s) => ({
+        name: s.name,
+        file: s.file,
+        members: s.members.map((m) => (m.kind === 'function' ? `${m.name}()` : m.name)),
+      })),
+  },
+  {
+    name: 'get_state',
+    description:
+      'One piece of shared state: each member of its file with its kind (signal, function or value) and how to use it in a template and in a script, and which functions change it.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'The state name: the file name in app/state, such as cart.',
+        },
+      },
+      required: ['name'],
+    },
+    run: (args, { manifest }) => {
+      const name = str(args.name, 'name')
+      const states = manifest().state
+      const found = states.find((s) => s.name === name)
+      if (!found) {
+        const close = nearest(
+          name,
+          states.map((s) => s.name),
+        )
+        throw new ToolError(
+          `There is no shared state named "${name}". State: ${states.map((s) => s.name).join(' and ') || 'none'}.${close ? ` Did you mean "${close}"?` : ''}`,
+        )
+      }
+      const functions = found.members
+        .filter((m) => m.kind === 'function')
+        .map((m) => `${found.name}.${m.name}()`)
+      return {
+        name: found.name,
+        file: found.file,
+        members: found.members,
+        readOnly: functions.length
+          ? `Only ${found.file} changes ${found.name}: a component calls ${functions.join(' or ')}.`
+          : `Only ${found.file} changes ${found.name}: it has no function to call yet.`,
+      }
+    },
+  },
+  {
     name: 'get_rules',
     description:
       'The rules the compiler enforces: which CSS properties must use tokens and which tokens each accepts, the contrast minimum, and the policy on primitive tokens.',

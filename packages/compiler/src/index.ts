@@ -31,6 +31,17 @@ export {
 } from './api-description'
 export { convertOpenApi, type DescriptionJson, type OpenApiResult } from './openapi'
 export { generateApisDts } from './apis'
+export {
+  buildStateList,
+  changeHint,
+  generateStateDts,
+  readStateFile,
+  stateFileLabel,
+  type ProjectState,
+  type StateDiagnostic,
+  type StateMemberKind,
+  type StateMembers,
+} from './shared-state'
 export { analyzeScript } from './script'
 export { componentProps, type PropInfo } from './props'
 export {
@@ -98,6 +109,7 @@ export {
 export { runExample, type ExampleEnv, type ExampleOutput } from './explain-run'
 export {
   apisOf,
+  stateOf,
   buildAgentManifest,
   type AgentManifest,
   type ManifestComponent,

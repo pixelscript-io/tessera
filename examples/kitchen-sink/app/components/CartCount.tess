@@ -1,0 +1,21 @@
+<contract>
+{
+  "name": "CartCount",
+  "role": "generic",
+  "description": "What is in the shared cart, read from app/state/cart.ts, with the count taken apart by destructuring.",
+  "parts": ["root", "total", "list", "item"]
+}
+</contract>
+
+<script>
+const { count } = cart
+</script>
+
+<template>
+  <div class="root">
+    <p class="total">{count} in the cart</p>
+    <ul class="list">
+      <li class="item" each="name in cart.items" key="name">{name}</li>
+    </ul>
+  </div>
+</template>

@@ -8,6 +8,7 @@ import { loadConfigFile } from './config-file'
 import { Project } from './project'
 import { validateConfig, type TesseraConfig } from './config'
 import { generateApisDts } from './apis'
+import { generateStateDts } from './shared-state'
 import { generateComponentsDts } from './dts'
 import { generateRoutesDts, generateRoutesModule, routeDiagnostics } from './routes'
 import { type DesignTokens, type ProjectComponents, type ProjectRoutes } from './node'
@@ -105,8 +106,22 @@ export function tessera(options: TesseraOptions = {}): Plugin {
     writeFileSync(path, text)
   }
 
+  /** Write `.tessera/state.d.ts`, which tells TypeScript what each piece of shared state is, only when it changed. */
+  const writeStateTypes = () => {
+    const path = join(root, '.tessera', 'state.d.ts')
+    const states = project.state().states
+    if (!states.length) return
+    const text = generateStateDts(states, join(root, '.tessera'))
+    if (existsSync(path) && readFileSync(path, 'utf8') === text) return
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, text)
+  }
+
   const loadRoutes = (): ProjectRoutes => project.routes()
-  const apiErrors = (): string => project.apis().diagnostics.map(formatDiagnostic).join('\n\n')
+  const apiErrors = (): string =>
+    [...project.apis().diagnostics, ...project.state().diagnostics]
+      .map(formatDiagnostic)
+      .join('\n\n')
 
   const pagesDisplay = () => relative(root, loadRoutes().dir).replaceAll('\\', '/')
 
@@ -154,6 +169,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       project.resetApis()
       writeComponentTypes()
       writeApiTypes()
+      writeStateTypes()
       writeRouteTypes()
       writeManifest()
       // A build fails on a route conflict even if nothing imports the routes; the dev server shows it on load.
@@ -172,6 +188,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       server.watcher.add(loadRoutes().layoutsDir)
       // The apis folder may not exist yet; its first file still needs to be seen.
       server.watcher.add(project.apis().dir)
+      server.watcher.add(project.state().dir)
 
       const inPages = (file: string) =>
         file.endsWith('.tess') &&
@@ -219,6 +236,26 @@ export function tessera(options: TesseraOptions = {}): Plugin {
         }
       }
 
+      const inState = (file: string) =>
+        /\.(?:ts|js|mts|mjs)$/.test(file) &&
+        file.replaceAll('\\', '/').startsWith(`${project.state().dir}/`)
+
+      /** A state file was added, removed or changed what it exports: scripts that use it must compile again. */
+      const refreshState = () => {
+        const snapshot = () => JSON.stringify([project.state().states, project.state().diagnostics])
+        const before = snapshot()
+        project.resetState()
+        if (snapshot() === before) return
+        writeStateTypes()
+        writeManifest()
+        for (const module of server.moduleGraph.idToModuleMap.values()) {
+          if (module.file?.endsWith('.tess') && !module.id?.includes('type=style')) {
+            server.moduleGraph.invalidateModule(module)
+            void server.reloadModule(module)
+          }
+        }
+      }
+
       const inApis = (file: string) =>
         /\.(?:ts|js|mts|mjs|json)$/.test(file) &&
         file.replaceAll('\\', '/').startsWith(`${project.apis().dir}/`)
@@ -243,11 +280,13 @@ export function tessera(options: TesseraOptions = {}): Plugin {
         if (inComponents(file)) refreshComponents()
         if (inPages(file)) refreshRoutes()
         if (inApis(file)) refreshApis()
+        if (inState(file)) refreshState()
       })
       server.watcher.on('unlink', (file) => {
         if (inComponents(file)) refreshComponents()
         if (inPages(file)) refreshRoutes()
         if (inApis(file)) refreshApis()
+        if (inState(file)) refreshState()
       })
       server.watcher.on('change', (file) => {
         if (file.endsWith('.tokens.json')) {
@@ -257,6 +296,7 @@ export function tessera(options: TesseraOptions = {}): Plugin {
           if (module) void server.reloadModule(module)
         } else if (inComponents(file)) refreshComponents()
         else if (file.endsWith('.api.json') && inApis(file)) refreshApis()
+        else if (inState(file)) refreshState()
       })
     },
 

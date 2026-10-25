@@ -8,6 +8,7 @@ import { formatDiagnostic } from '@tessera/contract'
 import { compile, extractContract, kindFromPath } from './compile'
 import { validateConfig, type TesseraConfig } from './config'
 import { buildApiList, type ProjectApi } from './apis'
+import { buildStateList, readStateFile, type ProjectState } from './shared-state'
 import { parseApiDescription } from './api-description'
 import { checkPlainScriptAutoImports } from './autoimport-ts'
 import type { ComponentResolver } from './codegen'
@@ -88,6 +89,11 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
               : parseApiDescription(api.description, `${name}.api.json`).description
           return { name, file: `/app/apis/${name}.ts`, ...(description ? { description } : {}) }
         }),
+        state: (example.state ?? []).map((s): ProjectState => ({
+          name: s.name,
+          file: `/app/state/${s.name}.ts`,
+          members: readStateFile(s.source),
+        })),
         ...example.options,
       })
       return out(result.diagnostics.map((d) => ({ code: d.code, text: formatDiagnostic(d) })))
@@ -118,6 +124,16 @@ export function runExample(example: Example, env: ExampleEnv): ExampleOutput {
     case 'apis':
       return out(
         buildApiList(example.files.map((f) => `app/apis/${f}`)).diagnostics.map((d) => ({
+          code: d.code,
+          text: `ERROR  ${d.code}  ${d.file}\n  ${d.message}\n  ${d.hint}\n  Run \`tessera explain ${d.code}\` for details.`,
+        })),
+      )
+    case 'state':
+      return out(
+        buildStateList(
+          example.files.map((f) => `app/state/${f}`),
+          () => '',
+        ).diagnostics.map((d) => ({
           code: d.code,
           text: `ERROR  ${d.code}  ${d.file}\n  ${d.message}\n  ${d.hint}\n  Run \`tessera explain ${d.code}\` for details.`,
         })),

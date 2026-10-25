@@ -112,4 +112,4 @@ Run `npx tessera check`: it reports a call on `github` to an endpoint the descri
 
 ## Next steps
 
-[Accessibility tests](/tutorial/09-accessibility).
+[Sharing state](/tutorial/09-shared-state).

@@ -10,9 +10,10 @@ import {
 import { DATA_APIS, DEFAULT_API, type ProjectApi } from './apis'
 import { checkDataCalls } from './data-checks'
 import { generateTemplate, type ComponentInfo, type ComponentResolver } from './codegen'
-import type { TemplateReads } from './expr'
+import { words, type TemplateReads } from './expr'
 import { Reporter, type CompilerDiagnostic } from './diagnostics'
-import { analyzeScript, type Binding } from './script'
+import { analyzeScript, type Binding, type StateMembers } from './script'
+import { changeHint, stateFileLabel, type ProjectState } from './shared-state'
 import { parseSfc } from './sfc'
 import { BEHAVIOR_ATTACH, BEHAVIOR_REQUIREMENTS } from '@tessera/behavior'
 import { isBaselineable } from './accountability'
@@ -47,6 +48,12 @@ export interface CompileOptions {
    * `default` is what `get`, `post`, `put`, `patch` and `del` use.
    */
   apis?: readonly ProjectApi[]
+  /**
+   * The shared state of the project (`app/state`). With `autoImports`, a script or a template that names one needs
+   * no import, its signal members are read as values in a template, and a change to one from outside its file is
+   * an error.
+   */
+  state?: readonly ProjectState[]
   /**
    * `true` (default): components and the script APIs (`state`, `derived`, `effect`, `onCleanup`, `onMount`) need
    * no import in a `.tess` file. `false`: every name must be imported, and a missing one is an error.
@@ -244,8 +251,11 @@ export function compile(source: string, options: CompileOptions): CompileResult 
   const scriptBlock = blocks.get('script')
   const apiFiles = new Map((options.apis ?? []).map((api) => [api.name, api.file]))
   const apiNames = new Set([...apiFiles.keys()].filter((name) => name !== DEFAULT_API))
+  const stateMembers = new Map<string, StateMembers>(
+    options.autoImports === false ? [] : (options.state ?? []).map((s) => [s.name, s.members]),
+  )
   const script = scriptBlock
-    ? analyzeScript(scriptBlock.content, { apis: apiNames })
+    ? analyzeScript(scriptBlock.content, { apis: apiNames, state: stateMembers })
     : analyzeScript('')
   const base = scriptBlock?.contentStart ?? 0
   for (const issue of script.impure) {
@@ -266,6 +276,34 @@ export function compile(source: string, options: CompileOptions): CompileResult 
           close ? `Did you mean "${close}"?` : `Add "${emit.name}" to "events" in <contract>.`,
         )
       }
+    }
+  }
+
+  // Shared state: a member that is not there, and a change from outside the file.
+  const stateOf = new Map((options.state ?? []).map((s) => [s.name, s]))
+  for (const use of script.stateUses) {
+    const found = stateOf.get(use.name)
+    if (!found || script.bindings.has(use.name) || use.member === undefined) continue
+    if (!(use.member in found.members)) {
+      const have = Object.keys(found.members)
+      const close = nearest(use.member, have)
+      report.error(
+        'T5012',
+        base + use.memberOffset!,
+        `"${use.name}" has no "${use.member}".`,
+        close
+          ? `Did you mean "${close}"?`
+          : have.length
+            ? `It has ${words(have.slice(0, 8))}.`
+            : undefined,
+      )
+    } else if (use.write) {
+      report.error(
+        'T5011',
+        base + use.offset,
+        `"${use.name}.${use.member}" can only be changed inside ${stateFileLabel(found.file)}.`,
+        changeHint(use.name, found.members),
+      )
     }
   }
 
@@ -297,6 +335,18 @@ export function compile(source: string, options: CompileOptions): CompileResult 
   for (const name of ['props', 'emit']) {
     if (!bindings.has(name))
       bindings.set(name, { name, kind: 'builtin', signal: 'callable', start: 0 })
+  }
+  // A piece of shared state is a name too, unless the script has one of its own.
+  for (const [name, members] of stateMembers) {
+    const found = stateOf.get(name)!
+    if (!bindings.has(name))
+      bindings.set(name, {
+        name,
+        kind: 'import',
+        signal: 'state',
+        state: { members, file: stateFileLabel(found.file) },
+        start: 0,
+      })
   }
   const autoImports = options.autoImports !== false
   for (const name of FRAMEWORK_APIS) {
@@ -351,6 +401,14 @@ export function compile(source: string, options: CompileOptions): CompileResult 
 
   if (generated) warnUnhandledData(report, script, reads, base)
 
+  // The state this file uses: the script names it, or the template reads it.
+  const stateImports = [...stateMembers.keys()]
+    .filter(
+      (name) =>
+        !script.bindings.has(name) && (script.identifiers.has(name) || reads.names.has(name)),
+    )
+    .map((name) => ({ name, file: stateOf.get(name)!.file }))
+
   if (generated && parsedContract?.contract) {
     report.diagnostics.push(
       ...checkTemplateParts(parsedContract, {
@@ -369,6 +427,7 @@ export function compile(source: string, options: CompileOptions): CompileResult 
       script,
       generated,
       kind === 'page' ? pageMeta : undefined,
+      stateImports,
     ),
     contract,
   )
@@ -469,6 +528,7 @@ function assemble(
   script: ReturnType<typeof analyzeScript>,
   generated: NonNullable<ReturnType<typeof generateTemplate>>,
   page?: PageMeta,
+  stateImports: Array<{ name: string; file: string }> = [],
 ): string {
   const baseName = options.file
     .split(/[\\/]/)
@@ -544,6 +604,10 @@ function assemble(
     ...named.map(
       (name) =>
         `import ${name} from ${JSON.stringify(relativeImport(importer, apiFiles.get(name)!))}`,
+    ),
+    ...stateImports.map(
+      ({ name, file }) =>
+        `import * as ${name} from ${JSON.stringify(relativeImport(importer, file))}`,
     ),
     ...(useDefault
       ? [`import $defaultApi from ${JSON.stringify(relativeImport(importer, defaultApi!))}`]

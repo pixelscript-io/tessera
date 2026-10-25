@@ -1,4 +1,4 @@
-# 9. Accessibility tests
+# 10. Accessibility tests
 
 The contract is enough for Tessera to generate tests. One command sets them up:
 
@@ -38,4 +38,4 @@ Run the tests with `npm run test:a11y` (or `npx vitest run`). Make a component's
 
 ## Next steps
 
-[Keeping it checked](/tutorial/10-checking).
+[Keeping it checked](/tutorial/11-checking).

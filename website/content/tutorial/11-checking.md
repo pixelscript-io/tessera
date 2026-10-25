@@ -1,4 +1,4 @@
-# 10. Keeping it checked
+# 11. Keeping it checked
 
 Everything so far runs when you build. `tessera check` runs the same validations without bundling, which is what you want in CI.
 

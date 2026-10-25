@@ -1,6 +1,6 @@
 # Tutorial
 
-Ten short steps from an empty project to a themed, routed page with a token-enforced component and data from an API. Each step ends with a check you can run, and every code sample on these pages is compiled by the docs test suite, so what you read is what works.
+Eleven short steps from an empty project to a themed, routed page with a token-enforced component data from an API and state that components share. Each step ends with a check you can run, and every code sample on these pages is compiled by the docs test suite, so what you read is what works.
 
 You need a project from the [Quick start](/quick-start). Every command below runs in its folder.
 
@@ -12,7 +12,8 @@ You need a project from the [Quick start](/quick-start). Every command below run
 6. [Pages and routing](/tutorial/06-pages)
 7. [Layouts](/tutorial/07-layouts)
 8. [Data from an API](/tutorial/08-data)
-9. [Accessibility tests](/tutorial/09-accessibility)
-10. [Keeping it checked](/tutorial/10-checking)
+9. [Sharing state](/tutorial/09-shared-state)
+10. [Accessibility tests](/tutorial/10-accessibility)
+11. [Keeping it checked](/tutorial/11-checking)
 
 The interactive in-browser version of this tutorial comes with the playground, which is deferred.

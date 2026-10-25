@@ -7,6 +7,7 @@ import { loadTokenDir } from '@tessera/tokens/node'
 import type { ComponentInfo, ComponentResolver } from './codegen'
 import { extractContract, listImports } from './compile'
 import { buildApiList, type ApiDiagnostic, type ProjectApi } from './apis'
+import { buildStateList, type ProjectState, type StateDiagnostic } from './shared-state'
 import { parseApiDescription, type DescriptionDiagnostic } from './api-description'
 import { nearest } from '@tessera/contract'
 import { ComponentRegistry, type RegistryFile } from './registry'
@@ -197,6 +198,30 @@ export function loadProjectApis(root: string, dir = join(root, 'app', 'apis')): 
     })
   }
   return { apis, diagnostics, dir: dir.replaceAll('\\', '/') }
+}
+
+export interface ProjectStates {
+  states: ProjectState[]
+  /** Files in the folder that cannot be shared state, and why. */
+  diagnostics: StateDiagnostic[]
+  /** The state folder, which may not exist. */
+  dir: string
+}
+
+/** The shared state of a project: the script files in `app/state`, each named after its file. */
+export function loadProjectState(
+  root: string,
+  apis: readonly string[] = [],
+  dir = join(root, 'app', 'state'),
+): ProjectStates {
+  const display = (file: string) => relative(root, file).replaceAll('\\', '/')
+  const files = existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isFile())
+        .map((e) => join(dir, e.name))
+    : []
+  const listed = buildStateList(files, (file) => readFileSync(file, 'utf8'), { apis, display })
+  return { ...listed, dir: dir.replaceAll('\\', '/') }
 }
 
 export interface ProjectRoutes {

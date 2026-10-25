@@ -34,6 +34,20 @@ function apisSection(manifest: AgentManifest, ticks: boolean): string {
   return `\n## APIs\n\n${list(lines)}\n${how}`
 }
 
+/** The shared state of the project, if it has any: what a component may use, and how it may change it. */
+function stateSection(manifest: AgentManifest, ticks: boolean): string {
+  if (!manifest.state.length) return ''
+  const name = (n: string) => (ticks ? `\`${n}\`` : n)
+  const lines = manifest.state.map(
+    (s) =>
+      `${name(s.name)}: ${s.members.map((m) => (m.kind === 'function' ? `${m.name}()` : m.name)).join(', ') || 'nothing exported'}`,
+  )
+  const how = ticks
+    ? `\nName a piece of state in a template or a script, with no import: \`{cart.count}\`, \`cart.add(item)\`. It is read-only outside its file: change it by calling the functions of its file, never by assigning (\`cart.items = []\` is an error). Put server data in \`get\`, not in state. \`get_state\` in \`npx tessera mcp\` gives the members.\n`
+    : ''
+  return `\n## Shared state\n\n${list(lines)}\n${how}`
+}
+
 /** AGENTS.md: the rules an AI coding tool must follow in this project, and where the facts are. */
 export function agentsMd(manifest: AgentManifest): string {
   const governed = Object.keys(manifest.rules.governed)
@@ -65,7 +79,7 @@ Run \`npx tessera check\` after every change. It prints the same errors the buil
 ## Components
 
 ${list(manifest.components.map(componentLine))}
-${apisSection(manifest, true)}`
+${apisSection(manifest, true)}${stateSection(manifest, true)}`
 }
 
 /** llms.txt: the same facts as a short index for language models, in the llms.txt convention. */
@@ -86,5 +100,5 @@ ${list(manifest.components.map((c) => `${c.name}: ${c.description ?? c.role}. Us
 ## Routes
 
 ${list(manifest.routes.routes.map((r) => `${r.path} (${r.file})`)) || '- (none)'}
-${apisSection(manifest, false)}`
+${apisSection(manifest, false)}${stateSection(manifest, false)}`
 }

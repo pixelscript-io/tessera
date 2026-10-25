@@ -91,6 +91,25 @@ describe('tessera agent-files', () => {
     expect(read(root, 'llms.txt')).toContain('pets: GET /pets')
   })
 
+  it('lists the shared state, and the rule that only its file changes it, when the project has any', async () => {
+    const plain = project(files())
+    await run(plain, 'agent-files')
+    expect(read(plain, 'AGENTS.md')).not.toContain('## Shared state')
+    const root = project({
+      ...files(),
+      'app/state/cart.ts':
+        "import { state } from '@pixelscriptio/tessera/core'\nexport const items = state([])\nexport function clear() { items.value = [] }\n",
+    })
+    await run(root, 'agent-files')
+    const agents = read(root, 'AGENTS.md')
+    expect(agents).toContain('## Shared state')
+    expect(agents).toContain('`cart`: items, clear()')
+    expect(agents).toContain('read-only outside its file')
+    expect(agents).toContain('get_state')
+    expect(read(root, 'llms.txt')).toContain('## Shared state')
+    expect(read(root, 'llms.txt')).toContain('cart: items, clear()')
+  })
+
   it('does not overwrite a file the person wrote, unless told to', async () => {
     const root = project(files())
     write(root, 'AGENTS.md', '# My own rules\n')
