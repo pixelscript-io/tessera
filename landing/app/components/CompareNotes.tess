@@ -1,0 +1,129 @@
+<contract>
+{
+  "name": "CompareNotes",
+  "role": "generic",
+  "description": "What Tessera does not try to be, said plainly, and where to go next.",
+  "parts": ["root", "inner", "items", "item", "title", "body", "footer", "fine", "actions"],
+  "contrast": [
+    { "foreground": "title", "background": "root" },
+    { "foreground": "body", "background": "root" },
+    { "foreground": "fine", "background": "root" }
+  ]
+}
+</contract>
+
+<script>
+import { links } from '../links'
+import { NOT_ITS_GOAL } from '../data/compare'
+</script>
+
+<template>
+  <section class="root">
+    <div class="inner">
+      <SectionHeader>
+        <span slot="eyebrow">What it is not</span>
+        <span slot="title">A small framework, on purpose.</span>
+        Tessera does one job: build an app on a design system and hold it to that system. Here is what it leaves to others.
+      </SectionHeader>
+      <div class="items">
+        <div class="item" each="n in NOT_ITS_GOAL" key="n.title">
+          <h3 class="title">{n.title}</h3>
+          <p class="body">{n.body}</p>
+        </div>
+      </div>
+      <div class="footer">
+        <p class="fine">
+          Compared with React 19, Vue 3 and Svelte 5 and their usual companions, as of October 2026. Frameworks change and a cell
+          can be out of date. If you see a mistake, please
+          <a class="link" :href="links.issues">open an issue</a>.
+        </p>
+        <div class="actions">
+          <LinkButton :href="links.quickStart">Quick start</LinkButton>
+          <LinkButton kind="outline" :href="links.roadmap">See the roadmap</LinkButton>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.32;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.72 $space.24;
+}
+
+.items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: $space.28 $space.32;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: $space.8;
+}
+
+.title {
+  margin: 0;
+  color: $color.text.default;
+  font-size: $font.size.16;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.14;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: $space.20;
+  padding-top: $space.20;
+  border-top: 1px solid $color.border.default;
+}
+
+.fine {
+  max-width: 640px;
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.12;
+  line-height: 1.6;
+}
+
+.link {
+  color: $color.text.default;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: $color.accent.default;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space.10;
+}
+
+@media (max-width: 720px) {
+  .inner {
+    gap: $space.24;
+    padding: $space.56 $space.16;
+  }
+}
+</style>

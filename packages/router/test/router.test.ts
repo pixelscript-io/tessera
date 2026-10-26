@@ -103,6 +103,35 @@ describe('router: navigate()', () => {
     expect(window.location.pathname).toBe('/about')
   })
 
+  it('scrolls to the element of the hash when the app starts on an address that has one', async () => {
+    const scrolled = vi.fn()
+    Element.prototype.scrollIntoView = scrolled
+    const pageWithTarget: () => Promise<PageModule> = async () => ({
+      default: defineComponent('target', {}, () => {
+        const r = getRenderer()
+        return r.el(
+          'main',
+          { attrs: { 'data-page': 'target' } },
+          r.el('h2', { attrs: { id: 'deep' } }, 'Deep'),
+        )
+      }),
+    })
+    window.history.replaceState(null, '', '/about#deep')
+    router = createRouter({ routes: [{ path: '/about', load: pageWithTarget }] })
+    await router.mount(container)
+    expect(scrolled).toHaveBeenCalledTimes(1)
+    expect(scrolled.mock.contexts[0]).toBe(document.getElementById('deep'))
+  })
+
+  it('does not scroll on start for a hash that has no element, or no hash', async () => {
+    const scrolled = vi.fn()
+    Element.prototype.scrollIntoView = scrolled
+    await start('/about#nowhere')
+    router.unmount()
+    await start('/about')
+    expect(scrolled).not.toHaveBeenCalled()
+  })
+
   it('moves focus to the new page without scrolling, and scrolls to the top', async () => {
     await start('/')
     await navigate('/about')

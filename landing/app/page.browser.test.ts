@@ -48,7 +48,9 @@ describe('the page', () => {
     expect(root.querySelectorAll('h1')).toHaveLength(1)
     expect(root.querySelector('h1')!.textContent).toBe('The design system is the framework.')
     expect(root.querySelectorAll('main')).toHaveLength(1)
-    for (const a of root.querySelectorAll<HTMLAnchorElement>('nav a[href^="#"]'))
+    const sections = root.querySelectorAll<HTMLAnchorElement>('nav a[href^="#"]')
+    expect(sections.length).toBeGreaterThan(4)
+    for (const a of sections)
       expect(root.querySelector(a.getAttribute('href')!), a.getAttribute('href')!).not.toBeNull()
   })
 

@@ -1,0 +1,77 @@
+<page>
+{ "title": "Tessera compared with React, Vue and Svelte" }
+</page>
+
+<template>
+  <div class="root">
+    <section class="head">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Compare</p>
+      <h1 class="title">Tessera next to React, Vue and Svelte.</h1>
+      <p class="lead">
+        The features people compare most, and what each framework gives you for them. Tessera is missing some on purpose: it is not
+        trying to be a huge framework. It is a small one for building on a design system.
+      </p>
+    </section>
+    <CompareTable />
+    <CompareNotes />
+  </div>
+</template>
+
+<style>
+.root {
+  display: block;
+}
+
+.head {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.72 $space.24 $space.32;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: $space.8;
+  margin: 0 0 $space.20;
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: $radius.xs;
+  background: $color.accent.default;
+}
+
+.title {
+  max-width: 18ch;
+  margin: 0;
+  color: $color.text.default;
+  font-size: raw(clamp(30px, 4vw, 44px), 'Fluid headline: a token is one fixed size', '2027-12-31');
+  font-weight: $font.weight.medium;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 56ch;
+  margin: $space.18 0 0;
+  color: $color.text.muted;
+  font-size: $font.size.18;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+@media (max-width: 720px) {
+  .head {
+    padding: $space.40 $space.16 $space.24;
+  }
+
+  .lead {
+    font-size: $font.size.16;
+  }
+}
+</style>

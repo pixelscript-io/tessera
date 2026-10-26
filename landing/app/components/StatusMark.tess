@@ -1,0 +1,67 @@
+<contract>
+{
+  "name": "StatusMark",
+  "role": "generic",
+  "description": "A small square and a word that say how a framework does a feature: built in, partly, through a library, planned or not at all.",
+  "parts": ["root", "mark", "label"],
+  "variants": {
+    "status": ["built", "partial", "library", "planned", "none"] // first value is the default
+  }
+}
+</contract>
+
+<script>
+const { label } = props({ label: '' })
+</script>
+
+<template>
+  <span class="root">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="label">{label}</span>
+  </span>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: $space.6;
+}
+
+.mark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: $radius.xs;
+}
+
+.label {
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  white-space: nowrap;
+}
+
+.root[data-status='built'] .mark {
+  background: $color.accent.default;
+}
+
+.root[data-status='partial'] .mark {
+  border: 1px solid $color.accent.default;
+  background: linear-gradient(90deg, $color.accent.default 50%, transparent 50%);
+}
+
+.root[data-status='library'] .mark {
+  border: 1px solid $color.text.faint;
+}
+
+.root[data-status='planned'] .mark {
+  border: 1px dashed $color.accent.default;
+}
+
+.root[data-status='none'] .mark {
+  height: 2px;
+  border-radius: $radius.none;
+  background: $color.text.faint;
+}
+</style>

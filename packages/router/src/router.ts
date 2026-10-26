@@ -350,6 +350,8 @@ export class Router {
 
     if (flags.initial) {
       this.firstRender = false
+      // The address may name a place on the page (`/#data`). The browser looked for it before the page was here.
+      if (url.hash) doc.getElementById(decodeURIComponent(url.hash.slice(1)))?.scrollIntoView()
       return
     }
 

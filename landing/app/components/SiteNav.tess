@@ -13,22 +13,27 @@
 
 <script>
 import { links } from '../links'
+
+// On the home page the sections are on the page, so a link is an anchor. On another page it goes to the home page first.
+const route = useRoute()
+const prefix = derived(() => (route.path === '/' ? '' : '/'))
 </script>
 
 <template>
   <header class="root" role="banner">
     <nav class="bar" aria-label="Main">
-      <a class="brand" href="#top">
+      <a class="brand" :href="prefix === '' ? '#top' : '/'">
         <span class="mark" aria-hidden="true"><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i></span>
         Tessera
       </a>
       <div class="links">
         <a class="link" :href="links.docs">Docs</a>
-        <a class="link" href="#data">Data</a>
-        <a class="link" href="#packages">Packages</a>
-        <a class="link" href="#anywhere">Any framework</a>
-        <a class="link" href="#interchange">Tokens</a>
-        <a class="link" href="#agents">AI tools</a>
+        <a class="link" :href="prefix + '#data'">Data</a>
+        <a class="link" :href="prefix + '#packages'">Packages</a>
+        <a class="link" :href="prefix + '#anywhere'">Any framework</a>
+        <a class="link" :href="prefix + '#interchange'">Tokens</a>
+        <a class="link" :href="prefix + '#agents'">AI tools</a>
+        <a class="link" href="/compare">Compare</a>
       </div>
       <div class="actions">
         <a class="github" :href="links.github">GitHub</a>

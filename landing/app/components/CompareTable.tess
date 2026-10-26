@@ -1,0 +1,320 @@
+<contract>
+{
+  "name": "CompareTable",
+  "role": "generic",
+  "description": "The comparison: a key to the marks, then every feature against Tessera, React, Vue and Svelte. A table on a wide screen, a card for each feature on a phone.",
+  "parts": [
+    "root",
+    "inner",
+    "legend",
+    "legendItem",
+    "meaning",
+    "scroll",
+    "table",
+    "caption",
+    "corner",
+    "framework",
+    "group",
+    "feature",
+    "name",
+    "note",
+    "cell",
+    "text",
+    "cards",
+    "cardGroup",
+    "cardGroupTitle",
+    "card",
+    "cardTitle",
+    "cardNote",
+    "entries",
+    "entry",
+    "entryName",
+    "entryValue"
+  ]
+}
+</contract>
+
+<script>
+import { FRAMEWORKS, GROUPS, STATUS_LABEL, STATUS_MEANING } from '../data/compare'
+</script>
+
+<template>
+  <section class="root" id="table">
+    <div class="inner">
+      <ul class="legend" aria-label="Key to the marks">
+        <li class="legendItem" each="m in STATUS_MEANING" key="m.status">
+          <StatusMark :status="m.status" :label="STATUS_LABEL[m.status]" />
+          <span class="meaning">{m.meaning}</span>
+        </li>
+      </ul>
+
+      <div class="scroll">
+        <table class="table">
+          <caption class="caption">
+            Features of Tessera, React, Vue and Svelte compared
+          </caption>
+          <thead>
+            <tr>
+              <th class="corner" scope="col">Feature</th>
+              <th class="framework" scope="col" each="f in FRAMEWORKS" key="f.id" :data-lead="f.id === 'tessera' ? 'true' : 'false'">{f.name}</th>
+            </tr>
+          </thead>
+          <tbody each="g in GROUPS" key="g.title">
+            <tr>
+              <th class="group" scope="colgroup" colspan="5">{g.title}</th>
+            </tr>
+            <tr each="row in g.rows" key="row.feature">
+              <th class="feature" scope="row">
+                <span class="name">{row.feature}</span>
+                <span class="note" if="row.note">{row.note}</span>
+              </th>
+              <td class="cell" each="f in FRAMEWORKS" key="f.id" :data-lead="f.id === 'tessera' ? 'true' : 'false'">
+                <StatusMark :status="row.cells[f.id].status" :label="STATUS_LABEL[row.cells[f.id].status]" />
+                <span class="text">{row.cells[f.id].text}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="cards">
+        <section class="cardGroup" each="g in GROUPS" key="g.title">
+          <h2 class="cardGroupTitle">{g.title}</h2>
+          <article class="card" each="row in g.rows" key="row.feature">
+            <h3 class="cardTitle">{row.feature}</h3>
+            <p class="cardNote" if="row.note">{row.note}</p>
+            <dl class="entries">
+              <div class="entry" each="f in FRAMEWORKS" key="f.id" :data-lead="f.id === 'tessera' ? 'true' : 'false'">
+                <dt class="entryName">{f.name}</dt>
+                <dd class="entryValue">
+                  <StatusMark :status="row.cells[f.id].status" :label="STATUS_LABEL[row.cells[f.id].status]" />
+                  <span class="text">{row.cells[f.id].text}</span>
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </section>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+.root {
+  border-top: 1px solid $color.border.default;
+  background: $color.surface.default;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: $space.24;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: $space.32 $space.24 $space.72;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space.12 $space.24;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $space.10;
+}
+
+.meaning {
+  color: $color.text.muted;
+  font-size: $font.size.12;
+}
+
+.scroll {
+  overflow-x: auto;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+}
+
+.table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: left;
+}
+
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.corner,
+.framework {
+  padding: $space.14 $space.16;
+  border-bottom: 1px solid $color.border.strong;
+  color: $color.text.muted;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  font-weight: $font.weight.regular;
+}
+
+.corner {
+  width: 24%;
+}
+
+.framework {
+  color: $color.text.default;
+  font-size: $font.size.14;
+  font-weight: $font.weight.bold;
+
+  &[data-lead='true'] {
+    background: $color.accent.wash;
+    border-bottom-color: $color.accent.default;
+  }
+}
+
+.group {
+  padding: $space.24 $space.16 $space.8;
+  border-bottom: 1px solid $color.border.default;
+  background: $color.surface.default;
+  color: $color.accent.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  font-weight: $font.weight.medium;
+}
+
+.feature {
+  padding: $space.14 $space.16;
+  border-bottom: 1px solid $color.border.default;
+  vertical-align: top;
+  font-weight: $font.weight.regular;
+}
+
+.name {
+  display: block;
+  color: $color.text.default;
+  font-size: $font.size.14;
+  font-weight: $font.weight.medium;
+}
+
+.note {
+  display: block;
+  margin-top: $space.4;
+  color: $color.text.muted;
+  font-size: $font.size.12;
+  line-height: 1.45;
+}
+
+.cell {
+  padding: $space.14 $space.16;
+  border-bottom: 1px solid $color.border.default;
+  vertical-align: top;
+
+  &[data-lead='true'] {
+    background: $color.accent.wash;
+  }
+}
+
+.text {
+  display: block;
+  margin-top: $space.6;
+  color: $color.text.default;
+  font-size: $font.size.14;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.cards {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .inner {
+    gap: $space.20;
+    padding: $space.24 $space.16 $space.56;
+  }
+
+  .scroll {
+    display: none;
+  }
+
+  .cards {
+    display: flex;
+    flex-direction: column;
+    gap: $space.24;
+  }
+
+  .cardGroup {
+    display: flex;
+    flex-direction: column;
+    gap: $space.12;
+  }
+
+  .cardGroupTitle {
+    margin: 0;
+    padding-bottom: $space.8;
+    border-bottom: 1px solid $color.border.default;
+    color: $color.accent.default;
+    font-family: var(--t-font-family-mono);
+    font-size: $font.size.12;
+    font-weight: $font.weight.medium;
+  }
+
+  .card {
+    padding: $space.16;
+    border: 1px solid $color.border.default;
+    border-radius: $radius.md;
+    background: $color.surface.raised;
+  }
+
+  .cardTitle {
+    margin: 0;
+    color: $color.text.default;
+    font-size: $font.size.16;
+    font-weight: $font.weight.bold;
+  }
+
+  .cardNote {
+    margin: $space.4 0 0;
+    color: $color.text.muted;
+    font-size: $font.size.12;
+    line-height: 1.45;
+  }
+
+  .entries {
+    display: flex;
+    flex-direction: column;
+    gap: $space.10;
+    margin: $space.14 0 0;
+  }
+
+  .entry {
+    padding: $space.8 $space.10;
+    border-radius: $radius.sm;
+
+    &[data-lead='true'] {
+      background: $color.accent.wash;
+    }
+  }
+
+  .entryName {
+    color: $color.text.muted;
+    font-family: var(--t-font-family-mono);
+    font-size: $font.size.12;
+  }
+
+  .entryValue {
+    margin: $space.4 0 0;
+  }
+}
+</style>
