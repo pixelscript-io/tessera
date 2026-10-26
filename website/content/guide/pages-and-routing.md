@@ -101,7 +101,7 @@ The router does what a browser does for a full page load, because a single-page 
 - **Title.** `document.title` becomes the page's `<page>` title.
 - **Announcement.** A visually hidden polite live region says `Navigated to About`, so a screen reader hears the change.
 - **Focus.** Focus moves to the new page's root element (given `tabindex="-1"`, without scrolling), so a keyboard user starts at the top of the new page and not on a link that no longer exists.
-- **Scroll.** A new page starts at the top, a link with a `#hash` scrolls to that element, and back and forward restore where you were.
+- **Scroll.** A new page starts at the top, a link with a `#hash` scrolls to that element (so does an app that starts on an address with one), and back and forward restore where you were.
 
 The first page of a visit does none of this: the browser already did it.
 
