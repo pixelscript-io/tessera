@@ -34,8 +34,7 @@ import { NOT_ITS_GOAL } from '../data/compare'
       <div class="footer">
         <p class="fine">
           Compared with React 19, Vue 3 and Svelte 5 and their usual companions, as of October 2026. Frameworks change and a cell
-          can be out of date. If you see a mistake, please
-          <a class="link" :href="links.issues">open an issue</a>.
+          can be out of date. If you see a mistake, please <a class="link" :href="links.issues">open an issue</a>.
         </p>
         <div class="actions">
           <LinkButton :href="links.quickStart">Quick start</LinkButton>

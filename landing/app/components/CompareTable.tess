@@ -175,7 +175,7 @@ import { FRAMEWORKS, GROUPS, STATUS_LABEL, STATUS_MEANING } from '../data/compar
 .framework {
   color: $color.text.default;
   font-size: $font.size.14;
-  font-weight: $font.weight.bold;
+  font-weight: $font.weight.medium;
 
   &[data-lead='true'] {
     background: $color.accent.wash;
