@@ -122,6 +122,10 @@ export default createApi({ base: import.meta.env.VITE_API_URL })
 
 Without a `default.ts`, plain `get` and the rest use the shared API that [`configureApi`](#setting-it-up) sets up, or a full URL in the path.
 
+### Where an API's headers go
+
+An API sends its `headers` and `credentials` only to its own origin: its base URL's, or the page's when there is no base. A path that is a full address on another site (`get(item.next)`) is sent without them, so a link in an answer cannot collect a token. A header named on the call itself is always sent. `allowOtherOrigins: true` sends them everywhere; use it only when every address is yours ([Security](/guide/security)). The cache also outlives a sign-out: call `clearApi()` when the person signs out.
+
 ### Keys and domains
 
 The base URL and keys are best taken from environment variables, which Vite reads from `.env` files and from your host's build settings, so staging and production differ without code changes. Anything in a variable that starts with `VITE_` is in the built page, so **it is public**. A key that must stay private cannot be in a browser call at all, in any framework: it has to be added by a server. When the API you call needs a secret, or does not allow browsers to call it (CORS), put a small proxy that you control in front of it.

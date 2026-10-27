@@ -25,7 +25,7 @@ The folder `.tessera/` is generated; keep it out of version control.
 `tessera mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server over the project. It speaks on standard input and output, so a client starts it as a command. It is read-only: no tool writes a file.
 
 ```bash
-npx tessera mcp
+npx @pixelscriptio/tessera mcp
 ```
 
 Tell the client how to start it. For most clients that is a `.mcp.json` or settings entry like this one:
@@ -33,7 +33,7 @@ Tell the client how to start it. For most clients that is a `.mcp.json` or setti
 ```json
 {
   "mcpServers": {
-    "tessera": { "command": "npx", "args": ["tessera", "mcp"] }
+    "tessera": { "command": "npx", "args": ["@pixelscriptio/tessera", "mcp"] }
   }
 }
 ```

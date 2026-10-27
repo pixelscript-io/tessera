@@ -19,6 +19,10 @@ A template has exactly one root element, which carries `class="root"`. The root 
 | Component         | `<Button tone="danger">`                 | Found by name; variants, events and slots are checked.                                                         |
 | Class             | `class="root"`                           | Scoped to the component. `:class` is not scoped ([W4102](/reference/errors/W4102)).                            |
 
+## Addresses and handlers from data
+
+A value that would run script (`javascript:`, `vbscript:`) is not set on `href`, `src`, `action`, `formaction` or `poster`: the attribute becomes `about:blank` and a warning says so once. An `on…` attribute such as `onclick` is not set; write `@click`. See [Security](/guide/security).
+
 ## Script names in a template
 
 A name in an expression must be declared in `<script>` or be an `each` variable ([T4006](/reference/errors/T4006)). Signals are unwrapped only when they are top-level bindings; `{state.field}` where `field` is a signal is [T4012](/reference/errors/T4012).

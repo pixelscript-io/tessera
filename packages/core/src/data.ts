@@ -58,6 +58,12 @@ export interface ApiOptions {
   headers?:
     Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>)
   credentials?: RequestCredentials
+  /**
+   * Headers and credentials are sent only to the api's own origin: the base's, or the page's when there is none. A path
+   * that is a full address on another site (`get(item.next)`) gets neither, so a link in an answer cannot collect a
+   * token. Set this to send them to any address a path names.
+   */
+  allowOtherOrigins?: boolean
   /** The `fetch` to use. Wrap it to add what every request needs. Default: the global one. */
   fetch?: typeof globalThis.fetch
   /** How long to wait before try number `attempt + 1` (0 is the first retry). Default: 300ms, doubling. */
@@ -175,6 +181,15 @@ interface Entry {
 const PLACEHOLDER = /\/:([A-Za-z_]\w*)/g
 const ABSOLUTE = /^[a-z][a-z0-9+.-]*:\/\//i
 
+/** The origin of an address, resolved against `from` when it is relative. Undefined when it cannot be read. */
+function originOf(url: string, from?: string): string | undefined {
+  try {
+    return new URL(url, from).origin
+  } catch {
+    return undefined
+  }
+}
+
 const noop = () => {}
 
 function abortError(): Error {
@@ -259,6 +274,20 @@ export function createApi(initial: ApiOptions = {}): Api {
   const fetcher: typeof globalThis.fetch = (input, init) =>
     (config.fetch ?? globalThis.fetch)(input, init)
 
+  /** The origin the api belongs to: its base's, or the page's. Undefined where there is no page (tests, a server). */
+  function ownOrigin(): string | undefined {
+    if (config.base && ABSOLUTE.test(config.base)) return originOf(config.base)
+    return (globalThis as { location?: { origin?: string } }).location?.origin
+  }
+
+  /** Whether this api's headers and credentials may go with a request to `url`. */
+  function trusts(url: string): boolean {
+    if (config.allowOtherOrigins) return true
+    const own = ownOrigin()
+    if (!own) return !ABSOLUTE.test(url) && !url.startsWith('//')
+    return originOf(url, own) === own
+  }
+
   function join(path: string): string {
     if (ABSOLUTE.test(path) || !config.base) return path
     return config.base.replace(/\/+$/, '') + path
@@ -287,7 +316,12 @@ export function createApi(initial: ApiOptions = {}): Api {
     signal: AbortSignal | undefined,
   ): Promise<unknown> {
     const headers: Record<string, string> = { accept: 'application/json, text/plain, */*' }
-    const own = typeof config.headers === 'function' ? await config.headers() : config.headers
+    const trusted = trusts(url)
+    const own = !trusted
+      ? undefined
+      : typeof config.headers === 'function'
+        ? await config.headers()
+        : config.headers
     for (const [k, v] of Object.entries({ ...own, ...request.headers }))
       headers[k.toLowerCase()] = v
     let payload: BodyInit | undefined
@@ -304,7 +338,7 @@ export function createApi(initial: ApiOptions = {}): Api {
         headers,
         body: payload,
         signal,
-        ...(config.credentials ? { credentials: config.credentials } : {}),
+        ...(config.credentials && trusted ? { credentials: config.credentials } : {}),
       })
     } catch (cause) {
       if (signal?.aborted) throw cause

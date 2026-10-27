@@ -1,7 +1,5 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { tessera } from '@tessera/compiler/vite'
-import { build as viteBuild, createServer, preview as vitePreview } from 'vite'
 import type { InlineConfig, Plugin } from 'vite'
 import type { Args } from '../args'
 import { flag, has } from '../args'
@@ -76,7 +74,9 @@ function htmlShell(root: string): Plugin {
  * `vite.config.ts` uses it as it is (it registers the plugin itself), and only gets the shell if it has no
  * `index.html`.
  */
-export function projectConfig(root: string, args: Args): InlineConfig {
+export async function projectConfig(root: string, args: Args): Promise<InlineConfig> {
+  // Loaded here, not at the top: every other command starts without Vite.
+  const { tessera } = await import('@tessera/compiler/vite')
   const own = VITE_CONFIGS.some((name) => existsSync(join(root, name)))
   const hasHtml = existsSync(join(root, 'index.html'))
   const port = flag(args, 'port')
@@ -93,7 +93,8 @@ export function projectConfig(root: string, args: Args): InlineConfig {
 /** `tessera dev`: the dev server, with hot updates. */
 export async function dev(args: Args, io: Io): Promise<number> {
   const root = findProjectRoot(io.cwd, args)
-  const server = await createServer(projectConfig(root, args))
+  const { createServer } = await import('vite')
+  const server = await createServer(await projectConfig(root, args))
   await server.listen()
   server.printUrls()
   // The server keeps the process alive; this resolves only when it is closed.
@@ -107,7 +108,8 @@ export async function dev(args: Args, io: Io): Promise<number> {
  */
 export async function build(args: Args, io: Io): Promise<number> {
   const root = findProjectRoot(io.cwd, args)
-  const config = projectConfig(root, args)
+  const { build: viteBuild } = await import('vite')
+  const config = await projectConfig(root, args)
   const prerendering = has(args, 'prerender')
   // The manifest says which stylesheets each page needs; the prerendered HTML links them.
   const hadManifest = !!config.build?.manifest
@@ -155,7 +157,8 @@ export async function build(args: Args, io: Io): Promise<number> {
 
 /** `tessera preview`: serve the production build. */
 export async function preview(args: Args, io: Io): Promise<number> {
-  const server = await vitePreview(projectConfig(findProjectRoot(io.cwd, args), args))
+  const { preview: vitePreview } = await import('vite')
+  const server = await vitePreview(await projectConfig(findProjectRoot(io.cwd, args), args))
   server.printUrls()
   await new Promise<void>((done) => server.httpServer.on('close', done))
   return 0

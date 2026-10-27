@@ -143,7 +143,7 @@ async function submit() {
 
 - A read follows the signals in its parameters (`get('/users/:id', { id })`), shares one answer with every component that asks for the same path, retries, and is refreshed when a write to the same path succeeds. Do not copy server data into state.
 - Each file in `app/apis` is a server with its own base URL: `app/apis/github.ts` exports `createApi({ base: 'https://api.github.com' })` (imported from `@pixelscriptio/tessera/core`) and a script calls `github.get('/users/:name', { name })`. A file named `default.ts` is what plain `get` and `post` use.
-- A description beside it (`github.api.json`, or made by `npx tessera api import openapi.json --name github`) makes the compiler check each call: the endpoint, its parameters and the fields a template reads.
+- A description beside it (`github.api.json`, or made by `npx @pixelscriptio/tessera api import openapi.json --name github`) makes the compiler check each call: the endpoint, its parameters and the fields a template reads.
 
 ### State that components share
 
@@ -169,4 +169,4 @@ A template then reads `{cart.count}` and `each="name in cart.items"`, and handle
 
 ### The loop
 
-After every change, run `npx tessera check`. It prints the same errors the build does, each with a fix, and `npx tessera explain T4008` explains any code. `npx tessera dev` runs the app with hot updates. Do not guess a component, variant, token or API member: look it up in the manifest or with the MCP tools, or in the documentation.
+After every change, run `npm run check`. It prints the same errors the build does, each with a fix, and `npx @pixelscriptio/tessera explain T4008` explains any code. `npm run dev` runs the app with hot updates. Run Tessera only through the npm scripts or as `npx @pixelscriptio/tessera <command>`: a bare `npx tessera` can download an unrelated package of that name when Tessera is not installed. Do not guess a component, variant, token or API member: look it up in the manifest or with the MCP tools, or in the documentation.

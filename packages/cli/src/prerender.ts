@@ -1,7 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { tessera } from '@tessera/compiler/vite'
-import { createServer } from 'vite'
 
 /** A page's route, as the router knows it. */
 export interface PrerenderRoute {
@@ -148,6 +146,9 @@ export async function prerender(
   const entry = join(dir, 'entry.ts')
   writeFileSync(entry, ENTRY)
 
+  // Loaded here, not at the top: every command that is not a build starts without Vite.
+  const { createServer } = await import('vite')
+  const { tessera } = await import('@tessera/compiler/vite')
   const server = await createServer({
     root,
     configFile: false,

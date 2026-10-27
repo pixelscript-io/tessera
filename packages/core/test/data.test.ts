@@ -8,6 +8,7 @@ interface Call {
   headers: Record<string, string>
   body: string | undefined
   signal: AbortSignal | null | undefined
+  credentials: RequestCredentials | undefined
 }
 
 type Reply = Response | object | string | number | undefined
@@ -27,6 +28,7 @@ function server(handler: (call: Call) => Reply | Promise<Reply>) {
       headers,
       body: typeof init?.body === 'string' ? init.body : undefined,
       signal: init?.signal,
+      credentials: init?.credentials,
     }
     calls.push(call)
     const aborted = new Promise<never>((_, reject) => {
@@ -177,6 +179,93 @@ describe('get: the request', () => {
     await settle()
     expect(s.calls[0]!.headers).toMatchObject({ authorization: 'Bearer t', 'x-trace': '1' })
     expect(token).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('an api sends its headers and credentials only to its own origin', () => {
+  const secret = { headers: { authorization: 'Bearer secret' }, credentials: 'include' as const }
+
+  it('does not send them to another site that a path names', async () => {
+    const s = server(() => ({}))
+    const { get } = api(s, { base: 'https://api.example.com', ...secret })
+    get('https://other.example.net/x')
+    get('/mine')
+    await settle()
+    const other = s.calls.find((c) => c.url === 'https://other.example.net/x')!
+    expect(other.headers.authorization).toBeUndefined()
+    expect(other.credentials).toBeUndefined()
+    const mine = s.calls.find((c) => c.url === 'https://api.example.com/mine')!
+    expect(mine.headers.authorization).toBe('Bearer secret')
+    expect(mine.credentials).toBe('include')
+  })
+
+  it('sends them to a full address on the same origin as its base', async () => {
+    const s = server(() => ({}))
+    const { get } = api(s, { base: 'https://api.example.com/v1', ...secret })
+    get('https://api.example.com/v2/users')
+    await settle()
+    expect(s.calls[0]!.headers.authorization).toBe('Bearer secret')
+  })
+
+  it('treats a path with no base as the page’s own, and an address that names another site as not', async () => {
+    vi.stubGlobal('location', { origin: 'https://app.example.com' })
+    try {
+      const s = server(() => ({}))
+      const { get } = api(s, secret)
+      get('/local')
+      get('https://app.example.com/same')
+      get('//evil.example.net/x')
+      get('https://evil.example.net/y')
+      await settle()
+      const sent = (url: string) => s.calls.find((c) => c.url === url)!.headers.authorization
+      expect(sent('/local')).toBe('Bearer secret')
+      expect(sent('https://app.example.com/same')).toBe('Bearer secret')
+      expect(sent('//evil.example.net/x')).toBeUndefined()
+      expect(sent('https://evil.example.net/y')).toBeUndefined()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('treats a relative base as the page’s own origin', async () => {
+    vi.stubGlobal('location', { origin: 'https://app.example.com' })
+    try {
+      const s = server(() => ({}))
+      const { get } = api(s, { base: '/api', ...secret })
+      get('/users')
+      await settle()
+      expect(s.calls[0]!.url).toBe('/api/users')
+      expect(s.calls[0]!.headers.authorization).toBe('Bearer secret')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('still sends the headers a request names itself, wherever it goes', async () => {
+    const s = server(() => ({}))
+    const { get } = api(s, { base: 'https://api.example.com', ...secret })
+    get('https://other.example.net/x', {}, { headers: { 'x-trace': '1' } })
+    await settle()
+    expect(s.calls[0]!.headers['x-trace']).toBe('1')
+    expect(s.calls[0]!.headers.authorization).toBeUndefined()
+  })
+
+  it('sends them everywhere when the api says so', async () => {
+    const s = server(() => ({}))
+    const { get } = api(s, { base: 'https://api.example.com', allowOtherOrigins: true, ...secret })
+    get('https://other.example.net/x')
+    await settle()
+    expect(s.calls[0]!.headers.authorization).toBe('Bearer secret')
+    expect(s.calls[0]!.credentials).toBe('include')
+  })
+
+  it('does the same for a write', async () => {
+    const s = server(() => ({}))
+    const { post } = api(s, { base: 'https://api.example.com', ...secret })
+    const send = post('https://other.example.net/x')
+    await send({ a: 1 })
+    expect(s.calls[0]!.headers.authorization).toBeUndefined()
+    expect(s.calls[0]!.credentials).toBeUndefined()
   })
 })
 

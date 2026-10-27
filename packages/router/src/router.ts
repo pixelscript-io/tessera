@@ -272,6 +272,13 @@ export class Router {
   ): Promise<void> {
     const url = new URL(to, this.win.location.href)
     if (url.origin !== this.win.location.origin) {
+      // Another site is the browser's to open. An address that is not http or https (`javascript:`, `data:`) would run
+      // in this page: `navigate(route.query.next)` must not be a way to run script.
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        throw new Error(
+          `navigate() will not go to "${to}": only http and https addresses leave the app. Use a normal <a href> for mailto: and tel: links.`,
+        )
+      }
       this.win.location.assign(url.href)
       return
     }

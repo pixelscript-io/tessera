@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
-import { transformWithEsbuild, type Plugin } from 'vite'
+import type { Plugin } from 'vite'
 import { formatDiagnostic } from '@tessera/contract'
 import { formatDiagnostic as formatTokenDiagnostic } from '@tessera/tokens'
 import { checkPlainScriptAutoImports } from './autoimport-ts'
@@ -400,6 +400,8 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       } else {
         styles.delete(id)
       }
+      // Vite is already running here, so this costs nothing; the module must not import it for the command line.
+      const { transformWithEsbuild } = await import('vite')
       const out = await transformWithEsbuild(output, `${id}.ts`, { target: 'esnext' })
       return { code: out.code, map: null }
     },

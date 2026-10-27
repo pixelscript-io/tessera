@@ -26,6 +26,8 @@ createApp().mount('#app')
 
 `mount()` returns a promise that resolves once the first page is on screen. The routes come from the `virtual:tessera/routes` module the Vite plugin generates; adding or removing a page file updates it, the types and the link checks without restarting the dev server.
 
+`navigate(address)` goes to another site only over http or https; any other address (`javascript:`, `data:`, `mailto:`) is rejected with an error, so `navigate(route.query.next)` cannot run script ([Security](/guide/security)).
+
 The router uses the History API. There is no hash mode, and no nested routes, guards or loaders.
 
 ## A page

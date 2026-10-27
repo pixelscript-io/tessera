@@ -1,4 +1,3 @@
-import { exportDocs, serveDocs } from '@tessera/docs'
 import type { Args } from '../args'
 import { flag, has } from '../args'
 import type { Io } from '../io'
@@ -11,6 +10,8 @@ import { buildReport } from './report'
  * In dev it reads them live; `--static` writes a folder any file server can host.
  */
 export async function docs(args: Args, io: Io): Promise<number> {
+  // Loaded here, not at the top: the docs app brings in Vite, which no other command needs.
+  const { exportDocs, serveDocs } = await import('@tessera/docs')
   const root = findProjectRoot(io.cwd, args)
   const report = (project: Parameters<typeof buildReport>[0]) => buildReport(project)
   if (has(args, 'static')) {

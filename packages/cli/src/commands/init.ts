@@ -100,7 +100,7 @@ const CLAUDE_MD = '@AGENTS.md\n'
 /** Starts the Tessera MCP server for a tool that reads `.mcp.json`, so it can look up components, tokens, APIs and state. */
 const MCP_JSON =
   JSON.stringify(
-    { mcpServers: { tessera: { command: 'npx', args: ['tessera', 'mcp'] } } },
+    { mcpServers: { tessera: { command: 'npx', args: ['@pixelscriptio/tessera', 'mcp'] } } },
     null,
     2,
   ) + '\n'
@@ -250,7 +250,7 @@ export async function init(args: Args, io: Io): Promise<number> {
       writeFileSync(join(target, '.tessera', 'manifest.json'), generated.manifest)
   } catch {
     io.out(
-      'Could not write AGENTS.md and llms.txt. Run npx tessera agent-files once the project builds.',
+      'Could not write AGENTS.md and llms.txt. Run npx @pixelscriptio/tessera agent-files once the project builds.',
     )
   }
   put('CLAUDE.md', CLAUDE_MD)
@@ -327,7 +327,7 @@ function printSummary(
   io.out('')
   io.out(
     ui.dim(
-      'Then: npx tessera docs for the design system docs, npx tessera check to validate, npx tessera a11y for accessibility tests.',
+      'Then: npx @pixelscriptio/tessera docs for the design system docs, npm run check to validate, npx @pixelscriptio/tessera a11y for accessibility tests.',
     ),
   )
 }

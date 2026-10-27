@@ -3,8 +3,6 @@ import { join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { customElementsManifest } from '@tessera/agent'
 import { componentProps } from '@tessera/compiler'
-import { tessera } from '@tessera/compiler/vite'
-import { build } from 'vite'
 import type { Args } from '../args'
 import { flag, has } from '../args'
 import {
@@ -104,6 +102,9 @@ export async function elements(args: Args, io: Io): Promise<number> {
   )
 
   rmSync(out, { recursive: true, force: true })
+  // Loaded here, not at the top: every other command starts without Vite.
+  const { tessera } = await import('@tessera/compiler/vite')
+  const { build } = await import('vite')
   await build({
     root: project.root,
     configFile: false,

@@ -69,6 +69,28 @@ function warnOnce(message: string): void {
   console.warn(`[tessera] ${message}`)
 }
 
+/** Attributes whose value is an address the browser follows or loads. */
+const URL_ATTRIBUTES = new Set(['href', 'src', 'action', 'formaction', 'poster', 'xlink:href'])
+
+/** An address that would run script in this page: `javascript:` or `vbscript:`, however it is spelled. */
+const runsScript = (value: string): boolean =>
+  // The browser ignores tabs, newlines and control characters in a scheme, and leading whitespace.
+  // eslint-disable-next-line no-control-regex -- those characters are the point
+  /^(?:javascript|vbscript):/i.test(value.replace(/[\u0000-\u0020\u007f-\u009f]+/g, ''))
+
+/**
+ * What may be set for an attribute or property. An address that would run script becomes `about:blank`, and an event
+ * handler attribute (`onclick`) is not set: both are what a value taken from data (an API answer, a query string)
+ * could use to run code in the page. Anything else is returned as it is.
+ */
+function safely(name: string, value: unknown): { value: unknown; refused?: string } {
+  if (/^on[a-z]{3,}$/i.test(name))
+    return { value: null, refused: 'is an event handler written as an attribute' }
+  if (typeof value === 'string' && URL_ATTRIBUTES.has(name.toLowerCase()) && runsScript(value))
+    return { value: 'about:blank', refused: 'was a script address' }
+  return { value }
+}
+
 export function createRenderer<N, E extends N>(adapter: RendererAdapter<N, E>): Renderer<N, E> {
   function text(source: string | number | (() => string | number)): N {
     if (typeof source !== 'function') return adapter.createText(String(source))
@@ -87,6 +109,15 @@ export function createRenderer<N, E extends N>(adapter: RendererAdapter<N, E>): 
       adapter.setText(node, next)
     })
     return node
+  }
+
+  function guarded(name: string, value: unknown): unknown {
+    const checked = safely(name, value)
+    if (checked.refused)
+      warnOnce(
+        `The value of "${name}" ${checked.refused}, so it was not used. Addresses must be http, https, mailto, tel or relative, and handlers are written @click.`,
+      )
+    return checked.value
   }
 
   function attrValue(value: string | boolean | null): string | null {
@@ -115,16 +146,18 @@ export function createRenderer<N, E extends N>(adapter: RendererAdapter<N, E>): 
 
     for (const [name, value] of Object.entries(options.attrs ?? {})) {
       if (typeof value === 'function') {
-        effect(() => adapter.setAttribute(element, name, attrValue(value())))
+        effect(() =>
+          adapter.setAttribute(element, name, attrValue(guarded(name, value()) as string | null)),
+        )
       } else {
-        adapter.setAttribute(element, name, attrValue(value))
+        adapter.setAttribute(element, name, attrValue(guarded(name, value) as string | null))
       }
     }
     for (const [name, value] of Object.entries(options.props ?? {})) {
       if (typeof value === 'function') {
-        effect(() => adapter.setProperty(element, name, (value as () => unknown)()))
+        effect(() => adapter.setProperty(element, name, guarded(name, (value as () => unknown)())))
       } else {
-        adapter.setProperty(element, name, value)
+        adapter.setProperty(element, name, guarded(name, value))
       }
     }
     for (const [type, handler] of Object.entries(options.on ?? {})) {

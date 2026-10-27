@@ -29,7 +29,7 @@ function apisSection(manifest: AgentManifest, ticks: boolean): string {
     return `${name(a.name)}: ${endpoints || 'no description, so calls are not checked'}`
   })
   const how = ticks
-    ? `\nCall them as \`<name>.get('/path')\`, \`<name>.post('/path')\` and so on (plain \`get\` is the \`default\` API). A call on an API that has a description is checked by the compiler; \`get_endpoint\` in \`npx tessera mcp\` gives an endpoint's parameters and answer.\n`
+    ? `\nCall them as \`<name>.get('/path')\`, \`<name>.post('/path')\` and so on (plain \`get\` is the \`default\` API). A call on an API that has a description is checked by the compiler; \`get_endpoint\` in the Tessera MCP server gives an endpoint's parameters and answer.\n`
     : ''
   return `\n## APIs\n\n${list(lines)}\n${how}`
 }
@@ -43,7 +43,7 @@ function stateSection(manifest: AgentManifest, ticks: boolean): string {
       `${name(s.name)}: ${s.members.map((m) => (m.kind === 'function' ? `${m.name}()` : m.name)).join(', ') || 'nothing exported'}`,
   )
   const how = ticks
-    ? `\nName a piece of state in a template or a script, with no import: \`{cart.count}\`, \`cart.add(item)\`. It is read-only outside its file: change it by calling the functions of its file, never by assigning (\`cart.items = []\` is an error). Put server data in \`get\`, not in state. \`get_state\` in \`npx tessera mcp\` gives the members.\n`
+    ? `\nName a piece of state in a template or a script, with no import: \`{cart.count}\`, \`cart.add(item)\`. It is read-only outside its file: change it by calling the functions of its file, never by assigning (\`cart.items = []\` is an error). Put server data in \`get\`, not in state. \`get_state\` in the Tessera MCP server gives the members.\n`
     : ''
   return `\n## Shared state\n\n${list(lines)}\n${how}`
 }
@@ -68,14 +68,16 @@ ${options.guide ? `${options.guide.trim()}\n\n` : ''}## Rules
 
 ## Check your work
 
-Run \`npx tessera check\` after every change. It prints the same errors the build does, each with a fix. \`npx tessera explain <code>\` explains one.
-\`npx tessera check --fix\` applies the fixes that cannot change how the page looks.
+Run \`npm run check\` after every change. It prints the same errors the build does, each with a fix. \`npx @pixelscriptio/tessera explain <code>\` explains one.
+\`npm run check -- --fix\` applies the fixes that cannot change how the page looks.
+
+Run Tessera through the npm scripts (\`npm run dev\`, \`check\`, \`build\`) or as \`npx @pixelscriptio/tessera <command>\`. A bare \`npx tessera\` can download an unrelated package of that name when Tessera is not installed.
 
 ## Where the facts are
 
 - \`node_modules/@pixelscriptio/tessera/dist/docs/llms-full.txt\`: the whole Tessera documentation as one Markdown file, offline. Search it (for a component, an error code or a feature) before guessing or going online; each page starts with a line \`<!-- page: path -->\`.
 - \`.tessera/manifest.json\`: every component's contract, every token with its value in every theme, and the routes. Read it instead of guessing.
-- \`npx tessera mcp\`: a read-only MCP server for the same facts: search components, get a contract, resolve a raw value to a token, and validate a snippet.
+- \`npx @pixelscriptio/tessera mcp\`: a read-only MCP server for the same facts: search components, get a contract, resolve a raw value to a token, and validate a snippet.
 
 ## Components
 
@@ -87,7 +89,7 @@ ${apisSection(manifest, true)}${stateSection(manifest, true)}`
 export function llmsTxt(manifest: AgentManifest, name = 'This project'): string {
   return `# ${name}
 
-> A Tessera project: components with contracts and design tokens, checked by the compiler. Build from the components and tokens listed in the manifest, and run \`npx tessera check\`.
+> A Tessera project: components with contracts and design tokens, checked by the compiler. Build from the components and tokens listed in the manifest, and run \`npm run check\`.
 
 ## Facts
 

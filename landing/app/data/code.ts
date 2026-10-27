@@ -68,7 +68,7 @@ $ npx tessera check --fix`,
     `// .mcp.json
 {
   "mcpServers": {
-    "tessera": { "command": "npx", "args": ["tessera", "mcp"] }
+    "tessera": { "command": "npx", "args": ["@pixelscriptio/tessera", "mcp"] }
   }
 }`,
     `→ resolve_value  padding: "13px"

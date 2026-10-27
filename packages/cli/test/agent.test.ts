@@ -63,7 +63,7 @@ describe('tessera agent-files', () => {
     expect(first.out).toContain('Wrote llms.txt')
     const agents = read(root, 'AGENTS.md')
     expect(agents).toContain('`Card`')
-    expect(agents).toContain('npx tessera check')
+    expect(agents).toContain('npm run check')
     expect(agents).toContain('.tessera/manifest.json')
     expect(read(root, 'llms.txt')).toContain('Card:')
     expect(existsSync(join(root, '.tessera', 'manifest.json'))).toBe(true)

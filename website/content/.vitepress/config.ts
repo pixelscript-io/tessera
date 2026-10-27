@@ -19,6 +19,7 @@ const guide = [
   { text: 'Linting any project', link: '/guide/lint' },
   { text: 'Fetching data', link: '/guide/data' },
   { text: 'Sharing state', link: '/guide/shared-state' },
+  { text: 'Security', link: '/guide/security' },
   { text: 'Tokens in the docs', link: '/guide/system-manager' },
   { text: 'Editor support', link: '/guide/editor' },
   { text: 'AI coding tools', link: '/guide/agents' },

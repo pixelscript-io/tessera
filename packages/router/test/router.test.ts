@@ -103,6 +103,39 @@ describe('router: navigate()', () => {
     expect(window.location.pathname).toBe('/about')
   })
 
+  it('refuses an address that would run script, and hands other sites to the browser', async () => {
+    const assign = vi.fn()
+    const bound = (target: object, name: PropertyKey) => {
+      const value = (target as Record<PropertyKey, unknown>)[name]
+      return typeof value === 'function' ? value.bind(target) : value
+    }
+    // The real location cannot be replaced piece by piece, so the router gets a plain one that records assign().
+    const location = { href: window.location.href, origin: window.location.origin, assign }
+    const win = new Proxy(window, {
+      get: (target, name) => (name === 'location' ? location : bound(target, name)),
+    })
+    window.history.replaceState(null, '', '/')
+    router = createRouter({ routes, window: win })
+    await router.mount(container)
+    for (const bad of [
+      'javascript:alert(1)',
+      'JaVaScRiPt:alert(1)',
+      '  javascript:alert(1)',
+      'java	script:alert(1)',
+      'data:text/html,<script>alert(1)</script>',
+      'vbscript:msgbox(1)',
+      'mailto:someone@example.com',
+    ]) {
+      await expect(router.navigate(bad), bad).rejects.toThrow(
+        /will not go to .*: only http and https/,
+      )
+    }
+    expect(assign).not.toHaveBeenCalled()
+    await router.navigate('https://example.com/x?y=1')
+    expect(assign).toHaveBeenCalledWith('https://example.com/x?y=1')
+    expect(assign).toHaveBeenCalledTimes(1)
+  })
+
   it('scrolls to the element of the hash when the app starts on an address that has one', async () => {
     const scrolled = vi.fn()
     Element.prototype.scrollIntoView = scrolled
