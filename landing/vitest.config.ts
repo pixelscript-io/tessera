@@ -1,3 +1,4 @@
+import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
 // Inside this repository the plugin is the built workspace package; a project of your own imports it from '@pixelscriptio/tessera/vite'.
 import { tessera } from '@tessera/compiler/vite'
@@ -15,10 +16,10 @@ export default defineConfig({
       enabled: true,
       headless: true,
       viewport: { width: 1280, height: 900 },
-      provider: 'playwright',
-      instances: [
-        { browser: 'chromium', launch: { channel: process.env.TESSERA_A11Y_CHANNEL || undefined } },
-      ],
+      provider: playwright({
+        launchOptions: { channel: process.env.TESSERA_A11Y_CHANNEL || undefined },
+      }),
+      instances: [{ browser: 'chromium' }],
     },
   },
 })

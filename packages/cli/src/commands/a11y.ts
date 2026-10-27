@@ -6,10 +6,10 @@ import { openProject } from '../project'
 
 /** The dev dependencies the generated tests need, at the versions Tessera is tested with. */
 export const A11Y_DEV_DEPENDENCIES: Readonly<Record<string, string>> = {
-  '@vitest/browser': '^3.2.7',
+  '@vitest/browser-playwright': '^4.1.12',
   'axe-core': '^4.14.0',
   playwright: '^1.64.1',
-  vitest: '^3.2.7',
+  vitest: '^4.1.12',
 }
 
 const VITEST_CONFIGS = [
@@ -22,7 +22,8 @@ const VITEST_CONFIGS = [
 ]
 
 /** The Vitest configuration that runs the generated tests in a real browser, using the project's own Tessera plugin. */
-export const VITEST_CONFIG = `import { defineConfig } from 'vitest/config'
+export const VITEST_CONFIG = `import { playwright } from '@vitest/browser-playwright'
+import { defineConfig } from 'vitest/config'
 import { tessera } from '@pixelscriptio/tessera/vite'
 
 // The generated accessibility tests run in a real browser (Vitest browser mode, with Playwright).
@@ -37,10 +38,10 @@ export default defineConfig({
     browser: {
       enabled: true,
       headless: true,
-      provider: 'playwright',
-      instances: [
-        { browser: 'chromium', launch: { channel: process.env.TESSERA_A11Y_CHANNEL || undefined } },
-      ],
+      provider: playwright({
+        launchOptions: { channel: process.env.TESSERA_A11Y_CHANNEL || undefined },
+      }),
+      instances: [{ browser: 'chromium' }],
     },
   },
 })

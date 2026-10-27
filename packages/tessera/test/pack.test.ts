@@ -182,7 +182,7 @@ describe('the packed package', () => {
     })
     expect(Object.keys(manifest.dependencies).sort()).toEqual(['acorn', 'vite'])
     // The test tools are the project's own: optional peers, never dependencies.
-    for (const tool of ['vitest', '@vitest/browser', 'axe-core']) {
+    for (const tool of ['vitest', '@vitest/browser-playwright', 'axe-core']) {
       expect(manifest.peerDependenciesMeta[tool], tool).toEqual({ optional: true })
     }
     expect(JSON.stringify(manifest)).not.toContain('workspace:')
@@ -216,7 +216,7 @@ describe('the packed package', () => {
     const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
     expect(manifest.scripts['test:a11y']).toBe('vitest run')
     expect(Object.keys(manifest.devDependencies)).toEqual(
-      expect.arrayContaining(['@vitest/browser', 'axe-core', 'playwright', 'vitest']),
+      expect.arrayContaining(['@vitest/browser-playwright', 'axe-core', 'playwright', 'vitest']),
     )
     // It does not install: the next step does.
     expect(existsSync(join(dir, 'node_modules', 'vitest'))).toBe(false)

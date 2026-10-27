@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import 'virtual:tessera/tokens.css'
-import { userEvent } from '@vitest/browser/context'
+import { userEvent } from 'vitest/browser'
 import { afterEach, describe, expect, it } from 'vitest'
 import { componentProps } from '@tessera/compiler'
 import { defineElement, flush } from '../src'

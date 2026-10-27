@@ -1,6 +1,6 @@
 {
   "name": "@pixelscriptio/tessera",
-  "version": "0.6.8",
+  "version": "0.7.0",
   "description": "A design-system-first frontend framework: tokens, accessibility, variants and docs built in and enforced at compile time.",
   "type": "module",
   "bin": {
@@ -78,8 +78,8 @@
   },
   "peerDependencies": {
     "prettier": "^3.0.0",
-    "vitest": "^3.2.0",
-    "@vitest/browser": "^3.2.0",
+    "vitest": "^4.1.12",
+    "@vitest/browser-playwright": "^4.1.12",
     "axe-core": "^4.10.0"
   },
   "peerDependenciesMeta": {
@@ -89,7 +89,7 @@
     "vitest": {
       "optional": true
     },
-    "@vitest/browser": {
+    "@vitest/browser-playwright": {
       "optional": true
     },
     "axe-core": {

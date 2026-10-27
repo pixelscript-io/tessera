@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { join } from 'node:path'
+import { parse } from 'acorn'
 import { describe, expect, it } from 'vitest'
 import { project, read, run, write } from './helpers'
 
@@ -187,6 +188,39 @@ describe('tessera api import', () => {
       const { code } = await run(root, 'api', 'import', url, '--name', 'web')
       expect(code).toBe(0)
       expect(existsSync(join(root, 'app/apis/web.api.json'))).toBe(true)
+    } finally {
+      await new Promise((resolve) => server.close(resolve))
+    }
+  })
+
+  it('writes a server address that is not a plain URL as a string, whatever is in it', async () => {
+    const root = app()
+    const hostile = "https://a.example.com/v1\n', evil: 1, x: '\\\u2028\"end"
+    const document = { ...PETS, servers: [{ url: hostile }] }
+    await run(root, 'api', 'import', spec(root, 'hostile.json', document), '--name', 'pets')
+    const text = read(root, 'app/apis/pets.ts')
+    // It is a module that reads, and it holds the address exactly, with nothing else added.
+    const tree = parse(text, { ecmaVersion: 'latest', sourceType: 'module' }) as any
+    const declaration = tree.body.find(
+      (n: any) => n.type === 'ExportDefaultDeclaration',
+    ).declaration
+    const properties = declaration.arguments[0].properties
+    expect(properties.map((p: any) => p.key.name)).toEqual(['base'])
+    expect(properties[0].value.value).toBe(hostile)
+  })
+
+  it('does not read a description larger than 10 MB from a web address', async () => {
+    const big = Buffer.alloc(11 * 1024 * 1024, 120)
+    const server: Server = createServer((_req, res) => {
+      res.setHeader('content-type', 'application/json')
+      res.end(big)
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    try {
+      const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/openapi.json`
+      const { code, err } = await run(app(), 'api', 'import', url, '--name', 'big')
+      expect(code).toBe(1)
+      expect(err).toContain('is larger than 10 MB')
     } finally {
       await new Promise((resolve) => server.close(resolve))
     }

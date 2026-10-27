@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import 'virtual:tessera/tokens.css'
 import './base.css'
-import { page, userEvent } from '@vitest/browser/context'
+import { page, userEvent } from 'vitest/browser'
 import axe from 'axe-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { flush, getRenderer } from '@tessera/core'

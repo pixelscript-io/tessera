@@ -38,7 +38,13 @@ describe('starting the command line', () => {
 
   it('does not load the test tools, Prettier or the docs app for any command that is not about them', () => {
     const { packages, files } = loadedAtStart()
-    for (const name of ['vitest', '@vitest/browser', 'prettier', 'axe-core', 'playwright'])
+    for (const name of [
+      'vitest',
+      '@vitest/browser-playwright',
+      'prettier',
+      'axe-core',
+      'playwright',
+    ])
       expect(packages.has(name), name).toBe(false)
     // The docs app and the Prettier plugin are chunks of their own, reached only by a dynamic import.
     expect(files.some((f) => f.startsWith('prettier-plugin'))).toBe(false)

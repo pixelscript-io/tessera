@@ -19,7 +19,7 @@ defineA11ySuites({
 })
 ```
 
-The test tools (`vitest`, `@vitest/browser`, `playwright`, `axe-core`) are yours, installed by `tessera a11y`: they are optional peers of Tessera, never dependencies. The tests run in a real browser; set `TESSERA_A11Y_CHANNEL=msedge` (or `chrome`) to use one that is already installed instead of downloading Chromium. For each component, in each theme, the generated suites check:
+The test tools (`vitest` 4 or newer, `@vitest/browser-playwright`, `playwright`, `axe-core`) are yours, installed by `tessera a11y`: they are optional peers of Tessera, never dependencies. The tests run in a real browser; set `TESSERA_A11Y_CHANNEL=msedge` (or `chrome`) to use one that is already installed instead of downloading Chromium. For each component, in each theme, the generated suites check:
 
 - axe-core finds no violations for every combination of the contract's variant values and every declared state the test can create, using a real mouse and keyboard (hover, focus-visible, pressed, checked, expanded, open, disabled);
 - the element's role matches the contract;

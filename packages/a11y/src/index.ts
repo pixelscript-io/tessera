@@ -7,7 +7,7 @@
  * Browser only: it needs real layout, real focus and a real keyboard, so it runs under Vitest's browser mode.
  */
 import axe from 'axe-core'
-import { userEvent } from '@vitest/browser/context'
+import { userEvent } from 'vitest/browser'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   comboboxConformance,

@@ -2,7 +2,7 @@
 
 Introduced in v0.1 (Milestones 0 and 7).
 
-Tessera projects use [Vitest](https://vitest.dev/). There are three kinds of test, and each runs where it needs to.
+Tessera projects use [Vitest](https://vitest.dev/) 4 or newer (browser tests also need `@vitest/browser-playwright`; `tessera a11y` adds both). There are three kinds of test, and each runs where it needs to.
 
 ## Logic: plain Vitest
 

@@ -53,7 +53,7 @@ describe('tessera a11y', () => {
     )
     expect(read(dir, 'app/components/a11y.browser.test.ts')).not.toContain('fixtures')
     expect(read(dir, 'vitest.config.ts')).toBe(VITEST_CONFIG)
-    expect(read(dir, 'vitest.config.ts')).toContain("provider: 'playwright'")
+    expect(read(dir, 'vitest.config.ts')).toContain('provider: playwright(')
     expect(read(dir, 'vitest.config.ts')).toContain("optimizeDeps: { include: ['axe-core'] }")
     const manifest = JSON.parse(read(dir, 'package.json')) as {
       scripts: Record<string, string>

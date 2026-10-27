@@ -1,3 +1,4 @@
+import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
 import { tessera } from './packages/compiler/dist/vite.js'
 
@@ -8,8 +9,8 @@ import { tessera } from './packages/compiler/dist/vite.js'
 const browser = () => ({
   enabled: true,
   headless: true,
-  provider: 'playwright' as const,
-  instances: [{ browser: 'chromium' as const, launch: { channel: 'msedge' } }],
+  provider: playwright({ launchOptions: { channel: 'msedge' } }),
+  instances: [{ browser: 'chromium' as const }],
 })
 
 export default defineConfig({

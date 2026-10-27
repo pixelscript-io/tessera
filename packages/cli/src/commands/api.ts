@@ -16,8 +16,10 @@ import { openProject } from '../project'
 const forward = (p: string) => p.replaceAll('\\', '/')
 const lines = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`
 
-/** Text as a single-quoted string in a script. */
-const quote = (text: string) => `'${text.split('\\').join('\\\\').split("'").join("\\'")}'`
+/** Text as a string in a script: single-quoted when that is safe, else escaped, so nothing in it can end the string. */
+// eslint-disable-next-line no-control-regex -- control characters and line separators are what must not go in single quotes
+const SAFE_IN_QUOTES = /^[^'\\\u0000-\u001f\u2028\u2029]*$/
+const quote = (text: string) => (SAFE_IN_QUOTES.test(text) ? `'${text}'` : JSON.stringify(text))
 
 /** The project to write into: the one that is here, or the folder itself (a description can start a project's `app/apis`). */
 async function projectRoot(io: Io, args: Args): Promise<string> {
@@ -32,12 +34,31 @@ async function projectRoot(io: Io, args: Args): Promise<string> {
   }
 }
 
+/** The most of a description that is read from a web address: a real one is far smaller. */
+const MAX_BYTES = 10 * 1024 * 1024
+
 async function readSource(io: Io, input: string): Promise<string> {
   if (/^https?:\/\//i.test(input)) {
     try {
       const response = await fetch(input, { signal: AbortSignal.timeout(15_000) })
       if (!response.ok) throw new Error(`the server said ${response.status}`)
-      return await response.text()
+      const tooBig = () => new Error('it is larger than 10 MB, which is not an API description')
+      if (Number(response.headers.get('content-length') ?? 0) > MAX_BYTES) throw tooBig()
+      const reader = response.body?.getReader()
+      if (!reader) return await response.text()
+      const chunks: Uint8Array[] = []
+      let size = 0
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        size += value.length
+        if (size > MAX_BYTES) {
+          await reader.cancel()
+          throw tooBig()
+        }
+        chunks.push(value)
+      }
+      return Buffer.concat(chunks).toString('utf8')
     } catch (error) {
       throw new CliError(
         `Could not read ${input}: ${error instanceof Error ? error.message : String(error)}.`,

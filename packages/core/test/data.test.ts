@@ -269,6 +269,87 @@ describe('an api sends its headers and credentials only to its own origin', () =
   })
 })
 
+describe('what an api remembers when who it is for changes', () => {
+  const setup = async (options: ApiOptions = {}) => {
+    const s = server(() => ({ name: 'a' }))
+    const client = api(s, {
+      base: 'https://api.example.com',
+      headers: { authorization: 'Bearer a' },
+      ...options,
+    })
+    const me = client.get('/me')
+    await settle()
+    return { s, client, me }
+  }
+
+  it('forgets everything when the headers change, so the next person does not see the last one’s answers', async () => {
+    const { s, client, me } = await setup()
+    expect(me.data.value).toEqual({ name: 'a' })
+    client.configure({ headers: { authorization: 'Bearer b' } })
+    // What was kept is gone at once; a read that is still shown asks again, with the new headers.
+    expect(me.data.value).toBeUndefined()
+    await settle()
+    expect(s.calls).toHaveLength(2)
+    expect(s.calls[1]!.headers.authorization).toBe('Bearer b')
+    expect(me.data.value).toEqual({ name: 'a' })
+  })
+
+  it('forgets everything when the credentials or the base change', async () => {
+    const one = await setup()
+    one.client.configure({ credentials: 'include' })
+    await settle()
+    expect(one.s.calls).toHaveLength(2)
+    const two = await setup()
+    two.client.configure({ base: 'https://other.example.com' })
+    await settle()
+    expect(two.s.calls.at(-1)!.url).toBe('https://other.example.com/me')
+  })
+
+  it('keeps what it has when the same headers are set again, or when an option that is not about who it is for changes', async () => {
+    const headers = { authorization: 'Bearer a' }
+    const { s, client, me } = await setup({ headers })
+    client.configure({ headers })
+    client.configure({ retryDelay: () => 5, staleAfter: 10_000 })
+    expect(me.data.value).toEqual({ name: 'a' })
+    await settle()
+    expect(s.calls).toHaveLength(1)
+  })
+})
+
+describe('a value that would change which address is asked', () => {
+  it('is an error for a read, which asks nothing, and a good value later asks', async () => {
+    const s = server(() => ({ ok: true }))
+    const { get } = api(s)
+    const id = state<string>('..')
+    const user = get('/users/:id', { id })
+    await settle()
+    expect(s.calls).toHaveLength(0)
+    expect((user.error.value as Error).message).toContain(
+      '"id" is "..", which would change which address is asked',
+    )
+    id.value = '7'
+    await settle()
+    expect(s.calls.map((c) => c.url)).toEqual(['/users/7'])
+    expect(user.error.value).toBeUndefined()
+  })
+
+  it('rejects a write, and asks nothing', async () => {
+    const s = server(() => ({}))
+    const { del } = api(s)
+    const remove = del('/users/:id')
+    await expect(remove({ id: '.' })).rejects.toThrow('which would change which address is asked')
+    expect(s.calls).toHaveLength(0)
+  })
+
+  it('allows a value that only has dots in it', async () => {
+    const s = server(() => ({}))
+    const { get } = api(s)
+    for (const id of ['a.b', '...', '.hidden', '1.5']) get('/files/:id', { id })
+    await settle()
+    expect(s.calls).toHaveLength(4)
+  })
+})
+
 describe('get: errors and retries', () => {
   it('turns a failed status into an ApiError with what the server said', async () => {
     const s = server(() => json({ message: 'no such user' }, 404))

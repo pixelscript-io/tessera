@@ -18,20 +18,22 @@ export default createApi({
 })
 ```
 
+**A value cannot climb out of its place in the path.** In `get('/users/:id', { id })`, a value of `.` or `..` would be read by the browser as a step up, which could ask a different endpoint with the API's credentials. It is refused: a read shows an error and asks nothing, and a write rejects.
+
 **Text is text.** `{expression}` in a template is set as text, and the prerender escapes text and attribute values, so data cannot add markup to a page.
 
 ## Things that stay yours
 
 - **Keys in the browser are public.** Anything in `VITE_` variables is in the built page. A secret needs a server in front of it ([Fetching data](/guide/data#keys-and-domains)).
-- **Cached answers outlive a sign-out.** An API remembers what it fetched. When a different person signs in during the same visit, call `clearApi()` (or the `clear()` of your API) first, so they do not see the last person's data for the next few seconds.
+- **Cached answers belong to who they were fetched for.** An API remembers what it fetched. When you change its `headers`, `credentials` or `base` with `configure`, everything it remembers is forgotten, so the next person does not see the last one's answers. If your headers are a function that returns a different token on its own, nothing tells the API, so call `clearApi()` (or the `clear()` of your API) when someone signs out.
 - **Third-party components and their descriptions** become part of `AGENTS.md` and of what the MCP server says. A model reads those as instructions. Read a component you did not write before you add it.
 
 ## On your computer
 
 - **`tessera dev`, `preview` and `docs` listen on this computer only.** The docs app with `--edit` is the one that can write files: its address carries a key that is new each run, and every request is checked for the key, the host and the origin before its body is read.
-- **Descriptions and tokens you import are data.** `tessera api import` reads OpenAPI JSON and writes a description; it does not run anything in it, and it writes the server address as a string literal. Token imports follow a Resolver's references only inside its own folder.
+- **Descriptions and tokens you import are data.** `tessera api import` reads OpenAPI JSON (at most 10 MB from a web address) and writes a description; it does not run anything in it, and it writes the server address as a string that nothing in it can end. Token imports follow a Resolver's references only inside its own folder.
 - **Run Tessera by its full name when it is not installed.** `npx tessera` runs the copy in `node_modules`. If Tessera is not installed, npx downloads a different package named `tessera` and runs that. Use `npm run check` and the other scripts that `init` adds, or `npx @pixelscriptio/tessera <command>`. The files `init` writes for AI tools do.
-- **The packages have few dependencies.** `@pixelscriptio/tessera` depends on `vite` and `acorn`. The test tools of the accessibility suite (`vitest`, `@vitest/browser`, `playwright`, `axe-core`) are yours, installed by `tessera a11y`; keep them up to date, as they run a dev server while the tests run.
+- **The packages have few dependencies.** `@pixelscriptio/tessera` depends on `vite` and `acorn`. The test tools of the accessibility suite (`vitest` 4.1.12 or newer, `@vitest/browser-playwright`, `playwright`, `axe-core`) are yours, installed by `tessera a11y`; keep them up to date, as they run a dev server while the tests run. Older Vitest versions have known vulnerabilities in that server.
 
 ## Reporting a problem
 

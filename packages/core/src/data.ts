@@ -213,9 +213,13 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 /** Put the values into the `:names` of a path. `missing` is the first name that has no value. */
-function fill(path: string, values: Params): { path: string; rest: Params; missing?: string } {
+function fill(
+  path: string,
+  values: Params,
+): { path: string; rest: Params; missing?: string; invalid?: string } {
   const rest = { ...values }
   let missing: string | undefined
+  let invalid: string | undefined
   const filled = path.replace(PLACEHOLDER, (_, name: string) => {
     const value = values[name]
     delete rest[name]
@@ -223,9 +227,14 @@ function fill(path: string, values: Params): { path: string; rest: Params; missi
       missing ??= name
       return ''
     }
-    return `/${encodeURIComponent(String(value))}`
+    const text = String(value)
+    // `.` and `..` are not changed by encoding, and the address would go up a level: a value from outside must not.
+    if (text === '.' || text === '..') {
+      invalid ??= `The value of "${name}" is "${text}", which would change which address is asked. Use a value that is not "." or "..".`
+    }
+    return `/${encodeURIComponent(text)}`
   })
-  return { path: filled, rest, missing }
+  return { path: filled, rest, missing, ...(invalid ? { invalid } : {}) }
 }
 
 function queryString(values: Params): string {
@@ -266,6 +275,8 @@ const retryable = (error: ApiError) =>
 export function createApi(initial: ApiOptions = {}): Api {
   const config: ApiOptions = { ...initial }
   const entries = new Map<string, Entry>()
+  /** Counts the changes of who the api is for, so what depends on the base asks for its address again. */
+  const configuration = state(0)
   let live = 0
   let stopFocus: (() => void) | undefined
 
@@ -528,15 +539,22 @@ export function createApi(initial: ApiOptions = {}): Api {
     options: ReadOptions<T> = {},
   ): Resource<T> {
     const target = derived(() => {
+      // The base is part of the address, so a read follows it when it changes (see `configure`).
+      void configuration.value
       const given = unwrapValues(typeof params === 'function' ? params() : (params ?? {}))
-      const { path: filled, rest, missing } = fill(path, given)
+      const { path: filled, rest, missing, invalid } = fill(path, given)
       // A parameter with no value yet means there is nothing to ask for yet.
       if (missing) return undefined
+      // A value that cannot be used is an error, and nothing is asked.
+      if (invalid)
+        return { invalid: new ApiError({ method: 'GET', url: path, status: 0, message: invalid }) }
       return { url: join(filled) + queryString(rest), path: filled }
     })
     const entry = derived(() => {
       const found = target.value
-      return found === undefined ? undefined : entryFor(`GET ${found.url}`, found.url, found.path)
+      return found === undefined || 'invalid' in found
+        ? undefined
+        : entryFor(`GET ${found.url}`, found.url, found.path)
     })
     const request: RequestOptions = {
       headers: options.headers,
@@ -566,7 +584,10 @@ export function createApi(initial: ApiOptions = {}): Api {
 
     return {
       data: derived(() => entry.value?.data.value as T | undefined),
-      error: derived(() => entry.value?.error.value),
+      error: derived(() => {
+        const found = target.value
+        return found !== undefined && 'invalid' in found ? found.invalid : entry.value?.error.value
+      }),
       loading: derived(() => entry.value?.loading.value ?? false),
       refreshing: derived(() => entry.value?.refreshing.value ?? false),
       refresh() {
@@ -594,8 +615,9 @@ export function createApi(initial: ApiOptions = {}): Api {
         let body: Body | undefined
         if (isPlainObject(input)) values = unwrapValues(input)
         else if (input !== undefined) body = input as Body
-        const { path: filled, rest, missing } = fill(path, values)
+        const { path: filled, rest, missing, invalid } = fill(path, values)
         if (missing) throw new Error(`${path} needs a value for "${missing}".`)
+        if (invalid) throw new ApiError({ method, url: path, status: 0, message: invalid })
         if (body === undefined && Object.keys(rest).length > 0) body = rest
         const result = (await send(method, join(filled), body, request)) as T
         data.value = result
@@ -627,6 +649,23 @@ export function createApi(initial: ApiOptions = {}): Api {
     }) as Action<T, I>
   }
 
+  /** Forget everything that was fetched. A read that is still shown starts again; one nothing shows is dropped. */
+  function clearAll(): void {
+    for (const entry of [...entries.values()]) {
+      entry.controller?.abort()
+      entry.data.value = undefined
+      entry.error.value = undefined
+      entry.fetched = false
+      entry.updatedAt = 0
+      entry.stale = false
+      if (entry.subscribers > 0) void run(entry)
+      else {
+        if (entry.gc) clearTimeout(entry.gc)
+        entries.delete(entry.key)
+      }
+    }
+  }
+
   return {
     get,
     post: (path, options) => action('POST', path, options),
@@ -634,23 +673,18 @@ export function createApi(initial: ApiOptions = {}): Api {
     patch: (path, options) => action('PATCH', path, options),
     del: (path, options) => action('DELETE', path, options),
     invalidate: (path) => invalidatePaths([path]),
-    clear() {
-      for (const entry of [...entries.values()]) {
-        entry.controller?.abort()
-        entry.data.value = undefined
-        entry.error.value = undefined
-        entry.fetched = false
-        entry.updatedAt = 0
-        entry.stale = false
-        if (entry.subscribers > 0) void run(entry)
-        else {
-          if (entry.gc) clearTimeout(entry.gc)
-          entries.delete(entry.key)
-        }
-      }
-    },
+    clear: clearAll,
     configure(options) {
+      // What was fetched belongs to whoever it was fetched for: a new base, credentials or headers (a different person
+      // signed in) must not be answered from the last one's memory.
+      const forWhom = (['base', 'credentials', 'headers'] as const).some(
+        (key) => key in options && !Object.is(options[key], config[key]),
+      )
       Object.assign(config, options)
+      if (forWhom) {
+        configuration.value++
+        clearAll()
+      }
     },
   }
 }

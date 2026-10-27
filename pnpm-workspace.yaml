@@ -4,3 +4,6 @@ packages:
   - website
   - landing
   - system
+
+overrides:
+  'vitepress>vite': '^6.4.4'

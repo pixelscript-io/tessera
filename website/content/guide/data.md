@@ -124,7 +124,7 @@ Without a `default.ts`, plain `get` and the rest use the shared API that [`confi
 
 ### Where an API's headers go
 
-An API sends its `headers` and `credentials` only to its own origin: its base URL's, or the page's when there is no base. A path that is a full address on another site (`get(item.next)`) is sent without them, so a link in an answer cannot collect a token. A header named on the call itself is always sent. `allowOtherOrigins: true` sends them everywhere; use it only when every address is yours ([Security](/guide/security)). The cache also outlives a sign-out: call `clearApi()` when the person signs out.
+An API sends its `headers` and `credentials` only to its own origin: its base URL's, or the page's when there is no base. A path that is a full address on another site (`get(item.next)`) is sent without them, so a link in an answer cannot collect a token. A header named on the call itself is always sent. `allowOtherOrigins: true` sends them everywhere; use it only when every address is yours ([Security](/guide/security)). When `configure` changes the `headers`, `credentials` or `base` of an API, everything it remembers is forgotten, so a different person is not answered from the last one's memory. If your headers are a function that returns a new token by itself, call `clearApi()` when someone signs out.
 
 ### Keys and domains
 
