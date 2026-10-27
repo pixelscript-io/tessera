@@ -115,6 +115,7 @@ describe('components', () => {
       'Icon',
       'Kbd',
       'Link',
+      'Popover',
       'Progress',
       'Quote',
       'RadioGroup',
@@ -127,6 +128,7 @@ describe('components', () => {
       'TaskList',
       'Textarea',
       'TextField',
+      'Tooltip',
     ])
   })
 
@@ -155,7 +157,7 @@ describe('components', () => {
     const r = call('get_component', { name: 'Buton' })
     expect(r.isError).toBe(true)
     expect(r.text).toBe(
-      'There is no component named Buton. Components: Accordion, AccordionItem, Alert, Avatar, Button, CartAdd, CartCount, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Form, FormField, Icon, Kbd, Link, Progress, Quote, RadioGroup, Select, Separator, SiteNav, Skeleton, Spinner, Switch, TaskList, Textarea, TextField.',
+      'There is no component named Buton. Components: Accordion, AccordionItem, Alert, Avatar, Button, CartAdd, CartCount, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Form, FormField, Icon, Kbd, Link, Popover, Progress, Quote, RadioGroup, Select, Separator, SiteNav, Skeleton, Spinner, Switch, TaskList, Textarea, TextField, Tooltip.',
     )
     expect(call('get_component', { name: 'Conf' }).text).toContain('Did you mean ConfirmBar?')
     expect(call('get_component', {}).text).toBe('"name" is required and must be a string.')

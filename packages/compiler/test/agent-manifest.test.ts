@@ -26,6 +26,7 @@ describe('the agent manifest: components', () => {
       'Icon',
       'Kbd',
       'Link',
+      'Popover',
       'Progress',
       'Quote',
       'RadioGroup',
@@ -38,6 +39,7 @@ describe('the agent manifest: components', () => {
       'TaskList',
       'Textarea',
       'TextField',
+      'Tooltip',
     ])
     expect(manifest.version).toBe(1)
     expect(manifest.generator).toBe('tessera')

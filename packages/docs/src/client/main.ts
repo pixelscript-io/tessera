@@ -512,6 +512,18 @@ function preview(c: ManifestComponent): HTMLElement {
                 h('li', null, `${e}${detail === undefined ? '' : ' ' + JSON.stringify(detail)}`),
               )
               // A dialog the person closes (Escape, the backdrop) is closed in the controls too.
+              // A component that reports being opened or closed by the person (a popover) is followed by its control.
+              if (
+                'open' in signals &&
+                detail &&
+                typeof detail === 'object' &&
+                typeof (detail as { open?: unknown }).open === 'boolean'
+              ) {
+                const now = (detail as { open: boolean }).open
+                signals.open!.value = now
+                const box = document.getElementById(`ctl-${c.name}-open`) as HTMLInputElement | null
+                if (box) box.checked = now
+              }
               if (e === 'dismiss' && 'open' in signals) {
                 signals.open!.value = false
                 const box = document.getElementById(`ctl-${c.name}-open`) as HTMLInputElement | null

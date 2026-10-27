@@ -1,0 +1,180 @@
+<contract>
+{
+  "name": "Popover",
+  "role": "generic",
+  "description": "A panel that opens next to a button and holds more than a tooltip can: text, a form, a few actions. It closes with Escape or a click outside, and the button always says whether it is open.",
+  "since": "0.8.0",
+  "parts": ["root", "trigger", "panel"],
+  "variants": {
+    "placement": ["bottom", "top", "right", "left"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "open"],
+  "slots": {
+    "trigger": "the text of the button that opens it",
+    "default": "the content of the panel"
+  },
+  "events": {
+    "change": "fired with { open } when the panel opens or closes; the open prop sets it from outside"
+  },
+  "preview": {
+    "slots": {
+      "trigger": "Share",
+      "default": [
+        { "tag": "strong", "text": "Share this page" },
+        { "tag": "p", "text": "Anyone with the link can read it." }
+      ]
+    }
+  }
+}
+</contract>
+
+<script>
+const { open, label } = props({ open: false, label: '' })
+
+// The component owns whether it is open, starts from the prop and follows it when it changes.
+const isOpen = state(open.value)
+effect(() => {
+  isOpen.value = open.value
+})
+
+const uid = `t-popover-${Math.random().toString(36).slice(2, 9)}`
+const panel = state(null)
+const trigger = state(null)
+
+// Browsers that cannot place a panel next to its button by themselves are placed here, under the button.
+const anchored = typeof CSS !== 'undefined' && CSS.supports('position-area', 'bottom')
+function place() {
+  const el = panel.value
+  const button = trigger.value
+  if (anchored || !el || !button) return
+  const box = button.getBoundingClientRect()
+  el.style.top = box.bottom + 8 + 'px'
+  el.style.left = box.left + 'px'
+}
+
+// The native popover is the source of what is shown: this makes it match the component's state...
+effect(() => {
+  const el = panel.value
+  const want = isOpen.value
+  if (!el || !el.showPopover) return
+  const shown = el.matches(':popover-open')
+  if (want && !shown) {
+    el.showPopover()
+    place()
+  } else if (!want && shown) el.hidePopover()
+})
+
+// ...and this makes the state follow the browser, which opens and closes it too: the button, Escape, a click outside.
+let listening = null
+effect(() => {
+  const el = panel.value
+  if (!el || listening === el) return
+  listening = el
+  el.addEventListener('toggle', (event) => {
+    const now = event.newState === 'open'
+    if (now === isOpen.value) return
+    isOpen.value = now
+    if (now) place()
+    emit('change', { open: now })
+  })
+})
+</script>
+
+<template>
+  <span class="root" :data-open="isOpen ? 'true' : null">
+    <button
+      class="trigger"
+      type="button"
+      ref="trigger"
+      :id="uid + '-trigger'"
+      :popovertarget="uid + '-panel'"
+      aria-haspopup="dialog"
+      :aria-expanded="isOpen ? 'true' : 'false'"
+      :aria-controls="uid + '-panel'"
+      :style="'anchor-name: --' + uid"
+      >
+      <slot name="trigger" />
+    </button>
+    <div
+      class="panel"
+      popover="auto"
+      ref="panel"
+      role="dialog"
+      :id="uid + '-panel'"
+      :aria-label="label || null"
+      :aria-labelledby="label ? null : uid + '-trigger'"
+      :style="'position-anchor: --' + uid"
+      >
+      <slot />
+    </div>
+  </span>
+</template>
+
+<style>
+.root {
+  display: inline-block;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: $space.2;
+  padding: $space.2 $space.4;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.md;
+  background: transparent;
+  color: $color.text.default;
+  font: inherit;
+  font-size: $font.size.sm;
+  cursor: pointer;
+  transition-duration: $motion.duration.fast;
+
+  &:hover {
+    background: $color.surface.raised;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+}
+
+.panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  min-width: 12rem;
+  max-width: min(24rem, calc(100vw - 2rem));
+  padding: $space.4;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.default;
+  color: $color.text.default;
+  box-shadow: $shadow.md;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+  /* Under the button, starting at its left edge, flipping to the other side when there is no room. */
+  position-area: bottom span-right;
+  position-try-fallbacks: flip-block, flip-inline;
+}
+
+.root[data-placement='top'] .panel {
+  position-area: top span-right;
+}
+
+.root[data-placement='right'] .panel {
+  position-area: right span-bottom;
+}
+
+.root[data-placement='left'] .panel {
+  position-area: left span-bottom;
+}
+
+.panel:not(:popover-open) {
+  display: none;
+}
+
+.panel > * + * {
+  margin-top: $space.2;
+}
+</style>

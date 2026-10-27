@@ -1,0 +1,153 @@
+<contract>
+{
+  "name": "Tooltip",
+  "role": "generic",
+  "description": "A short hint for a control, shown when the pointer rests on it or it has focus. It adds a description, never the only name: a control that needs a label has one of its own.",
+  "since": "0.8.0",
+  "parts": ["root", "tip"],
+  "variants": {
+    "placement": ["top", "bottom", "right", "left"] // first value is the default
+  },
+  "states": ["hover", "focus-visible"],
+  "slots": {
+    "default": "what the tip describes: a button, a link or a field",
+    "content": "the hint, one short line of plain text"
+  },
+  "preview": {
+    "slots": {
+      "default": {
+        "component": "Button",
+        "props": { "tone": "neutral", "emphasis": "outline" },
+        "slots": { "default": "Hover or focus me" }
+      },
+      "content": "Saves your changes as a draft"
+    }
+  }
+}
+</contract>
+
+<script>
+const { delay } = props({ delay: 400 })
+
+const uid = `t-tooltip-${Math.random().toString(36).slice(2, 9)}`
+const box = state(null)
+const tip = state(null)
+const shown = state(false)
+const anchored = typeof CSS !== 'undefined' && CSS.supports('position-area', 'bottom')
+
+// What the tip describes is the first control in the slot. It is pointed at the tip, so a screen reader reads the hint
+// after the name. With no control in the slot, the wrapper itself can be reached with the keyboard, so the hint is not
+// for the pointer alone.
+effect(() => {
+  const root = box.value
+  if (!root) return
+  const found = [...root.querySelectorAll('button, a[href], input, select, textarea, [tabindex]')]
+  const control = found.find((el) => !(tip.value && tip.value.contains(el)))
+  const target = control ?? root
+  if (!control) root.setAttribute('tabindex', '0')
+  target.setAttribute('aria-describedby', uid + '-tip')
+})
+
+let timer = null
+function reveal() {
+  const el = tip.value
+  const root = box.value
+  if (!el || !el.showPopover || el.matches(':popover-open')) return
+  el.showPopover()
+  if (!anchored && root) {
+    const rect = root.getBoundingClientRect()
+    el.style.top = rect.bottom + 6 + 'px'
+    el.style.left = rect.left + 'px'
+  }
+  shown.value = true
+}
+function conceal() {
+  const el = tip.value
+  if (el && el.hidePopover && el.matches(':popover-open')) el.hidePopover()
+  shown.value = false
+}
+
+// Focus shows it at once. The pointer waits a moment, so passing over does not flash it, and leaving waits a moment
+// too, so the pointer can reach the tip itself (it stays open while it is over it).
+function enter(event) {
+  clearTimeout(timer)
+  timer = setTimeout(reveal, delay.value)
+}
+function focused() {
+  clearTimeout(timer)
+  reveal()
+}
+function leave() {
+  clearTimeout(timer)
+  timer = setTimeout(conceal, 100)
+}
+function key(event) {
+  if (event.key === 'Escape') {
+    clearTimeout(timer)
+    conceal()
+  }
+}
+onCleanup(() => clearTimeout(timer))
+</script>
+
+<template>
+  <span
+    class="root"
+    ref="box"
+    :style="'anchor-name: --' + uid"
+    @mouseenter="enter($event)"
+    @mouseleave="leave()"
+    @focusin="focused()"
+    @focusout="leave()"
+    @keydown="key($event)"
+    >
+    <slot />
+    <span
+      class="tip"
+      ref="tip"
+      popover="manual"
+      role="tooltip"
+      :id="uid + '-tip'"
+      :style="'position-anchor: --' + uid"
+      ><slot name="content"
+        /></span>
+  </span>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+}
+
+.tip {
+  position: fixed;
+  inset: auto;
+  margin: $space.2;
+  max-width: 20rem;
+  padding: $space.1 $space.3;
+  border-radius: $radius.sm;
+  background: $color.surface.inverse;
+  color: $color.surface.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+  line-height: 1.4;
+  position-area: top;
+  position-try-fallbacks: flip-block, flip-inline;
+}
+
+.root[data-placement='bottom'] .tip {
+  position-area: bottom;
+}
+
+.root[data-placement='right'] .tip {
+  position-area: right;
+}
+
+.root[data-placement='left'] .tip {
+  position-area: left;
+}
+
+.tip:not(:popover-open) {
+  display: none;
+}
+</style>

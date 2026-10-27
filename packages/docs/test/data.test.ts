@@ -30,6 +30,7 @@ describe('the docs data', () => {
       ['Icon', 'system'],
       ['Kbd', 'system'],
       ['Link', 'router'],
+      ['Popover', 'system'],
       ['Progress', 'system'],
       ['Quote', 'app'],
       ['RadioGroup', 'system'],
@@ -42,6 +43,7 @@ describe('the docs data', () => {
       ['TaskList', 'app'],
       ['Textarea', 'system'],
       ['TextField', 'system'],
+      ['Tooltip', 'system'],
     ])
     expect(data.hasTokens).toBe(true)
   })
