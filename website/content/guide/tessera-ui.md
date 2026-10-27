@@ -87,6 +87,20 @@ space.8
 
 New components may add tokens to this list; a test fails until the list and the components agree, and a new token is a change you will find in the [release notes](/releases/).
 
+## Icons
+
+Icons come from [Lucide](https://lucide.dev/icons/) (ISC license). Lucide is a dependency of `@pixelscriptio/tessera-ui` and of nothing else: a project that does not install the library, or that has no design system, does not get it, and `@pixelscriptio/tessera` itself never depends on it.
+
+```xml tess kind=page
+<template>
+  <main>
+    <Button><Icon slot="icon" name="plus" />New</Button>
+  </main>
+</template>
+```
+
+`Icon` knows about sixty of the most common icons by name (`check`, `x`, `search`, `chevron-down`, `trash-2` and so on, Lucide's names in kebab case). For any other icon, import it from `lucide` and pass it as `icon`; only what you import is in your build. Install `lucide` in your project first, or use a design system of your own and draw icons however you like: nothing in Tessera requires this one.
+
 ## Conventions every library component follows
 
 These are the rules a component must meet before it joins the library. They are also a good checklist for your own.
@@ -96,10 +110,10 @@ These are the rules a component must meet before it joins the library. They are 
 - **Accessible by construction.** The generated accessibility suite passes in the light and dark themes, for every variant and state. Keyboard behavior comes from a behavior, not from the component's own script.
 - **Variants are `tone`, `size` and `emphasis`.** The same names mean the same thing everywhere: `size` is `sm` or `md` (and `lg` where it makes sense), `tone` is `primary`, `neutral` or `danger`, `emphasis` is `solid`, `outline` or `ghost`.
 - **Events are named for what happened.** `press`, `toggle`, `change`, `input`, `select`, `dismiss`, `expand`; the payload is the new value.
-- **Icons are a slot.** No icon is bundled. A component that can show one has an `icon` slot.
+- **Icons are a slot.** A component that can show one has an `icon` slot, filled with an `Icon` (see below). The library never draws an icon you did not ask for.
 - **One docs page per component**, `Name.docs.md` beside it, with live examples that compile.
 - **It builds as a custom element** with `tessera elements`, like the rest of the system.
 
 ## What is in it
 
-`Accordion`, `AccordionItem`, `Alert`, `Avatar`, `Button`, `Checkbox`, `Combobox`, `Dialog`, `Kbd`, `Progress`, `Select`, `Separator`, `Skeleton`, `Spinner`, `Switch` and `TextField`, and more coming in phases: the rest of forms and feedback first (`Textarea`, `RadioGroup`, `FormField`), then overlays, navigation and data, and pickers. The library is meant to stay around forty components; a component that most apps do not need belongs in the project that does. See the [roadmap](/releases/roadmap).
+`Accordion`, `AccordionItem`, `Alert`, `Avatar`, `Button`, `Checkbox`, `Combobox`, `Dialog`, `Icon`, `Kbd`, `Progress`, `Select`, `Separator`, `Skeleton`, `Spinner`, `Switch` and `TextField`, and more coming in phases: the rest of forms and feedback first (`Textarea`, `RadioGroup`, `FormField`), then overlays, navigation and data, and pickers. The library is meant to stay around forty components; a component that most apps do not need belongs in the project that does. See the [roadmap](/releases/roadmap).

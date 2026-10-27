@@ -20,5 +20,8 @@
   "devDependencies": {
     "@pixelscriptio/tessera": "workspace:*",
     "@tessera/a11y": "workspace:*"
+  },
+  "dependencies": {
+    "lucide": "1.62.0"
   }
 }

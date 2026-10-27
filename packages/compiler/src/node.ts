@@ -166,9 +166,27 @@ export function routerComponentsDir(root: string): string | null {
 
 /**
  * The components of the Tessera UI library, found through the installed package
- * (`@pixelscriptio/tessera-ui`, which ships them as source in `components`). Null when it is not installed.
+ * (`@pixelscriptio/tessera-ui`, which ships them as source in `components`). Null when it is not installed, or when the
+ * project does not list it.
  */
 export function uiComponentsDir(root: string): string | null {
+  // A project uses the library only if its package.json lists it. Resolution alone is not enough: a package manager may
+  // make a package reachable that the project never asked for.
+  const manifest = join(root, 'package.json')
+  if (existsSync(manifest)) {
+    try {
+      const json = JSON.parse(readFileSync(manifest, 'utf8')) as Record<
+        string,
+        Record<string, string>
+      >
+      const listed = ['dependencies', 'devDependencies', 'peerDependencies'].some(
+        (field) => json[field]?.['@pixelscriptio/tessera-ui'] !== undefined,
+      )
+      if (!listed) return null
+    } catch {
+      return null
+    }
+  }
   try {
     const require = createRequire(resolve(root, 'package.json'))
     const dir = join(

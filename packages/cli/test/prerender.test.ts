@@ -34,7 +34,10 @@ const write = (file: string, text: string) => {
 beforeAll(async () => {
   mkdirSync(scratch, { recursive: true })
   root = mkdtempSync(join(scratch, 'p-')).replaceAll('\\', '/')
-  writeFileSync(join(root, 'package.json'), '{ "name": "site" }\n')
+  writeFileSync(
+    join(root, 'package.json'),
+    '{ "name": "site", "dependencies": { "@pixelscriptio/tessera-ui": "*" } }\n',
+  )
   for (const [file, content] of Object.entries(presetFiles('tessera'))) write(file, content)
   write(
     'app/pages/about.tess',
@@ -119,7 +122,10 @@ describe('tessera build --prerender', () => {
   it('writes one extra file only with the flag', async () => {
     // Without it the build is what it always was: index.html is the empty shell.
     const dir = mkdtempSync(join(scratch, 'q-')).replaceAll('\\', '/')
-    writeFileSync(join(dir, 'package.json'), '{ "name": "plain" }\n')
+    writeFileSync(
+      join(dir, 'package.json'),
+      '{ "name": "plain", "dependencies": { "@pixelscriptio/tessera-ui": "*" } }\n',
+    )
     for (const [file, content] of Object.entries(presetFiles('tessera'))) {
       mkdirSync(dirname(join(dir, file)), { recursive: true })
       writeFileSync(join(dir, file), content)

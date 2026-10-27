@@ -31,7 +31,10 @@ const closers: Array<() => Promise<void> | void> = []
 beforeAll(async () => {
   mkdirSync(scratch, { recursive: true })
   root = mkdtempSync(join(scratch, 'p-')).replaceAll('\\', '/')
-  writeFileSync(join(root, 'package.json'), '{ "name": "acme-system" }\n')
+  writeFileSync(
+    join(root, 'package.json'),
+    '{ "name": "acme-system", "dependencies": { "@pixelscriptio/tessera-ui": "*" } }\n',
+  )
   for (const [file, content] of Object.entries(presetFiles('tessera'))) {
     mkdirSync(dirname(join(root, file)), { recursive: true })
     writeFileSync(join(root, file), content)
@@ -131,7 +134,7 @@ describe('the names', () => {
 
 describe('tessera elements', () => {
   it('says what it built', () => {
-    expect(output).toContain('Built 18 custom elements into')
+    expect(output).toContain('Built 19 custom elements into')
     for (const tag of ['acme-button', 'acme-checkbox', 'acme-accordion-item', 'acme-text-field'])
       expect(output).toContain(`<${tag}>`)
     expect(output).toMatch(/elements\.js [\d.]+ kB .* gzipped/)

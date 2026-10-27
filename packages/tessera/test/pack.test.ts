@@ -35,7 +35,8 @@ const scratch = () => {
   made.push(dir)
   return dir
 }
-afterAll(() => made.forEach((d) => rmSync(d, { recursive: true, force: true })))
+// Every project installs the component library, and with it Lucide: removing them all takes a while.
+afterAll(() => made.forEach((d) => rmSync(d, { recursive: true, force: true })), 120_000)
 
 /** `pnpm` if it is installed, else a shim that runs the pinned version through npx. */
 function pnpmEnv(dir: string): NodeJS.ProcessEnv {
@@ -293,7 +294,7 @@ describe('the packed package', () => {
       `node "${join(dir, 'node_modules', '@pixelscriptio', 'tessera', 'bin', 'tessera.js')}" elements`,
       { cwd: dir },
     )
-    expect(stdout).toContain('Built 18 custom elements into dist-elements')
+    expect(stdout).toContain('Built 19 custom elements into dist-elements')
     for (const file of [
       'elements.js',
       'elements.css',

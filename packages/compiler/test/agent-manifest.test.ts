@@ -21,6 +21,7 @@ describe('the agent manifest: components', () => {
       'ConfirmBar',
       'Counter',
       'Dialog',
+      'Icon',
       'Kbd',
       'Link',
       'Progress',

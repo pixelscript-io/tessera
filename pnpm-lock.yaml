@@ -308,6 +308,10 @@ importers:
   packages/tokens: {}
 
   packages/ui:
+    dependencies:
+      lucide:
+        specifier: 1.62.0
+        version: 1.62.0
     devDependencies:
       '@pixelscriptio/tessera':
         specifier: workspace:*
@@ -1657,6 +1661,9 @@ packages:
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
+
+  lucide@1.62.0:
+    resolution: {integrity: sha512-/8NUdyLCNCHGd103wuw4s4RLs/nZyXhs+cs5dx1qDjv7zFgmExkVr/LUythjxhy+oWIoYbAU8llv+c0Jsz69QQ==}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -3443,6 +3450,8 @@ snapshots:
       p-locate: 5.0.0
 
   lru-cache@10.4.3: {}
+
+  lucide@1.62.0: {}
 
   magic-string@0.30.21:
     dependencies:

@@ -25,6 +25,7 @@ describe('the docs data', () => {
       ['ConfirmBar', 'app'],
       ['Counter', 'app'],
       ['Dialog', 'system'],
+      ['Icon', 'system'],
       ['Kbd', 'system'],
       ['Link', 'router'],
       ['Progress', 'system'],

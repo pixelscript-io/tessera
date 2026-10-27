@@ -1,8 +1,9 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 import { formatDiagnostic } from '@tessera/contract'
-import { loadComponentRegistry, loadDesignTokens } from '../src/node'
+import { loadComponentRegistry, loadDesignTokens, uiComponentsDir } from '../src/node'
+import { Project } from '../src/project'
 import { compile } from '../src/compile'
 
 const root = fileURLToPath(new URL('../../../', import.meta.url))
@@ -157,4 +158,45 @@ describe('the token interface of the library', () => {
       }
     })
   }
+})
+
+describe('the library in a project', () => {
+  const app = `${root}examples/kitchen-sink`
+  const project = new Project(app)
+
+  it('is flagged in the registry, so a project component may replace it', () => {
+    const { registry } = project.components()
+    expect(registry.get('Button')!.library).toBe(true)
+    expect(registry.get('Counter')!.library).toBeUndefined()
+  })
+
+  it('is not among the files the project owns, but is among those check reads', () => {
+    const owned = project.files().map((f) => f.replaceAll('\\', '/'))
+    expect(owned.some((f) => f.includes('/packages/ui/'))).toBe(false)
+    expect(owned.some((f) => f.endsWith('/app/components/Counter.tess'))).toBe(true)
+    const checked = project.files({ library: true }).map((f) => f.replaceAll('\\', '/'))
+    expect(checked.some((f) => f.endsWith('/packages/ui/components/Button.tess'))).toBe(true)
+  })
+})
+
+describe('which projects use the library', () => {
+  const scratch = `${root}examples/kitchen-sink/.library-test`
+  const make = (manifest: object | null) => {
+    rmSync(scratch, { recursive: true, force: true })
+    mkdirSync(scratch, { recursive: true })
+    if (manifest) writeFileSync(`${scratch}/package.json`, JSON.stringify(manifest))
+    return scratch
+  }
+  afterAll(() => rmSync(scratch, { recursive: true, force: true }))
+
+  it('only one whose package.json lists it, even when the package can be found', () => {
+    const found = uiComponentsDir(
+      make({ name: 'a', dependencies: { '@pixelscriptio/tessera-ui': '^1' } }),
+    )
+    expect(found?.replaceAll('\\', '/').endsWith('/packages/ui/components')).toBe(true)
+    expect(
+      uiComponentsDir(make({ name: 'a', devDependencies: { '@pixelscriptio/tessera-ui': '^1' } })),
+    ).not.toBeNull()
+    expect(uiComponentsDir(make({ name: 'a', dependencies: {} }))).toBeNull()
+  })
 })

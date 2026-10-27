@@ -19,5 +19,7 @@ defineA11ySuites({
   fixtures: {
     Combobox: { props: { options } },
     Select: { props: { options } },
+    // An icon that stands alone needs a name.
+    Icon: { props: { name: 'check', label: 'Done' } },
   },
 })

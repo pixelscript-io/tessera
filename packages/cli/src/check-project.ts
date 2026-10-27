@@ -53,7 +53,7 @@ export function checkProject(project: Project, options: { baseline?: null } = {}
   const tokens = project.tokens()
   if (tokens && !tokens.ok) messages.push(...tokens.diagnostics.map(formatTokenDiagnostic))
 
-  for (const path of project.files()) {
+  for (const path of project.files({ library: true })) {
     const checked = project.compileFile(path, readFileSync(path, 'utf8'), {
       baseline: options.baseline,
     })

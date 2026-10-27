@@ -186,14 +186,16 @@ export class Project {
   }
 
   /**
-   * Every `.tess` file the project builds: the component library's (so they are checked against this project's tokens),
-   * its system components (when they are in or above the root), the router's own components are left out, then `app/components`, `app/layouts` and `app/pages`.
+   * Every `.tess` file the project owns: its system components (when they are in or above the root), then
+   * `app/components`, `app/layouts` and `app/pages`. The router's components are left out, and so are the Tessera UI
+   * library's, which are not the project's to format, migrate or report on: `check` asks for them with `library`,
+   * to check them against the project's own tokens.
    */
-  files(): string[] {
+  files({ library = false }: { library?: boolean } = {}): string[] {
     const out: string[] = []
     const systemDir = findUp(this.root, join('system', 'components'))
     for (const dir of [
-      projectLibraryDir(this.root),
+      library ? projectLibraryDir(this.root) : undefined,
       systemDir,
       join(this.root, 'app', 'components'),
       join(this.root, 'app', 'layouts'),

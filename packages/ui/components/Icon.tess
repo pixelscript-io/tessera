@@ -1,0 +1,80 @@
+<contract>
+{
+  "name": "Icon",
+  "role": "img",
+  "description": "A small drawing that stands for an action or a thing, from Lucide. Give it a label when it says something on its own; without one it is decoration and hidden from assistive technology.",
+  "since": "0.8.0",
+  "parts": ["root"],
+  "variants": {
+    "size": ["md", "sm", "lg"] // first value is the default
+  }
+}
+</contract>
+
+<script>
+import { ICONS } from './icons.ts'
+
+// `name` picks one of the icons Tessera UI knows; `icon` is any Lucide icon, imported from `lucide`.
+const { name, icon, label } = props({ name: '', icon: null, label: '' })
+
+const shapes = derived(() => icon.value ?? ICONS[name.value] ?? [])
+// Each shape gets an id for `each` to key by: its place in the icon.
+const of = (tag) =>
+  shapes.value.flatMap((shape, id) => (shape[0] === tag ? [{ ...shape[1], id }] : []))
+const paths = derived(() => of('path'))
+const circles = derived(() => of('circle'))
+const rects = derived(() => of('rect'))
+const lines = derived(() => of('line'))
+const ellipses = derived(() => of('ellipse'))
+const polylines = derived(() => of('polyline'))
+const polygons = derived(() => of('polygon'))
+</script>
+
+<template>
+  <svg
+    class="root"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    role="img"
+    :aria-label="label || null"
+    :aria-hidden="label ? null : 'true'"
+    >
+    <path each="p in paths" key="p.id" :d="p.d" />
+    <circle each="c in circles" key="c.id" :cx="c.cx" :cy="c.cy" :r="c.r" :fill="c.fill ?? null" />
+    <rect
+      each="r in rects" key="r.id"
+      :x="r.x"
+      :y="r.y"
+      :width="r.width"
+      :height="r.height"
+      :rx="r.rx ?? null"
+      :ry="r.ry ?? null"
+      />
+    <line each="l in lines" key="l.id" :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2" />
+    <ellipse each="e in ellipses" key="e.id" :cx="e.cx" :cy="e.cy" :rx="e.rx" :ry="e.ry" />
+    <polyline each="p in polylines" key="p.id" :points="p.points" />
+    <polygon each="p in polygons" key="p.id" :points="p.points" />
+  </svg>
+</template>
+
+<style>
+.root {
+  flex: none;
+  width: $space.5;
+  height: $space.5;
+
+  &[data-size='sm'] {
+    width: $space.4;
+    height: $space.4;
+  }
+
+  &[data-size='lg'] {
+    width: $space.6;
+    height: $space.6;
+  }
+}
+</style>
