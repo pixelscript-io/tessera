@@ -17,3 +17,5 @@ experiments/agent-mcp/work
 landing/**/__screenshots__
 website/content/public/llms.txt
 website/content/public/llms-full.txt
+
+.vitest-attachments/

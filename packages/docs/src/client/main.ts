@@ -202,6 +202,12 @@ interface ReportLike {
   }>
 }
 
+/** A color the way a person reads it: whole numbers in `rgb(...)`, not `236.999999`. */
+const shown = (value: string) =>
+  value.startsWith('rgb')
+    ? value.replace(/\d+\.\d{3,}/g, (n) => (Number(n) >= 1 ? String(Math.round(Number(n))) : n))
+    : value
+
 const pct = (n: number | null) => (n === null ? 'n/a' : `${Math.round(n * 100)}%`)
 const card = (value: string, label: string) =>
   h('div', { class: 'docs-card' }, h('b', null, value), h('span', null, label))
@@ -211,6 +217,7 @@ function overview(): HTMLElement {
   const main = h(
     'div',
     null,
+    h('p', { class: 'docs-eyebrow' }, 'Design system'),
     h('h1', null, data.project.name),
     h(
       'p',
@@ -539,7 +546,16 @@ function componentPage(name: string): HTMLElement {
       h('h1', null, 'Not found'),
       h('p', null, `There is no component named ${name}.`),
     )
-  const main = h('div', null, h('h1', null, c.name))
+  const main = h(
+    'div',
+    null,
+    h(
+      'p',
+      { class: 'docs-eyebrow' },
+      c.origin === 'system' ? 'Component' : c.origin === 'app' ? 'This app' : 'Router',
+    ),
+    h('h1', null, c.name),
+  )
   if (m.description) main.append(h('p', { class: 'docs-lead' }, m.description))
   main.append(
     h(
@@ -722,7 +738,7 @@ function tokenPage(group: string): HTMLElement {
           'td',
           null,
           v ? specimen(t.type, v.resolved) : null,
-          v ? code(v.resolved) : null,
+          v ? code(shown(v.resolved)) : null,
           v?.alias ? h('div', { class: 'docs-muted' }, `→ ${v.alias}`) : null,
         )
       }),
@@ -737,6 +753,7 @@ function tokenPage(group: string): HTMLElement {
   return h(
     'div',
     null,
+    h('p', { class: 'docs-eyebrow' }, 'Tokens'),
     h('h1', null, group),
     h(
       'p',
@@ -769,6 +786,7 @@ function contrastPage(): HTMLElement {
   return h(
     'div',
     null,
+    h('p', { class: 'docs-eyebrow' }, 'Tokens'),
     h('h1', null, 'Contrast'),
     h(
       'p',

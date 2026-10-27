@@ -91,7 +91,7 @@ describe('the docs are styled by the project’s tokens', () => {
     expect(await colors(light)).toMatchObject({
       page: rgb('#faf9f6'), // color.surface.default
       text: rgb('#17160f'), // color.text.default
-      nav: rgb('#f2f0ea'), // the sidebar is color.surface.raised
+      nav: rgb('#faf9f6'), // the sidebar is flat: the page color, divided by a hairline
     })
     // The font is the token's, not the docs' own.
     expect((await colors(light)).font).toContain('ui-sans-serif')
@@ -100,7 +100,7 @@ describe('the docs are styled by the project’s tokens', () => {
     expect(await colors(dark)).toMatchObject({
       page: rgb('#13120e'),
       text: rgb('#edeae2'),
-      nav: rgb('#1b1a15'),
+      nav: rgb('#13120e'),
     })
   }, 120_000)
 
