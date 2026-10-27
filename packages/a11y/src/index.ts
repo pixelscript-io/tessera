@@ -19,6 +19,8 @@ import {
   domTabsHarness,
   pressConformance,
   tabsConformance,
+  radioGroupConformance,
+  domRadioGroupHarness,
   toggleConformance,
 } from '@tessera/behavior/conformance'
 import { extractContract, type Contract } from '@tessera/compiler'
@@ -108,6 +110,7 @@ const BEHAVIOR_EVENT: Record<string, string> = {
   // A combobox's own event is its keys; what the suite counts is what was chosen.
   combobox: 'select',
   tabs: 'activate',
+  'radio-group': 'choose',
 }
 
 function mount(
@@ -174,6 +177,11 @@ function subjectOf(root: HTMLElement, contract: Contract): HTMLElement {
     return root.matches('[role="tablist"]')
       ? root
       : (root.querySelector<HTMLElement>('[role="tablist"]') ?? root)
+  // The radio group is the element a radio-group behavior is attached to.
+  if (contract.behavior === 'radio-group')
+    return root.matches('[role="radiogroup"]')
+      ? root
+      : (root.querySelector<HTMLElement>('[role="radiogroup"]') ?? root)
   // A dialog is the element that has the role, which is the root.
   if (contract.behavior === 'dialog') return root
   if (root.matches('button, input, select, textarea, [role]')) return root
@@ -319,6 +327,21 @@ const SUITES: Record<string, Suite> = {
           const tab = subject.querySelectorAll('[role="tab"]')[index]!
           if (disabled) tab.setAttribute('aria-disabled', 'true')
           else tab.removeAttribute('aria-disabled')
+        },
+      }),
+  },
+  'radio-group': {
+    title: 'radio-group behavior conformance',
+    cases: radioGroupConformance,
+    focusRing: false,
+    harness: (m, subject) =>
+      domRadioGroupHarness(subject, userEvent, {
+        choices: m.presses as Array<{ value: string; source: string }>,
+        // The behavior reads the attribute, so the case sets the one a component would bind.
+        setDisabled: (index, disabled) => {
+          const radio = subject.querySelectorAll('[role="radio"]')[index]!
+          if (disabled) radio.setAttribute('aria-disabled', 'true')
+          else radio.removeAttribute('aria-disabled')
         },
       }),
   },

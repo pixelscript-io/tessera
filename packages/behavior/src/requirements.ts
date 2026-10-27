@@ -22,6 +22,7 @@ export const BEHAVIOR_REQUIREMENTS: Readonly<Record<string, BehaviorRequirements
   dialog: { parts: ['root'], events: ['dismiss'], states: [], implemented: true },
   combobox: { parts: ['root', 'input', 'listbox'], events: [], states: [], implemented: true },
   tabs: { parts: ['root', 'tab', 'panel'], events: ['activate'], states: [], implemented: true },
+  'radio-group': { parts: ['root', 'radio'], events: ['choose'], states: [], implemented: true },
 }
 
 /** Behavior event name to the behavior that produces it, so `@press` in a template can be wired. */
@@ -32,6 +33,7 @@ export const BEHAVIOR_EVENTS: Readonly<Record<string, string>> = {
   dismiss: 'dialog',
   command: 'combobox',
   activate: 'tabs',
+  choose: 'radio-group',
 }
 
 /** The function each behavior is attached with, exported from `@pixelscriptio/tessera/behavior`. */
@@ -42,4 +44,5 @@ export const BEHAVIOR_ATTACH: Readonly<Record<string, string>> = {
   dialog: 'attachDialog',
   combobox: 'attachCombobox',
   tabs: 'attachTabs',
+  'radio-group': 'attachRadioGroup',
 }

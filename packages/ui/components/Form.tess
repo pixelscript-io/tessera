@@ -1,0 +1,68 @@
+<contract>
+{
+  "name": "Form",
+  "role": "form",
+  "description": "A form that checks what the person entered before it lets it through. On submit it runs your rules: a valid form fires submit with the values, an invalid one fires invalid with the errors and moves focus to the first field with one.",
+  "since": "0.8.0",
+  "parts": ["root"],
+  "slots": {
+    "default": "the fields and the buttons"
+  },
+  "events": {
+    "submit": "fired with { values } when the form is submitted and every rule passes",
+    "invalid": "fired with { errors } when it is submitted and a rule fails: errors maps a field name to its message"
+  }
+}
+</contract>
+
+<script>
+// `values` is the form's data, by field name. `rules` maps a field name to a function that takes the field's value and all
+// the values, and returns a message when it is wrong, or an empty string (or nothing) when it is fine.
+const { values, rules, busy } = props({ values: {}, rules: {}, busy: false })
+
+const formEl = state(null)
+
+// The first field marked invalid gets focus, once the page has shown the errors.
+function focusFirstInvalid() {
+  const root = formEl.value
+  if (!root) return
+  const first = root.querySelector('[aria-invalid="true"]')
+  if (!first) return
+  const target = first.matches('input, textarea, select, button')
+    ? first
+    : first.querySelector('input, textarea, select, button')
+  if (target) target.focus()
+}
+
+function submit(event) {
+  event.preventDefault()
+  const data = values.value ?? {}
+  const errors = {}
+  for (const [name, rule] of Object.entries(rules.value ?? {})) {
+    const message = rule(data[name], data)
+    if (message) errors[name] = message
+  }
+  if (Object.keys(errors).length) {
+    emit('invalid', { errors })
+    setTimeout(focusFirstInvalid, 0)
+  } else {
+    emit('submit', { values: data })
+  }
+}
+</script>
+
+<template>
+  <form class="root" role="form" novalidate :aria-busy="busy ? 'true' : null" ref="formEl" @submit="submit($event)">
+    <slot />
+  </form>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.4;
+  font-family: var(--t-font-family-sans);
+  color: $color.text.default;
+}
+</style>

@@ -25,11 +25,14 @@ describe('the docs data', () => {
       ['ConfirmBar', 'app'],
       ['Counter', 'app'],
       ['Dialog', 'system'],
+      ['Form', 'system'],
+      ['FormField', 'system'],
       ['Icon', 'system'],
       ['Kbd', 'system'],
       ['Link', 'router'],
       ['Progress', 'system'],
       ['Quote', 'app'],
+      ['RadioGroup', 'system'],
       ['Select', 'system'],
       ['Separator', 'system'],
       ['SiteNav', 'app'],
@@ -37,6 +40,7 @@ describe('the docs data', () => {
       ['Spinner', 'system'],
       ['Switch', 'system'],
       ['TaskList', 'app'],
+      ['Textarea', 'system'],
       ['TextField', 'system'],
     ])
     expect(data.hasTokens).toBe(true)

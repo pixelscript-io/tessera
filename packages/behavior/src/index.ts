@@ -3,6 +3,7 @@ export { attachToggle, toggleAttribute, type ToggleDetail, type ToggleOptions } 
 export { attachDisclosure, type DisclosureOptions, type ExpandDetail } from './disclosure'
 export { attachDialog, type DialogOptions, type DismissDetail } from './dialog'
 export { attachTabs, type TabsActivate, type TabsOptions } from './tabs'
+export { attachRadioGroup, type RadioGroupChoose, type RadioGroupOptions } from './radio-group'
 export { attachCombobox, type ComboboxCommand, type ComboboxOptions } from './combobox'
 export {
   BEHAVIOR_ATTACH,

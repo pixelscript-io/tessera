@@ -21,11 +21,14 @@ describe('the agent manifest: components', () => {
       'ConfirmBar',
       'Counter',
       'Dialog',
+      'Form',
+      'FormField',
       'Icon',
       'Kbd',
       'Link',
       'Progress',
       'Quote',
+      'RadioGroup',
       'Select',
       'Separator',
       'SiteNav',
@@ -33,6 +36,7 @@ describe('the agent manifest: components', () => {
       'Spinner',
       'Switch',
       'TaskList',
+      'Textarea',
       'TextField',
     ])
     expect(manifest.version).toBe(1)

@@ -19,6 +19,8 @@ defineA11ySuites({
   fixtures: {
     Combobox: { props: { options } },
     Select: { props: { options } },
+    // A radio group has one option chosen, and the behavior's cases need at least three.
+    RadioGroup: { props: { options, value: 'apple' } },
     // An icon that stands alone needs a name.
     Icon: { props: { name: 'check', label: 'Done' } },
   },

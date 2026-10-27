@@ -1,0 +1,132 @@
+<contract>
+{
+  "name": "Textarea",
+  "role": "generic",
+  "description": "A text box for more than one line, with a visible label, an optional hint and an optional error. The label is required: it is what assistive technology reads.",
+  "since": "0.8.0",
+  "parts": ["root", "label", "input", "hint", "error"],
+  "variants": {
+    "size": ["md", "sm"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "disabled"],
+  "slots": {
+    "label": "the visible label, required",
+    "hint": "help under the box"
+  },
+  "events": {
+    "input": "fired with the new text on every change",
+    "change": "fired with the text when the person leaves the box after changing it"
+  }
+}
+</contract>
+
+<script>
+const { value, placeholder, rows, disabled, invalid, error } = props({
+  value: '',
+  placeholder: '',
+  rows: 3,
+  disabled: false,
+  invalid: false,
+  error: '',
+})
+
+// The box owns what is typed, starts from the prop and follows it when it changes.
+const text = state(value.value)
+effect(() => {
+  text.value = value.value
+})
+
+// Ids of its own, so the hint and the error can describe the box however many there are.
+const uid = `t-textarea-${Math.random().toString(36).slice(2, 9)}`
+
+function typed(event) {
+  emit('input', event.target.value)
+}
+
+function committed(event) {
+  emit('change', event.target.value)
+}
+</script>
+
+<template>
+  <label class="root">
+    <span class="label"><slot name="label" /></span>
+    <textarea
+      class="input"
+      :rows="rows"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      :aria-invalid="invalid || error ? 'true' : null"
+      :aria-describedby="uid + '-hint ' + uid + '-error'"
+      bind:value="text"
+      @input="typed($event)"
+      @change="committed($event)"
+      ></textarea>
+    <span class="hint" :id="uid + '-hint'"><slot name="hint" /></span>
+    <span class="error" :id="uid + '-error'" aria-live="polite">{error}</span>
+  </label>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+}
+
+.label {
+  font-size: $font.size.sm;
+  font-weight: $font.weight.bold;
+}
+
+.input {
+  padding: $space.2 $space.3;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.md;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font: inherit;
+  resize: vertical;
+  transition-duration: $motion.duration.fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color.text.default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: $color.action.danger.text;
+  }
+}
+
+.root[data-size='sm'] .input {
+  padding: $space.1 $space.2;
+}
+
+.hint {
+  color: $color.text.muted;
+  font-size: $font.size.sm;
+}
+
+.error {
+  color: $color.action.danger.text;
+  font-size: $font.size.sm;
+}
+
+.hint:empty,
+.error:empty {
+  display: none;
+}
+</style>

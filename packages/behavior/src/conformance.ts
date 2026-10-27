@@ -890,3 +890,4 @@ export function domComboboxHarness(
 }
 
 export * from './tabs-conformance'
+export * from './radio-group-conformance'

@@ -23,11 +23,11 @@
 </contract>
 
 <script>
-const { disabled } = props({ disabled: false })
+const { disabled, type } = props({ disabled: false, type: 'button' })
 </script>
 
 <template>
-  <button class="root" type="button" :disabled="disabled" @press="emit('press', $event)">
+  <button class="root" :type="type" :disabled="disabled" @press="emit('press', $event)">
     <span class="icon"><slot name="icon" /></span>
     <span class="label"><slot /></span>
   </button>

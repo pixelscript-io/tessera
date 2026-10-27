@@ -18,4 +18,5 @@ export const DEFAULT_BEHAVIORS: Readonly<Record<string, BehaviorRequirements>> =
   dialog: { parts: ['root'], events: ['dismiss'], states: [] },
   combobox: { parts: ['root', 'input', 'listbox'], events: [], states: [] },
   tabs: { parts: ['root', 'tab', 'panel'], events: ['activate'], states: [] },
+  'radio-group': { parts: ['root', 'radio'], events: ['choose'], states: [] },
 }

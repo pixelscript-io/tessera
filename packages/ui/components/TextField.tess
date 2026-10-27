@@ -4,14 +4,14 @@
   "role": "generic",
   "description": "A text input with a visible label and an optional hint. The label is required: it is what assistive technology reads.",
   "since": "0.5.0",
-  "parts": ["root", "label", "input", "hint"],
+  "parts": ["root", "label", "input", "hint", "error"],
   "variants": {
     "size": ["md", "sm"] // first value is the default
   },
   "states": ["hover", "focus-visible", "disabled"],
   "slots": {
     "label": "the visible label, required",
-    "hint": "help or an error message under the input"
+    "hint": "help under the input"
   },
   "events": {
     "input": "fired with the new text on every change",
@@ -21,13 +21,17 @@
 </contract>
 
 <script>
-const { value, type, placeholder, disabled, invalid } = props({
+const { value, type, placeholder, disabled, invalid, error } = props({
   value: '',
   type: 'text',
   placeholder: '',
   disabled: false,
   invalid: false,
+  error: '',
 })
+
+// Ids of its own, so the hint and the error can describe the input however many fields there are.
+const uid = `t-textfield-${Math.random().toString(36).slice(2, 9)}`
 
 // The field owns what is typed, starts from the prop and follows it when it changes.
 const text = state(value.value)
@@ -52,12 +56,14 @@ function committed(event) {
       :type="type"
       :placeholder="placeholder"
       :disabled="disabled"
-      :aria-invalid="invalid ? 'true' : null"
+      :aria-invalid="invalid || error ? 'true' : null"
+      :aria-describedby="uid + '-hint ' + uid + '-error'"
       bind:value="text"
       @input="typed($event)"
       @change="committed($event)"
       />
-    <span class="hint"><slot name="hint" /></span>
+    <span class="hint" :id="uid + '-hint'"><slot name="hint" /></span>
+    <span class="error" :id="uid + '-error'" aria-live="polite">{error}</span>
   </label>
 </template>
 
@@ -114,7 +120,13 @@ function committed(event) {
   font-size: $font.size.sm;
 }
 
-.hint:empty {
+.error {
+  color: $color.action.danger.text;
+  font-size: $font.size.sm;
+}
+
+.hint:empty,
+.error:empty {
   display: none;
 }
 </style>

@@ -2,7 +2,7 @@
 
 Introduced in v0.1 (Milestone 7).
 
-A behavior is the interaction logic of a component, separate from how it looks. Six are built: `press` (a click, a tap, or Enter or Space, with none of the differences between them), `toggle` (press that moves between on and off), `disclosure` (a trigger that shows and hides a region), `dialog` (a modal dialog), `combobox` (the keyboard of an editable combobox with a list) and `tabs` (a tab list, with the arrow keys). They share one design: the component owns its state and binds it to the element, and the behavior reads that state from the element, handles the keyboard and pointer, and reports where it is going.
+A behavior is the interaction logic of a component, separate from how it looks. Seven are built: `press` (a click, a tap, or Enter or Space, with none of the differences between them), `toggle` (press that moves between on and off), `disclosure` (a trigger that shows and hides a region), `dialog` (a modal dialog), `combobox` (the keyboard of an editable combobox with a list) `tabs` (a tab list, with the arrow keys) and `radio-group` (a set of radios, one of which is chosen). They share one design: the component owns its state and binds it to the element, and the behavior reads that state from the element, handles the keyboard and pointer, and reports where it is going.
 
 ## Using press
 
@@ -198,9 +198,22 @@ The keys and the pointer of a tab list (the ARIA tabs pattern, with automatic ac
 
 `$event.value` is the tab's `data-value` (or its `id`, or its position), and `$event.source` is `keyboard` or `pointer`. A list with `aria-orientation="vertical"` uses Arrow Down and Arrow Up instead. A disabled tab (`disabled`, or `aria-disabled="true"`) is skipped by the keys and gives no click. Unlike the other behaviors it needs a DOM, because it finds the tabs and moves focus. The landing page's code window (`landing/app/components/CodeTabs.tess` in the repository) is a complete one.
 
+## radio-group
+
+The keys and the pointer of a radio group (the ARIA radio group pattern). Attach it to the element that has `role="radiogroup"` with `@choose`. The contract declares the parts `root` and `radio` and the event `choose`. The component owns which radio is checked: it binds `aria-checked` and `tabindex` on each radio (0 for the checked one, or the first that can be chosen when none is, and -1 for the others, so Tab leaves the group). The behavior finds the radios (`role="radio"`), moves focus and reports where the person is going:
+
+| Input                   | What happens                                   |
+| ----------------------- | ---------------------------------------------- |
+| Arrow Right, Arrow Down | Focus and choose the next radio, wrapping.     |
+| Arrow Left, Arrow Up    | Focus and choose the previous radio, wrapping. |
+| Space                   | Choose the focused radio.                      |
+| Click                   | Choose that radio.                             |
+
+`$event.value` is the radio's `data-value` (or its `id`, or its position), and `$event.source` is `keyboard` or `pointer`. Unlike tabs, a radio group moves in every direction, whatever its layout. A disabled radio (`disabled`, or `aria-disabled="true"`) is skipped by the keys and gives no click. Like tabs it needs a DOM. `RadioGroup` in [Tessera UI](/guide/tessera-ui) is a complete one.
+
 ## The components that use them
 
-The design system's own components are built on these behaviors, and each has generated accessibility tests: `Button` (press), `Checkbox` and `Switch` (toggle), `AccordionItem` and `Accordion` (disclosure), `Dialog` (dialog), `Combobox` (combobox), and `TextField` and `Select` (the browser's own controls, with a visible label). They live in the repository's `system/components`, and `tessera init` writes them into your project's `system/components` for the `tessera` and `tailwind` presets. The `none` preset has no design system, so it gets none of them: write your own, with the same behaviors, which ship with the framework.
+The design system's own components are built on these behaviors, and each has generated accessibility tests: `Button` (press), `Checkbox` and `Switch` (toggle), `AccordionItem` and `Accordion` (disclosure), `Dialog` (dialog), `Combobox` (combobox), and `TextField` and `Select` (the browser's own controls, with a visible label). They are the components of [Tessera UI](/guide/tessera-ui) (`@pixelscriptio/tessera-ui`), which the `tessera` and `tailwind` presets depend on. The `none` preset has no design system, so it gets none of them: write your own, with the same behaviors, which ship with the framework.
 
 ## Generated accessibility tests
 

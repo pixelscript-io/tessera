@@ -87,6 +87,12 @@ space.8
 
 New components may add tokens to this list; a test fails until the list and the components agree, and a new token is a change you will find in the [release notes](/releases/).
 
+## Forms
+
+A field is a component with a visible label, an optional hint and an optional `error`: `TextField`, `Textarea`, `Select`, `Combobox` and `RadioGroup`. The error is announced when it appears, is read with the field, and marks it invalid. For a control with none of that (a native date input, say) wrap it in a `FormField`.
+
+`Form` ties them together. You give it the `values` and the `rules`; on submit it fires `submit` with the values if every rule passes, and otherwise `invalid` with the errors, and moves focus to the first field that has one. It does not draw the errors: you keep them in state and hand each to its field, so the messages and when they appear stay yours. The Form page of the component docs (`npx tessera docs`) has a complete example.
+
 ## Icons
 
 Icons come from [Lucide](https://lucide.dev/icons/) (ISC license). Lucide is a dependency of `@pixelscriptio/tessera-ui` and of nothing else: a project that does not install the library, or that has no design system, does not get it, and `@pixelscriptio/tessera` itself never depends on it.
@@ -116,4 +122,4 @@ These are the rules a component must meet before it joins the library. They are 
 
 ## What is in it
 
-`Accordion`, `AccordionItem`, `Alert`, `Avatar`, `Button`, `Checkbox`, `Combobox`, `Dialog`, `Icon`, `Kbd`, `Progress`, `Select`, `Separator`, `Skeleton`, `Spinner`, `Switch` and `TextField`, and more coming in phases: the rest of forms and feedback first (`Textarea`, `RadioGroup`, `FormField`), then overlays, navigation and data, and pickers. The library is meant to stay around forty components; a component that most apps do not need belongs in the project that does. See the [roadmap](/releases/roadmap).
+`Accordion`, `AccordionItem`, `Alert`, `Avatar`, `Button`, `Checkbox`, `Combobox`, `Dialog`, `Form`, `FormField`, `Icon`, `Kbd`, `Progress`, `RadioGroup`, `Select`, `Separator`, `Skeleton`, `Spinner`, `Switch`, `Textarea` and `TextField`, and more coming in phases: overlays first, then navigation and data, and pickers. The library is meant to stay around forty components; a component that most apps do not need belongs in the project that does. See the [roadmap](/releases/roadmap).
