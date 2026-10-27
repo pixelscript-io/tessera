@@ -7,6 +7,12 @@
   "parts": ["root"],
   "variants": {
     "size": ["md", "sm", "lg"] // first value is the default
+  },
+  "preview": {
+    "props": {
+      "name": "settings",
+      "label": "Settings"
+    }
   }
 }
 </contract>

@@ -212,7 +212,7 @@ describe('tessera codemod: the kitchen-sink app', () => {
       'app/components/ConfirmBar.tess:26  variant value  Action.tone="danger" → Action.tone="destructive"',
     )
     expect(out).toContain(
-      'app/components/Action.tess:84  variant value  [data-tone=danger] → [data-tone=destructive]',
+      'app/components/Action.tess:95  variant value  [data-tone=danger] → [data-tone=destructive]',
     )
     expect(out).toContain('Would update')
     expect(out).toContain('Run it again with --write to apply.')

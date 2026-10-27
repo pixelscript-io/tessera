@@ -7,7 +7,12 @@
   "variants": {
     "tone": ["neutral", "primary", "danger"] // first value is the default
   },
-  "slots": { "default": "the label" }
+  "slots": { "default": "the label" },
+  "preview": {
+    "slots": {
+      "default": "New"
+    }
+  }
 }
 </contract>
 

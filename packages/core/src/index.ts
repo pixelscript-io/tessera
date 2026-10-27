@@ -32,6 +32,14 @@ export {
 } from './component'
 export { defineElement, type ElementSpec } from './element'
 export {
+  previewComponents,
+  previewProps,
+  previewSlots,
+  type PreviewContent,
+  type PreviewNode,
+  type PreviewSpec,
+} from './preview'
+export {
   createStringAdapter,
   createStringNode,
   serializeChildren,

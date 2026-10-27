@@ -13,6 +13,15 @@
   },
   "events": {
     "expand": "fired with { expanded, source } when the person opens or closes it; the open prop sets it from outside"
+  },
+  "preview": {
+    "props": {
+      "open": true
+    },
+    "slots": {
+      "title": "Section title",
+      "default": "The content that is shown and hidden."
+    }
   }
 }
 </contract>

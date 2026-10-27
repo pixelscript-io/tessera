@@ -1,4 +1,5 @@
-import type { Contract } from '@tessera/contract'
+import type { Contract, Preview, PreviewContent, PreviewNode } from '@tessera/contract'
+import type { PropInfo } from './props'
 import type { RouteManifest } from '@tessera/router/manifest'
 import type { TokenManifest } from '@tessera/tokens'
 import { tokenLifecycle } from './style/tokens'
@@ -92,6 +93,10 @@ export interface ManifestComponent {
   events: Record<string, string>
   /** Part pairs whose text and background contrast is checked in every theme. */
   contrast: Array<{ foreground: string; background: string }>
+  /** The props its script asks for besides the variants (`value`, `options`), each with its type and default. */
+  props: PropInfo[]
+  /** Sample props and slot content: what the docs show, what the generated tests mount, and what `usage` is written from. */
+  preview?: Preview
   /** Valid ways to use it, generated from the contract. Copy and adapt. */
   usage: string[]
 }
@@ -133,8 +138,75 @@ export interface ManifestRules {
   autoImports: boolean
 }
 
+const escapeText = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+const escapeAttr = (text: string) => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
+
+/** A prop as an attribute: text as it is, anything else as an expression naming the value (an object needs a script). */
+function propAttribute(name: string, value: unknown): string {
+  if (typeof value === 'string') return `${name}="${escapeAttr(value)}"`
+  if (value === true) return name
+  if (value === false || value === null) return `:${name}="${value}"`
+  if (typeof value === 'number') return `:${name}="${value}"`
+  return `:${name}="${name}"`
+}
+
+/** Markup for sample content, one node per line, so a slot can be copied as it reads. */
+function nodeMarkup(node: PreviewNode, slot: string | undefined, indent: string): string[] {
+  const mark = slot ? ` slot="${slot}"` : ''
+  if (typeof node === 'string') {
+    return slot
+      ? [`${indent}<span${mark}>${escapeText(node)}</span>`]
+      : [`${indent}${escapeText(node)}`]
+  }
+  if ('component' in node) {
+    const attrs = Object.entries(node.props ?? {}).map(([k, v]) => propAttribute(k, v))
+    const open = [node.component + mark, ...attrs].join(' ')
+    const inner = Object.entries(node.slots ?? {}).flatMap(([name, content]) =>
+      contentMarkup(content, name === 'default' ? undefined : name, indent + '  '),
+    )
+    return inner.length
+      ? [`${indent}<${open}>`, ...inner, `${indent}</${node.component}>`]
+      : [`${indent}<${open} />`]
+  }
+  const attrs = Object.entries(node.attrs ?? {}).map(([k, v]) =>
+    v === true ? k : `${k}="${escapeAttr(String(v))}"`,
+  )
+  const open = [node.tag + mark, ...attrs].join(' ')
+  const kids =
+    node.children === undefined ? [] : contentMarkup(node.children, undefined, indent + '  ')
+  if (!kids.length && node.text === undefined) return [`${indent}<${open} />`]
+  if (!kids.length) return [`${indent}<${open}>${escapeText(node.text!)}</${node.tag}>`]
+  return [
+    `${indent}<${open}>`,
+    ...(node.text !== undefined ? [`${indent}  ${escapeText(node.text)}`] : []),
+    ...kids,
+    `${indent}</${node.tag}>`,
+  ]
+}
+
+function contentMarkup(
+  content: PreviewContent,
+  slot: string | undefined,
+  indent: string,
+): string[] {
+  return (Array.isArray(content) ? content : [content]).flatMap((n) => nodeMarkup(n, slot, indent))
+}
+
+/** The component as its preview says to show it, written as a template. */
+function previewUsage(c: Contract): string | undefined {
+  const preview = c.preview
+  if (!preview) return undefined
+  return nodeMarkup(
+    { component: c.name, props: preview.props, slots: preview.slots },
+    undefined,
+    '',
+  ).join(String.fromCharCode(10))
+}
+
 /** A tag with every variant at its default, and slot content if the component has a default slot. */
 function basicUsage(c: Contract): string {
+  const fromPreview = previewUsage(c)
+  if (fromPreview) return fromPreview
   const content = 'default' in c.slots ? 'content' : ''
   return content ? `<${c.name}>${content}</${c.name}>` : `<${c.name} />`
 }
@@ -155,10 +227,10 @@ function variedUsage(c: Contract): string | undefined {
 }
 
 export function componentsOf(
-  entries: Iterable<{ name: string; file: string; contract: Contract }>,
+  entries: Iterable<{ name: string; file: string; contract: Contract; props?: PropInfo[] }>,
 ): ManifestComponent[] {
   return [...entries]
-    .map(({ file, contract: c }) => ({
+    .map(({ file, contract: c, props }) => ({
       name: c.name,
       file,
       role: c.role,
@@ -180,6 +252,8 @@ export function componentsOf(
       slots: c.slots,
       events: c.events,
       contrast: c.contrast.map((p) => ({ foreground: p.foreground, background: p.background })),
+      props: props ?? [],
+      ...(c.preview ? { preview: c.preview } : {}),
       usage: [basicUsage(c), variedUsage(c)].filter((u): u is string => !!u),
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -313,7 +387,7 @@ export function stateOf(
 
 /** Assemble the manifest from what a project already knows. Pure: the caller supplies the pieces. */
 export function buildAgentManifest(input: {
-  components: Iterable<{ name: string; file: string; contract: Contract }>
+  components: Iterable<{ name: string; file: string; contract: Contract; props?: PropInfo[] }>
   tokens: TokenManifest | undefined
   routes: RouteManifest | undefined
   layouts: string[]

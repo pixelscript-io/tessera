@@ -10,6 +10,11 @@
   },
   "slots": {
     "default": "the key, such as Ctrl or K"
+  },
+  "preview": {
+    "slots": {
+      "default": "K"
+    }
   }
 }
 </contract>

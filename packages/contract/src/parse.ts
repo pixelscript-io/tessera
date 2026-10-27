@@ -1,6 +1,7 @@
 import { DEFAULT_BEHAVIORS, type BehaviorRequirements } from './behaviors'
 import { nearest, type ContractCode, type ContractDiagnostic } from './diagnostics'
 import { JsonSyntaxError, lineTable, parseJsonc, type JsonNode, type JsonProp } from './jsonc'
+import { parsePreview, type Preview } from './preview'
 import { ARIA_ROLES } from './roles'
 
 export interface Contrast {
@@ -31,6 +32,8 @@ export interface Contract {
   /** Variant name to the values that were renamed: old value to its replacement. The old value is no longer allowed. */
   renamedValues?: Record<string, Record<string, string>>
   forkedFrom?: { component: string; version: string }
+  /** Sample props and slot content to show the component with: in the docs, in the generated tests, in usage examples. */
+  preview?: Preview
 }
 
 export interface ParseContractOptions {
@@ -71,6 +74,7 @@ const FIELDS = [
   'deprecatedValues',
   'renamedValues',
   'forkedFrom',
+  'preview',
 ] as const
 
 const PASCAL = /^[A-Z][A-Za-z0-9]*$/
@@ -353,6 +357,15 @@ export function parseContract(source: string, options: ParseContractOptions): Pa
   const eventsProp = fields.get('events')
   const events = eventsProp ? stringMap(eventsProp.value, 'events', 'event', MEMBER) : {}
 
+  // preview
+  let preview: Preview | undefined
+  const previewProp = fields.get('preview')
+  if (previewProp) {
+    preview = parsePreview(previewProp.value, Object.keys(slots), {
+      report: (offset, message, hint) => report('T3003', offset, message, hint),
+    })
+  }
+
   // behavior
   let behavior: string | undefined
   const behaviorProp = fields.get('behavior')
@@ -599,6 +612,7 @@ export function parseContract(source: string, options: ParseContractOptions): Pa
           ...(deprecatedValues ? { deprecatedValues } : {}),
           ...(renamedValues ? { renamedValues } : {}),
           ...(forkedFrom ? { forkedFrom } : {}),
+          ...(preview ? { preview } : {}),
         }
 
   return { contract, diagnostics, file, locate }

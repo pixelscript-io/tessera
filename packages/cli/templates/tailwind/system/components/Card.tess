@@ -11,7 +11,12 @@
     "default": "the card content",
     "header": "an optional heading"
   },
-  "contrast": [{ "foreground": "body", "background": "root" }]
+  "contrast": [{ "foreground": "body", "background": "root" }],
+  "preview": {
+    "slots": {
+      "default": "A card holds related content."
+    }
+  }
 }
 </contract>
 

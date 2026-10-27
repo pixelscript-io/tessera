@@ -16,6 +16,12 @@
   "events": {
     "input": "fired with the new text on every change",
     "change": "fired with the text when the person leaves the field after changing it"
+  },
+  "preview": {
+    "slots": {
+      "label": "Email",
+      "hint": "We only use it to sign you in."
+    }
   }
 }
 </contract>

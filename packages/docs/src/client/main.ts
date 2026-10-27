@@ -1,6 +1,12 @@
 import raw from 'virtual:tessera-docs/data'
 import { components, live } from 'virtual:tessera-docs/components'
-import { createRoot, state } from 'virtual:tessera-docs/runtime'
+import {
+  createRoot,
+  previewComponents,
+  previewSlots,
+  state,
+  type PreviewContent,
+} from 'virtual:tessera-docs/runtime'
 import type { DocsComponent, DocsData } from '../data'
 import { editBar, exportPage, gitPanel, importPage, readKey } from './editor'
 import { STYLE } from './style'
@@ -427,34 +433,94 @@ function showError(into: HTMLElement, error: unknown) {
   )
 }
 
-function preview(c: (typeof data.manifest.components)[number]): HTMLElement {
+type ManifestComponent = (typeof data.manifest.components)[number]
+
+/** A slot with no sample content still gets some, so a component never shows an empty hole where text belongs. */
+function sampleFor(slot: string): string | undefined {
+  if (slot === 'icon') return undefined
+  return slot === 'default' ? 'Label' : slot[0]!.toUpperCase() + slot.slice(1)
+}
+
+/**
+ * The part of the page that shows a component and lets a person try it. What it shows comes from the contract's
+ * `preview` (sample props and slot content) and what it lets you change comes from the component itself: a control for
+ * each variant, and for each prop whose default says what kind of value it takes.
+ */
+function preview(c: ManifestComponent): HTMLElement {
   const stage = h('div', { class: 'docs-stage', 'aria-live': 'polite' })
   const log = h('ol', { class: 'docs-events', 'aria-label': 'Events fired' })
-  const signals = Object.fromEntries(c.variants.map((v) => [v.name, state<string>(v.default)]))
-  const disabled = state(false)
-  let slotText = 'Label'
-  let dispose: (() => void) | undefined
+  const sample = c.preview ?? {}
+  const variantNames = new Set(c.variants.map((v) => v.name))
 
+  // One signal for each thing a control can change: a variant, or a prop whose value is text, a number or on/off.
+  const signals: Record<string, ReturnType<typeof state<any>>> = Object.fromEntries(
+    c.variants.map((v) => [v.name, state<unknown>(sample.props?.[v.name] ?? v.default)]),
+  )
+  const editable: Array<{ name: string; type: 'boolean' | 'number' | 'string' }> = []
+  for (const p of c.props) {
+    if (variantNames.has(p.name)) continue
+    const given = sample.props && p.name in sample.props ? sample.props[p.name] : p.default
+    if (p.type === 'boolean' || p.type === 'number' || p.type === 'string') {
+      // A prop that is null in the sample (an unknown value) is not editable as text.
+      signals[p.name] = state<unknown>(given ?? p.default)
+      editable.push({ name: p.name, type: p.type })
+    } else signals[p.name] = state<unknown>(given)
+  }
+  // Props the sample gives that the script does not name still reach the component.
+  for (const [name, value] of Object.entries(sample.props ?? {})) {
+    if (!(name in signals)) signals[name] = state<unknown>(value)
+  }
+  if (c.states.includes('disabled') && !('disabled' in signals)) {
+    signals.disabled = state<unknown>(false)
+    editable.push({ name: 'disabled', type: 'boolean' })
+  }
+
+  // Slot content: the sample's, else some text of its own. A text slot has a control; the rest are fixed.
+  const slotContent: Record<string, PreviewContent> = {}
+  for (const slot of Object.keys(c.slots)) {
+    const given = sample.slots?.[slot]
+    const fallback = sampleFor(slot)
+    if (given !== undefined) slotContent[slot] = given as PreviewContent
+    else if (fallback !== undefined) slotContent[slot] = fallback
+  }
+  const textSlots = Object.keys(slotContent).filter((s) => typeof slotContent[s] === 'string')
+
+  let dispose: (() => void) | undefined
+  let generation = 0
   const remount = async () => {
+    const mine = ++generation
     dispose?.()
     dispose = undefined
     try {
+      // Components named in the content are loaded first, so building the content is synchronous.
+      const names = previewComponents({ slots: slotContent })
+      const loaded: Record<string, (input?: any) => any> = {}
+      for (const name of names) {
+        const load = components[name]
+        if (!load) throw new Error(`The preview uses ${name}, which does not exist.`)
+        loaded[name] = (await load()).default
+      }
+      if (mine !== generation) return
+      const resolve = (name: string) => loaded[name]
       dispose = await mountComponent(c.name, stage, {
-        props: { ...signals, ...(c.states.includes('disabled') ? { disabled } : {}) },
+        props: signals,
         events: Object.fromEntries(
           Object.keys(c.events).map((e) => [
             e,
             (detail?: unknown) => {
-              const item = h(
-                'li',
-                null,
-                `${e}${detail === undefined ? '' : ' ' + JSON.stringify(detail)}`,
+              log.prepend(
+                h('li', null, `${e}${detail === undefined ? '' : ' ' + JSON.stringify(detail)}`),
               )
-              log.prepend(item)
+              // A dialog the person closes (Escape, the backdrop) is closed in the controls too.
+              if (e === 'dismiss' && 'open' in signals) {
+                signals.open!.value = false
+                const box = document.getElementById(`ctl-${c.name}-open`) as HTMLInputElement | null
+                if (box) box.checked = false
+              }
             },
           ]),
         ),
-        slots: 'default' in c.slots ? { default: () => [slotText] } : {},
+        slots: previewSlots(slotContent, resolve),
       })
     } catch (error) {
       showError(stage, error)
@@ -473,40 +539,64 @@ function preview(c: (typeof data.manifest.components)[number]): HTMLElement {
       },
       ...v.values.map((value) => h('option', { value }, value)),
     ) as HTMLSelectElement
-    select.value = v.default
+    select.value = String(signals[v.name]!.value)
     controls.append(h('label', { for: id }, v.name, select))
   }
-  if (c.states.includes('disabled')) {
-    controls.append(
-      h(
-        'label',
-        null,
+  for (const p of editable) {
+    const id = `ctl-${c.name}-${p.name}`
+    const current = signals[p.name]!.value
+    if (p.type === 'boolean') {
+      controls.append(
         h(
-          'span',
-          null,
-          'disabled',
-          ' ',
+          'label',
+          { for: id },
+          h(
+            'span',
+            null,
+            p.name,
+            ' ',
+            h('input', {
+              id,
+              type: 'checkbox',
+              ...(current === true ? { checked: true } : {}),
+              onchange: (e: Event) =>
+                (signals[p.name]!.value = (e.target as HTMLInputElement).checked),
+            }),
+          ),
+        ),
+      )
+    } else {
+      controls.append(
+        h(
+          'label',
+          { for: id },
+          p.name,
           h('input', {
-            type: 'checkbox',
-            onchange: (e: Event) => (disabled.value = (e.target as HTMLInputElement).checked),
+            id,
+            type: p.type === 'number' ? 'number' : 'text',
+            value: current === null || current === undefined ? '' : String(current),
+            oninput: (e: Event) => {
+              const raw = (e.target as HTMLInputElement).value
+              signals[p.name]!.value = p.type === 'number' ? (raw === '' ? null : Number(raw)) : raw
+            },
           }),
         ),
-      ),
-    )
+      )
+    }
   }
-  if ('default' in c.slots) {
-    const id = `ctl-${c.name}-slot`
+  for (const slot of textSlots) {
+    const id = `ctl-${c.name}-slot${slot === 'default' ? '' : '-' + slot}`
     controls.append(
       h(
         'label',
         { for: id },
-        'content',
+        slot === 'default' ? 'content' : slot,
         h('input', {
           id,
           type: 'text',
-          value: slotText,
+          value: String(slotContent[slot]),
           oninput: (e: Event) => {
-            slotText = (e.target as HTMLInputElement).value
+            slotContent[slot] = (e.target as HTMLInputElement).value
             void remount()
           },
         }),
@@ -533,7 +623,46 @@ function preview(c: (typeof data.manifest.components)[number]): HTMLElement {
     )
   }
   if (Object.keys(c.events).length) controls.append(h('h3', null, 'Events'), log)
-  return h('div', { class: 'docs-preview' }, stage, controls)
+
+  // A component that needs data or children, and does not say what to show them with, shows less than it can.
+  const needsSample =
+    !c.preview &&
+    (c.props.some((p) => p.type === 'array' || p.type === 'object' || p.type === 'unknown') ||
+      Object.keys(c.slots).some((s) => s !== 'default' && s !== 'icon'))
+  // An overlay that opens and closes (a dialog) shows nothing until it is open, and when it is open it covers the page.
+  // It gets a button that opens it, so the preview always has something to press.
+  if ('open' in signals && 'dismiss' in c.events) {
+    controls.prepend(
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'docs-button docs-primary',
+          id: `ctl-${c.name}-trigger`,
+          onclick: () => {
+            signals.open!.value = true
+            const box = document.getElementById(`ctl-${c.name}-open`) as HTMLInputElement | null
+            if (box) box.checked = true
+          },
+        },
+        `Open the ${c.name.toLowerCase()}`,
+      ),
+    )
+  }
+  return h(
+    'div',
+    null,
+    h('div', { class: 'docs-preview' }, stage, controls),
+    needsSample
+      ? h(
+          'p',
+          { class: 'docs-note' },
+          'This preview uses only the defaults. Add a ',
+          code('"preview"'),
+          ' to the contract with sample props and slot content to show it fully.',
+        )
+      : null,
+  )
 }
 
 function componentPage(name: string): HTMLElement {

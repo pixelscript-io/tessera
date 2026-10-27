@@ -116,5 +116,19 @@ export const contractSchema = {
       },
       description: 'Set by `tessera eject`: the system component this was copied from.',
     },
+    preview: {
+      type: 'object',
+      additionalProperties: false,
+      description:
+        'Sample props and slot content to show the component with in the docs, the generated tests and usage examples.',
+      properties: {
+        props: { type: 'object', description: 'Prop name to a sample value.' },
+        slots: {
+          type: 'object',
+          description:
+            'Slot name to content: text, a { "component", "props", "slots" } node, a { "tag", "attrs", "text", "children" } element, or a list of them.',
+        },
+      },
+    },
   },
 } as const

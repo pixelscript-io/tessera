@@ -18,6 +18,17 @@
   },
   "events": {
     "press": "fired on click, Enter, or Space, with { source: 'pointer' | 'keyboard' | 'virtual' }"
+  },
+  "preview": {
+    "slots": {
+      "default": "Save changes",
+      "icon": {
+        "component": "Icon",
+        "props": {
+          "name": "plus"
+        }
+      }
+    }
   }
 }
 </contract>

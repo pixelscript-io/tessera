@@ -3,6 +3,7 @@ import { join, relative } from 'node:path'
 import { applyBaseline, applySeverity, type Baseline, type BaselineResult } from './accountability'
 import { apisOf, buildAgentManifest, stateOf, type AgentManifest } from './agent-manifest'
 import { compile, kindFromPath, type CompileResult, type FileKind } from './compile'
+import { componentProps } from './props'
 import type { TesseraConfig } from './config'
 import type { CompilerDiagnostic } from './diagnostics'
 import {
@@ -133,6 +134,7 @@ export class Project {
         name: e.name,
         file: this.display(e.file),
         contract: e.contract,
+        props: existsSync(e.file) ? componentProps(readFileSync(e.file, 'utf8')) : [],
       })),
       tokens: tokens?.ok ? tokens.manifest : undefined,
       routes: existsSync(routes.dir) ? routes.manifest : undefined,

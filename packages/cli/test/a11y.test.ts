@@ -20,12 +20,11 @@ describe('the test file it writes', () => {
     expect(testFile({ tokens: false, components: ['Button'] })).not.toContain('tokens.css')
   })
 
-  it('gives the components that need a list some options, and only those', () => {
+  it('says where a component gets its sample data: the preview in its contract, not a fixture', () => {
     const text = testFile({ tokens: true, components: ['Button', 'Combobox', 'Select'] })
-    expect(text).toContain('Combobox: { props: { options } }')
-    expect(text).toContain('Select: { props: { options } }')
-    expect(text).not.toContain('Button: {')
-    expect(testFile({ tokens: true, components: ['Combobox'] })).not.toContain('Select:')
+    expect(text).toContain('"preview"')
+    expect(text).not.toContain('fixtures')
+    expect(text).not.toContain('options')
   })
 })
 
@@ -48,9 +47,7 @@ describe('tessera a11y', () => {
     expect(out).toContain('npm install')
     expect(out).toContain('npx playwright install chromium')
     expect(out).toContain('npm run test:a11y')
-    expect(read(dir, 'system/components/a11y.browser.test.ts')).toContain(
-      'Combobox: { props: { options } }',
-    )
+    expect(read(dir, 'system/components/a11y.browser.test.ts')).not.toContain('fixtures')
     expect(read(dir, 'app/components/a11y.browser.test.ts')).not.toContain('fixtures')
     expect(read(dir, 'vitest.config.ts')).toBe(VITEST_CONFIG)
     expect(read(dir, 'vitest.config.ts')).toContain('provider: playwright(')
@@ -134,16 +131,19 @@ describe('tessera a11y', () => {
 })
 
 describe('the setup, in the preset projects', () => {
-  it('is the same test file the repository runs on its own components, apart from the fixtures', () => {
+  it('is the same call the repository runs on its own components', () => {
     const own = readFileSync(
       new URL('../../../packages/ui/components/a11y.browser.test.ts', import.meta.url),
       'utf8',
     )
     const generated = testFile({ tokens: true, components: ['Combobox', 'Select'] })
-    // Both ask for the generated suites with the same two fixtures.
-    expect(own).toContain('Combobox: { props: { options } }')
-    expect(generated).toContain('Combobox: { props: { options } }')
-    expect(own).toContain('Select: { props: { options } }')
-    expect(generated).toContain('Select: { props: { options } }')
+    for (const line of [
+      'defineA11ySuites({',
+      "components: import.meta.glob('./*.tess', { eager: true, import: 'default' }),",
+      "sources: import.meta.glob('./*.tess', { query: '?raw', eager: true, import: 'default' }),",
+    ]) {
+      expect(own, line).toContain(line)
+      expect(generated, line).toContain(line)
+    }
   })
 })

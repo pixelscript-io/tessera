@@ -24,7 +24,7 @@ import {
   toggleConformance,
 } from '@tessera/behavior/conformance'
 import { extractContract, type Contract } from '@tessera/compiler'
-import { constant, flush, getRenderer, state, type Component } from '@tessera/core'
+import { constant, flush, getRenderer, previewSlots, state, type Component } from '@tessera/core'
 import { setTheme } from '@tessera/tokens'
 
 /** What automation here does not check. The docs list this next to each component's results. */
@@ -73,8 +73,8 @@ export interface A11yOptions {
   /** Themes to run in. `null` is the default theme. */
   themes?: Array<string | null>
   /**
-   * Props a component needs to be tested with, by component name: a combobox needs options to show. They are given as
-   * props in every run of that component.
+   * Props a component needs to be tested with, by component name, on top of the contract's own `preview` (which the
+   * docs show too): a test may need a value the preview does not. They are given as props in every run of that component.
    */
   fixtures?: Record<string, { props?: Record<string, unknown> }>
 }
@@ -119,6 +119,7 @@ function mount(
   variants: Record<string, string>,
   initial: { disabled?: boolean } = {},
   fixture: { props?: Record<string, unknown> } = {},
+  resolve: (name: string) => Component | undefined = () => undefined,
 ): Mounted {
   const host = document.createElement('div')
   // A page-like surface, so contrast is measured against what a real page would paint.
@@ -133,11 +134,12 @@ function mount(
     component({
       props: {
         ...Object.fromEntries(Object.entries(variants).map(([k, v]) => [k, constant(v)])),
-        disabled,
-        open,
+        // What the contract's preview and the fixture give, then the two the harness drives itself.
         ...Object.fromEntries(
           Object.entries(fixture.props ?? {}).map(([k, v]) => [k, constant(v)]),
         ),
+        disabled,
+        open,
       },
       events: Object.fromEntries(
         Object.keys(contract.events).map((name) => [
@@ -149,13 +151,17 @@ function mount(
           },
         ]),
       ),
-      // Every slot the contract declares has text, so a component that needs a label has one.
-      slots: Object.fromEntries(
-        Object.keys(contract.slots).map((name) => [
-          name,
-          () => [name === 'default' ? 'Label' : `${name} text`],
-        ]),
-      ),
+      // The preview's content where it has some; every other slot the contract declares has text, so a component that
+      // needs a label has one.
+      slots: {
+        ...Object.fromEntries(
+          Object.keys(contract.slots).map((name) => [
+            name,
+            () => [name === 'default' ? 'Label' : `${name} text`],
+          ]),
+        ),
+        ...previewSlots(contract.preview?.slots, resolve),
+      },
     }),
   )
   return {
@@ -401,8 +407,15 @@ export function defineA11ySuites(options: A11yOptions): void {
     expect(entries.length).toBeGreaterThan(0)
   })
 
+  // A component the preview of another names is found by its contract name.
+  const byName = new Map(entries.map((e) => [e.contract.name, e.component]))
+  const resolve = (name: string) => byName.get(name)
+
   for (const { contract, component } of entries) {
-    const fixture = options.fixtures?.[contract.name] ?? {}
+    // The contract's own sample props, and then the fixture's on top.
+    const fixture = {
+      props: { ...contract.preview?.props, ...options.fixtures?.[contract.name]?.props },
+    }
     describe(`${contract.name} accessibility`, () => {
       for (const theme of themes) {
         const themeName = theme ?? 'default theme'
@@ -411,7 +424,7 @@ export function defineA11ySuites(options: A11yOptions): void {
             for (const variants of variantCombinations(contract)) {
               it(`has no axe violations: ${label(variants)}, ${state}`, async () => {
                 setTheme(theme)
-                const m = mount(component, contract, variants, {}, fixture)
+                const m = mount(component, contract, variants, {}, fixture, resolve)
                 const subject = subjectOf(m.root, contract)
                 try {
                   await enter(state, m, subject)
@@ -427,7 +440,7 @@ export function defineA11ySuites(options: A11yOptions): void {
       }
 
       it(`has the ${contract.role} role its contract declares`, () => {
-        const m = mount(component, contract, {}, {}, fixture)
+        const m = mount(component, contract, {}, {}, fixture, resolve)
         try {
           const actual = m.root.getAttribute('role') ?? IMPLICIT_ROLES[m.root.tagName.toLowerCase()]
           if (!['generic', 'none', 'presentation'].includes(contract.role))
@@ -439,7 +452,7 @@ export function defineA11ySuites(options: A11yOptions): void {
 
       if (contract.states.includes('disabled')) {
         it('is disabled in a way assistive technology can see', () => {
-          const m = mount(component, contract, {}, { disabled: true })
+          const m = mount(component, contract, {}, { disabled: true }, fixture, resolve)
           try {
             flush()
             const subject = subjectOf(m.root, contract)
@@ -457,7 +470,7 @@ export function defineA11ySuites(options: A11yOptions): void {
 
       if (contract.states.includes('focus-visible') && !contract.behavior) {
         it('shows a visible focus indicator on its control when reached with the keyboard', async () => {
-          const m = mount(component, contract, {})
+          const m = mount(component, contract, {}, {}, fixture, resolve)
           const subject = subjectOf(m.root, contract)
           try {
             await userEvent.tab()
@@ -479,7 +492,7 @@ export function defineA11ySuites(options: A11yOptions): void {
       if (suite) {
         if (suite.focusRing) {
           it('shows a visible focus indicator when reached with the keyboard', async () => {
-            const m = mount(component, contract, {}, {}, fixture)
+            const m = mount(component, contract, {}, {}, fixture, resolve)
             const subject = subjectOf(m.root, contract)
             try {
               await userEvent.tab()
@@ -499,7 +512,7 @@ export function defineA11ySuites(options: A11yOptions): void {
         describe(suite.title, () => {
           for (const testCase of suite.cases) {
             it(testCase.name, async () => {
-              const m = mount(component, contract, {}, {}, fixture)
+              const m = mount(component, contract, {}, {}, fixture, resolve)
               const subject = subjectOf(m.root, contract)
               try {
                 await testCase.run(suite.harness(m, subject, fixture))

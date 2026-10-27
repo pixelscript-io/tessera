@@ -7,6 +7,36 @@
   "parts": ["root"],
   "slots": {
     "default": "AccordionItem components"
+  },
+  "preview": {
+    "slots": {
+      "default": [
+        {
+          "component": "AccordionItem",
+          "props": {
+            "open": true
+          },
+          "slots": {
+            "title": "What is Tessera?",
+            "default": "A design-system-first frontend framework."
+          }
+        },
+        {
+          "component": "AccordionItem",
+          "slots": {
+            "title": "Is it accessible?",
+            "default": "Every component is tested against its contract, in both themes."
+          }
+        },
+        {
+          "component": "AccordionItem",
+          "slots": {
+            "title": "Can I change the look?",
+            "default": "Change the tokens and every component follows."
+          }
+        }
+      ]
+    }
   }
 }
 </contract>

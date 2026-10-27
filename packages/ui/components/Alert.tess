@@ -12,6 +12,18 @@
     "icon": "optional leading icon",
     "title": "a short heading",
     "default": "the message"
+  },
+  "preview": {
+    "slots": {
+      "icon": {
+        "component": "Icon",
+        "props": {
+          "name": "info"
+        }
+      },
+      "title": "Heads up",
+      "default": "Your trial ends in three days."
+    }
   }
 }
 </contract>

@@ -145,7 +145,9 @@ describe('components', () => {
       values: ['primary', 'neutral', 'danger'],
       default: 'primary',
     })
-    expect(button.usage[0]).toBe('<Button>content</Button>')
+    expect(button.usage[0]).toBe(
+      ['<Button>', '  Save changes', '  <Icon slot="icon" name="plus" />', '</Button>'].join('\n'),
+    )
     expect(button.source).toContain('<contract>')
   })
 

@@ -10,5 +10,11 @@ declare module 'virtual:tessera-docs/components' {
 }
 
 declare module 'virtual:tessera-docs/runtime' {
-  export { state, createRoot } from '@tessera/core'
+  export {
+    state,
+    createRoot,
+    previewComponents,
+    previewSlots,
+    type PreviewContent,
+  } from '@tessera/core'
 }

@@ -63,9 +63,41 @@ describe('the agent manifest: components', () => {
 
   it('writes usage examples that are valid for the contract', () => {
     expect(component('Button').usage).toEqual([
-      '<Button>content</Button>',
+      ['<Button>', '  Save changes', '  <Icon slot="icon" name="plus" />', '</Button>'].join('\n'),
       '<Button tone="neutral" size="md" emphasis="outline" @press="onPress">content</Button>',
     ])
+  })
+
+  it('writes the usage of a component from its preview: its children, its slots and the data it needs', () => {
+    const accordion = component('Accordion').usage[0]!.split('\n')
+    expect(accordion.slice(0, 6)).toEqual([
+      '<Accordion>',
+      '  <AccordionItem open>',
+      '    <span slot="title">What is Tessera?</span>',
+      '    A design-system-first frontend framework.',
+      '  </AccordionItem>',
+      '  <AccordionItem>',
+    ])
+    expect(accordion.at(-1)).toBe('</Accordion>')
+    expect(accordion.join('\n')).toContain('Is it accessible?')
+    // A list is named, not written out: it is a value for the script.
+    expect(component('RadioGroup').usage[0]).toContain(':options="options"')
+    expect(component('RadioGroup').usage[0]).toContain('<span slot="label">Billing period</span>')
+    // A native element in a slot.
+    expect(component('FormField').usage[0]).toContain('<input type="date" />')
+  })
+
+  it('lists the props a component takes besides its variants, with what their defaults say they are', () => {
+    expect(component('RadioGroup').props).toEqual([
+      { name: 'options', type: 'array', default: [] },
+      { name: 'value', type: 'string', default: '' },
+      { name: 'disabled', type: 'boolean', default: false },
+      { name: 'error', type: 'string', default: '' },
+    ])
+    expect(component('RadioGroup').preview?.props?.value).toBe('monthly')
+  })
+
+  it('writes a self-closing tag for a component that has no default slot and no preview', () => {
     // A component with no default slot gets a self-closing tag.
     expect(component('ConfirmBar').usage[0]).toBe('<ConfirmBar />')
   })

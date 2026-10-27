@@ -48,6 +48,8 @@ th { color: var(--d-muted); font: 500 11px/1.4 var(--d-mono); letter-spacing: .0
 .docs-card span { color: var(--d-muted); font: 400 11px/1.4 var(--d-mono); letter-spacing: .06em; text-transform: uppercase; }
 .docs-preview { display: grid; grid-template-columns: minmax(0, 1fr) 240px; border: 1px solid var(--d-line); border-radius: var(--d-r-md); overflow: hidden; }
 .docs-stage { padding: 40px 28px; min-height: 240px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; background-color: var(--t-color-surface-default, #fff); background-image: radial-gradient(var(--d-line) 1px, transparent 1px); background-size: 16px 16px; color: var(--t-color-text-default, #17202a); }
+/* A block-level component (a group, a form, a field) is as wide as a column of content; an inline one (a button, a key) is as wide as it is. */
+.docs-stage > :where(div, form, label, section, fieldset) { width: 100%; max-width: 28rem; }
 .docs-stage.parts [class] { outline: 1px dashed #d6336c; outline-offset: 1px; }
 .docs-stage .docs-error { color: #a1261c; font-family: ui-monospace, monospace; white-space: pre-wrap; }
 .docs-controls { padding: 16px 18px; background: var(--d-bg); border-left: 1px solid var(--d-line); display: grid; gap: 12px; align-content: start; font-size: 13px; }
@@ -56,6 +58,8 @@ th { color: var(--d-muted); font: 500 11px/1.4 var(--d-mono); letter-spacing: .0
 .docs-controls h3 { margin: 0; font: 500 11px/1 var(--d-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--d-fg); }
 .docs-events { margin: 0; padding-left: 18px; max-height: 110px; overflow: auto; }
 .docs-live { border: 1px solid var(--d-line); border-radius: var(--d-r-md); padding: 28px 24px; margin: 12px 0 4px; background-image: radial-gradient(var(--d-line) 1px, transparent 1px); background-size: 16px 16px; background-color: var(--t-color-surface-default, #fff); color: var(--t-color-text-default, #17202a); }
+.docs-note { margin: 10px 0 0; padding: 10px 14px; border: 1px dashed var(--d-line); border-radius: var(--d-r-md); color: var(--d-muted); font-size: 13px; }
+.docs-controls input[type=number] { font: inherit; padding: 5px 8px; background: var(--d-alt); color: var(--d-fg); border: 1px solid var(--d-line); border-radius: var(--d-r-md); }
 .docs-prose h1 { margin: 0 0 12px; font-size: 20px; line-height: 1.3; letter-spacing: -.015em; }
 .docs-live > div > * + * { margin-top: 24px; }
 .docs-swatch { display: inline-block; width: 22px; height: 22px; border-radius: var(--d-r-sm); border: 1px solid var(--d-line); vertical-align: middle; margin-right: 8px; }

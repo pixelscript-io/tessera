@@ -16,6 +16,32 @@
   "events": {
     "select": "fired with { value, label } when an option is chosen",
     "input": "fired with the text on every change"
+  },
+  "preview": {
+    "props": {
+      "options": [
+        {
+          "value": "apple",
+          "label": "Apple"
+        },
+        {
+          "value": "apricot",
+          "label": "Apricot"
+        },
+        {
+          "value": "banana",
+          "label": "Banana"
+        },
+        {
+          "value": "blueberry",
+          "label": "Blueberry"
+        }
+      ],
+      "placeholder": "Search fruit"
+    },
+    "slots": {
+      "label": "Fruit"
+    }
   }
 }
 </contract>

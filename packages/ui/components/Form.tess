@@ -11,6 +11,28 @@
   "events": {
     "submit": "fired with { values } when the form is submitted and every rule passes",
     "invalid": "fired with { errors } when it is submitted and a rule fails: errors maps a field name to its message"
+  },
+  "preview": {
+    "slots": {
+      "default": [
+        {
+          "component": "TextField",
+          "slots": {
+            "label": "Email",
+            "hint": "We only use it to sign you in."
+          }
+        },
+        {
+          "component": "Button",
+          "props": {
+            "type": "submit"
+          },
+          "slots": {
+            "default": "Sign up"
+          }
+        }
+      ]
+    }
   }
 }
 </contract>

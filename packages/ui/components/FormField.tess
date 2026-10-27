@@ -9,6 +9,18 @@
     "label": "the visible label, required",
     "default": "the control: an input, a textarea, a select or an element with a role such as radiogroup",
     "hint": "help under the control"
+  },
+  "preview": {
+    "slots": {
+      "label": "Start date",
+      "default": {
+        "tag": "input",
+        "attrs": {
+          "type": "date"
+        }
+      },
+      "hint": "The first day of the trial."
+    }
   }
 }
 </contract>

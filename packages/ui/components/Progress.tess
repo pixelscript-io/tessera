@@ -8,6 +8,12 @@
   "variants": {
     "size": ["md", "sm"], // first value is the default
     "tone": ["primary", "neutral", "danger"]
+  },
+  "preview": {
+    "props": {
+      "value": 60,
+      "label": "Uploading photo"
+    }
   }
 }
 </contract>
@@ -38,6 +44,7 @@ const percent = derived(() => {
 <style>
 .root {
   position: relative;
+  width: 100%;
   height: $space.2;
   overflow: hidden;
   border-radius: $radius.full;

@@ -21,7 +21,34 @@
   "contrast": [
     { "foreground": "body", "background": "panel" },
     { "foreground": "title", "background": "panel" }
-  ]
+  ],
+  "preview": {
+    "slots": {
+      "title": "Delete project?",
+      "default": "This cannot be undone. The project and its files are removed for everyone.",
+      "actions": [
+        {
+          "component": "Button",
+          "props": {
+            "tone": "neutral",
+            "emphasis": "outline"
+          },
+          "slots": {
+            "default": "Cancel"
+          }
+        },
+        {
+          "component": "Button",
+          "props": {
+            "tone": "danger"
+          },
+          "slots": {
+            "default": "Delete"
+          }
+        }
+      ]
+    }
+  }
 }
 </contract>
 

@@ -16,6 +16,26 @@
   },
   "events": {
     "choose": "fired with { value, source } when the person chooses an option, where source is keyboard or pointer"
+  },
+  "preview": {
+    "props": {
+      "options": [
+        {
+          "value": "monthly",
+          "label": "Monthly"
+        },
+        {
+          "value": "yearly",
+          "label": "Yearly, two months free"
+        },
+        { "value": "team", "label": "Team" }
+      ],
+      "value": "monthly"
+    },
+    "slots": {
+      "label": "Billing period",
+      "hint": "You can change this later."
+    }
   }
 }
 </contract>

@@ -147,7 +147,7 @@ describe('invalid contracts', () => {
       parse('{ "name": "Button", "role": "button", "parts": ["root"], "zzzzzzzz": 1 }')
         .diagnostics[0]!.hint,
     ).toBe(
-      'Known fields: "name", "role", "parts", "variants", "states", "behavior", "slots", "events", "description", "contrast", "since", "deprecated", "renamedFrom", "deprecatedValues", "renamedValues", "forkedFrom".',
+      'Known fields: "name", "role", "parts", "variants", "states", "behavior", "slots", "events", "description", "contrast", "since", "deprecated", "renamedFrom", "deprecatedValues", "renamedValues", "forkedFrom", "preview".',
     )
   })
 
@@ -405,5 +405,81 @@ describe('contract against its template', () => {
 
   it('does nothing for an invalid contract', () => {
     expect(checkTemplateParts(parse('{}'), { classes: [] })).toEqual([])
+  })
+})
+
+describe('preview', () => {
+  const contract = (preview: unknown) => {
+    const base = JSON.parse(
+      BUTTON.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').replace(/,(\s*[}\]])/g, '$1'),
+    )
+    return parse(JSON.stringify({ ...base, preview }))
+  }
+
+  it('reads sample props and slot content: text, components, elements and lists', () => {
+    const p = contract({
+      props: { value: 'a', options: [{ value: 'a', label: 'A' }] },
+      slots: {
+        default: 'Save',
+        icon: [
+          { component: 'Icon', props: { name: 'check' } },
+          { tag: 'span', attrs: { 'aria-hidden': true }, text: '!' },
+        ],
+      },
+    })
+    expect(errors(p)).toEqual([])
+    expect(p.contract!.preview).toEqual({
+      props: { value: 'a', options: [{ value: 'a', label: 'A' }] },
+      slots: {
+        default: 'Save',
+        icon: [
+          { component: 'Icon', props: { name: 'check' } },
+          { tag: 'span', attrs: { 'aria-hidden': true }, text: '!' },
+        ],
+      },
+    })
+  })
+
+  it('is optional', () => {
+    expect(parse(BUTTON).contract!.preview).toBeUndefined()
+  })
+
+  it('says what a preview must be, and names an unknown field with a suggestion', () => {
+    expect(errors(contract('x')).join('\n')).toContain(
+      '"preview" must be an object with "props" and "slots".',
+    )
+    const typo = errors(contract({ slot: {} })).join('\n')
+    expect(typo).toContain('Unknown preview field "slot".')
+    expect(typo).toContain('Did you mean "slots"?')
+  })
+
+  it('refuses content for a slot the contract does not declare, with the nearest one', () => {
+    const e = errors(contract({ slots: { defalt: 'x' } })).join('\n')
+    expect(e).toContain('The slot "defalt" in "preview" is not declared in "slots".')
+    expect(e).toContain('Did you mean "default"?')
+  })
+
+  it('checks a node: component or tag, and the shape of each', () => {
+    const message = (content: unknown) =>
+      errors(contract({ slots: { default: content } })).join('\n')
+    expect(message(5)).toContain(
+      'The content of the slot "default" must be text, or an object with "component" or "tag"',
+    )
+    expect(message({})).toContain('A preview node needs a "component" or a "tag".')
+    expect(message({ component: 'A', tag: 'a' })).toContain(
+      'A preview node is a "component" or a "tag", not both.',
+    )
+    expect(message({ component: 'button' })).toContain(
+      '"component" must be a component name in PascalCase.',
+    )
+    expect(message({ tag: 'Input' })).toContain(
+      '"tag" must be an element name in lowercase, such as "input".',
+    )
+    const typo = message({ tag: 'p', txt: 'x' })
+    expect(typo).toContain('Unknown field "txt" in a preview node.')
+    expect(typo).toContain('Did you mean "text"?')
+    expect(message({ component: 'Icon', props: [] })).toContain(
+      '"props" of a preview node must be an object of prop names to values.',
+    )
   })
 })

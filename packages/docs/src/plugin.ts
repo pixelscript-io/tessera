@@ -177,7 +177,7 @@ export function docsPlugin(options: DocsOptions = {}): Plugin {
       }
       if (id === RESOLVED(COMPONENTS_ID)) return components()
       if (id === RESOLVED(RUNTIME_ID)) {
-        return "export { state, createRoot, getRenderer } from '@pixelscriptio/tessera/core'\n"
+        return "export { state, createRoot, getRenderer, previewComponents, previewSlots } from '@pixelscriptio/tessera/core'\n"
       }
       return null
     },

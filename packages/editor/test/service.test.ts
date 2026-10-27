@@ -186,6 +186,7 @@ const allFields = [
   'deprecatedValues',
   'renamedValues',
   'forkedFrom',
+  'preview',
 ]
 
 describe('components resolved without imports', () => {

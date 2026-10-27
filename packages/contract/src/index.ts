@@ -8,6 +8,7 @@ export {
   type ParsedContract,
   type TemplateFacts,
 } from './parse'
+export { jsonValue, type Preview, type PreviewContent, type PreviewNode } from './preview'
 export { generateTypes } from './types'
 export { contractSchema } from './schema'
 export { DEFAULT_BEHAVIORS, type BehaviorRequirements } from './behaviors'

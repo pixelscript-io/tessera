@@ -2,26 +2,10 @@
 import 'virtual:tessera/tokens.css'
 import { defineA11ySuites } from '@tessera/a11y'
 
-// A list to choose from, for the components that need one. The first two share their opening letters ("ap"),
-// which the combobox conformance types to narrow the list.
-const options = [
-  { value: 'apple', label: 'Apple' },
-  { value: 'apricot', label: 'Apricot' },
-  { value: 'banana', label: 'Banana' },
-  { value: 'blueberry', label: 'Blueberry' },
-]
-
-// Every component in this folder gets accessibility tests generated from its contract. Adding a component
-// adds its tests; there is nothing to register, except what a component needs to be shown with.
+// Every component in this folder gets accessibility tests generated from its contract. Adding a component adds its
+// tests; there is nothing to register. A component is mounted with what its contract's `preview` gives it: the same
+// sample props and slot content the docs show, so what is tested is what a person sees there.
 defineA11ySuites({
   components: import.meta.glob('./*.tess', { eager: true, import: 'default' }),
   sources: import.meta.glob('./*.tess', { query: '?raw', eager: true, import: 'default' }),
-  fixtures: {
-    Combobox: { props: { options } },
-    Select: { props: { options } },
-    // A radio group has one option chosen, and the behavior's cases need at least three.
-    RadioGroup: { props: { options, value: 'apple' } },
-    // An icon that stands alone needs a name.
-    Icon: { props: { name: 'check', label: 'Done' } },
-  },
 })

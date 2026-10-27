@@ -47,47 +47,19 @@ export default defineConfig({
 })
 `
 
-/** Components that cannot be shown without data are given some, so their tests have something to test. */
-const FIXTURE_COMPONENTS = ['Combobox', 'Select']
-
-const FIXTURES = `  // A list for the components that need one. The first two share their opening letters, which the combobox
-  // tests type to narrow the list.
-  fixtures: {
-@COMPONENTS@
-  },
-`
-
 /** The test file for one folder of components. */
 export function testFile(options: { tokens: boolean; components: string[] }): string {
-  const needs = FIXTURE_COMPONENTS.filter((c) => options.components.includes(c))
-  const fixtures = needs.length
-    ? FIXTURES.replace(
-        '@COMPONENTS@',
-        needs.map((c) => `    ${c}: { props: { options } },`).join('\n'),
-      )
-    : ''
   return [
     '/// <reference types="vite/client" />',
     ...(options.tokens ? ["import 'virtual:tessera/tokens.css'"] : []),
     "import { defineA11ySuites } from '@pixelscriptio/tessera/a11y'",
     '',
-    ...(needs.length
-      ? [
-          'const options = [',
-          "  { value: 'apple', label: 'Apple' },",
-          "  { value: 'apricot', label: 'Apricot' },",
-          "  { value: 'banana', label: 'Banana' },",
-          "  { value: 'blueberry', label: 'Blueberry' },",
-          ']',
-          '',
-        ]
-      : []),
     '// Every component in this folder that has a contract gets accessibility tests generated from it. Adding a',
-    '// component adds its tests; there is nothing to register.',
+    "// component adds its tests; there is nothing to register. A component is shown with what its contract's",
+    '// "preview" gives it (sample props and slot content), so a component that needs data says so there.',
     'defineA11ySuites({',
     "  components: import.meta.glob('./*.tess', { eager: true, import: 'default' }),",
     "  sources: import.meta.glob('./*.tess', { query: '?raw', eager: true, import: 'default' }),",
-    ...(fixtures ? [fixtures.trimEnd()] : []),
     '})',
     '',
   ].join('\n')

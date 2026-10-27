@@ -10,6 +10,11 @@
   },
   "slots": {
     "default": "the label, announced and not shown; Loading when empty"
+  },
+  "preview": {
+    "slots": {
+      "default": "Loading"
+    }
   }
 }
 </contract>

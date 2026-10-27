@@ -16,6 +16,12 @@
   "events": {
     "input": "fired with the new text on every change",
     "change": "fired with the text when the person leaves the box after changing it"
+  },
+  "preview": {
+    "slots": {
+      "label": "Message",
+      "hint": "Plain text, up to 500 characters."
+    }
   }
 }
 </contract>
