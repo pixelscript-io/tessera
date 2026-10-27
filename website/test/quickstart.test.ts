@@ -36,7 +36,7 @@ const commands = blocks
 const setup = commands.slice(0, -1)
 const serve = commands[commands.length - 1]!
 /** The one line this test changes: the install reads the package from the checkout's tarball, so a run tests the code under change and not whatever was last published. */
-const INSTALL = 'npm install @pixelscriptio/tessera@latest'
+const INSTALL = 'npm install @pixelscriptio/tessera@latest @pixelscriptio/tessera-ui@latest'
 
 const made: string[] = []
 // `git init` leaves read-only files on Windows, and a just-stopped server can still hold a handle for a moment:
@@ -117,13 +117,25 @@ describe('the Quick start', () => {
         readdirSync(packed).find((f) => f.endsWith('.tgz'))!,
       ).replaceAll('\\', '/')
 
+      // The component library, packed the same way.
+      execSync(`pnpm pack --pack-destination "${packed}"`, {
+        cwd: join(repo, 'packages', 'ui'),
+        env,
+        stdio: 'pipe',
+      })
+      const uiTarball = readdirSync(packed)
+        .filter((f) => f.endsWith('.tgz'))
+        .map((f) => join(packed, f).replaceAll('\\', '/'))
+        .find((f) => f !== tarball)!
+
       // The commands, exactly as the page writes them.
       const work = join(dir, 'work')
       mkdirSync(work)
       // Run line by line in the platform's own shell (cmd.exe, sh), so it needs no bash. `cd` moves where the
       // next line runs. Only the install line differs from the page: it installs the tarball.
       let cwd = work
-      const filled = (line: string) => (line === INSTALL ? `npm install "${tarball}"` : line)
+      const filled = (line: string) =>
+        line === INSTALL ? `npm install "${tarball}" "${uiTarball}"` : line
       for (const line of setup) {
         const cd = /^cd\s+(.+)$/.exec(line.trim())
         if (cd) cwd = join(cwd, cd[1]!)

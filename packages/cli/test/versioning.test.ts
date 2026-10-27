@@ -178,7 +178,7 @@ describe('tessera codemod: the kitchen-sink app', () => {
       recursive: true,
       filter: (src) => !/(\.browser\.test\.ts|__screenshots__|seeded|\.d\.ts)/.test(src),
     })
-    const original = readFileSync(join(repo, 'system/components/Button.tess'), 'utf8')
+    const original = readFileSync(join(repo, 'packages/ui/components/Button.tess'), 'utf8')
     const action = original
       .replace(
         '"name": "Button"',

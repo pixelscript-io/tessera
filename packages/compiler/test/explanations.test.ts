@@ -17,7 +17,7 @@ const loaded = loadDesignTokens(repo('system/tokens'))
 if (!loaded.ok) throw new Error('the repository tokens do not build')
 const env: ExampleEnv = {
   tokens: loaded.tokens,
-  button: readFileSync(repo('system/components/Button.tess'), 'utf8'),
+  button: readFileSync(repo('packages/ui/components/Button.tess'), 'utf8'),
   link: readFileSync(repo('packages/router/components/Link.tess'), 'utf8'),
 }
 

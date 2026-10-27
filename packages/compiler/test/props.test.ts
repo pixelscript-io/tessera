@@ -65,7 +65,7 @@ describe('the props a component names', () => {
 
   it('reads the design system components', () => {
     const read = (name: string) =>
-      readFileSync(new URL(`../../../system/components/${name}.tess`, import.meta.url), 'utf8')
+      readFileSync(new URL(`../../../packages/ui/components/${name}.tess`, import.meta.url), 'utf8')
     expect(componentProps(read('Checkbox')).map((p) => p.name)).toEqual(['checked', 'disabled'])
     expect(componentProps(read('Combobox')).map((p) => p.name)).toEqual([
       'options',

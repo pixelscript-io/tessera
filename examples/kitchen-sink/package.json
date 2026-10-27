@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@pixelscriptio/tessera": "workspace:*"
+    "@pixelscriptio/tessera": "workspace:*",
+    "@pixelscriptio/tessera-ui": "workspace:*"
   },
   "devDependencies": {
     "@tessera/compiler": "workspace:*",

@@ -31,7 +31,7 @@ function session(options: { edit?: boolean } = {}) {
     recursive: true,
     filter: (src) => !/(\.browser\.test\.ts|__screenshots__|seeded|\.d\.ts)/.test(src),
   })
-  cpSync(join(repo, 'system/components/Button.tess'), join(root, BASE))
+  cpSync(join(repo, 'packages/ui/components/Button.tess'), join(root, BASE))
   cpSync(join(repo, 'system/tokens'), join(root, 'system/tokens'), { recursive: true })
   writeFileSync(join(root, 'package.json'), '{ "name": "scratch" }\n')
   git(root, 'init', '-b', 'main', '-q')

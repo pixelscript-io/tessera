@@ -66,12 +66,13 @@ export function forkContract(
 }
 
 /**
- * `tessera eject <Name> <NewName>`: copy a system component into `app/components/` under a new name and
+ * `tessera eject <Name> [<NewName>]`: copy a system component into `app/components/` under a new name and
  * record `forkedFrom` (the component and the version it came from), so owning a copy never means silent drift.
+ * A component of the Tessera UI library may be copied under its own name: the copy then replaces the library's.
  */
 export async function eject(args: Args, io: Io): Promise<number> {
-  const [from, to] = args.positional
-  if (!from || !to)
+  const [from, given] = args.positional
+  if (!from)
     throw new CliError(
       'Say which component to copy and what to call the copy.',
       'tessera eject Button FancyButton',
@@ -94,13 +95,21 @@ export async function eject(args: Args, io: Io): Promise<number> {
       'Eject copies a system component. To make a variation of your own, copy the file by hand.',
     )
   }
+  // A library component keeps its name by default (the copy replaces it); any other needs a new one.
+  const to = given ?? (entry.library ? from : undefined)
+  if (!to) {
+    throw new CliError(
+      'Say which component to copy and what to call the copy.',
+      `tessera eject ${from} Fancy${from}`,
+    )
+  }
   if (!PASCAL.test(to)) {
     throw new CliError(
       `"${to}" is not a valid component name.`,
       'Use PascalCase with letters and numbers, such as FancyButton.',
     )
   }
-  if (registry.entries.has(to)) {
+  if (registry.entries.has(to) && !(to === from && entry.library)) {
     throw new CliError(
       `A component named ${to} already exists (${project.display(registry.entries.get(to)!.file)}).`,
     )

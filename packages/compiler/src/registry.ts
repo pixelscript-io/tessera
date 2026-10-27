@@ -11,6 +11,8 @@ export interface RegistryEntry {
   contract: Contract
   /** Where the contract's `name` value is in the file (1-based). */
   nameAt: { line: number; column: number }
+  /** From a component library (`@pixelscriptio/tessera-ui`): a project component of the same name replaces it. */
+  library?: boolean
 }
 
 export interface RegistryDiagnostic {
@@ -28,6 +30,8 @@ export interface RegistryFile {
   /** Absolute path. */
   file: string
   source: string
+  /** Part of a component library rather than the project, so the project may replace it. */
+  library?: boolean
 }
 
 const normalize = (path: string) => path.replaceAll('\\', '/')
@@ -66,7 +70,7 @@ export class ComponentRegistry {
     display: (file: string) => string = (f) => f,
   ): ComponentRegistry {
     const registry = new ComponentRegistry(display)
-    for (const { file, source } of files) {
+    for (const { file, source, library } of files) {
       const info = extractContractInfo(source, file)
       if (!info) continue
       const entry: RegistryEntry = {
@@ -74,9 +78,14 @@ export class ComponentRegistry {
         file: normalize(file),
         contract: info.contract,
         nameAt: info.nameAt,
+        ...(library ? { library } : {}),
       }
-      if (registry.entries.has(entry.name)) registry.duplicates.push(entry)
-      else registry.entries.set(entry.name, entry)
+      const first = registry.entries.get(entry.name)
+      if (!first) registry.entries.set(entry.name, entry)
+      // A project component replaces a library one, in either order; the library never reports a clash.
+      else if (first.library && !entry.library) registry.entries.set(entry.name, entry)
+      else if (entry.library && !first.library) continue
+      else registry.duplicates.push(entry)
     }
 
     for (const dup of registry.duplicates) {

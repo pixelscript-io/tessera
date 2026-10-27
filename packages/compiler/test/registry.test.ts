@@ -246,3 +246,32 @@ ${script ? `<script>\n${script}\n</script>` : ''}
     expect(result.code.split('\n')[0]).toContain(', state }')
   })
 })
+
+describe('ComponentRegistry: library components', () => {
+  const library = {
+    file: '/proj/node_modules/ui/Button.tess',
+    source: component('Button'),
+    library: true,
+  }
+
+  it('lets a project component replace a library component of the same name, without an error', () => {
+    const own = { file: '/proj/app/components/Button.tess', source: component('Button') }
+    for (const order of [
+      [library, own],
+      [own, library],
+    ]) {
+      const registry = ComponentRegistry.build(order, display)
+      expect(registry.get('Button')!.file).toBe(own.file)
+      expect(registry.diagnostics).toEqual([])
+      expect(registry.duplicates).toEqual([])
+    }
+  })
+
+  it('still reports two library components, or two project components, with one name', () => {
+    const other = { ...library, file: '/proj/node_modules/other/Button.tess' }
+    expect(ComponentRegistry.build([library, other], display).diagnostics).toHaveLength(2)
+    const a = { file: '/proj/app/components/Button.tess', source: component('Button') }
+    const b = { file: '/proj/system/components/Button.tess', source: component('Button') }
+    expect(ComponentRegistry.build([library, a, b], display).diagnostics).toHaveLength(2)
+  })
+})

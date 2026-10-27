@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { ComponentRegistry, generateComponentsDts } from '../src'
 
 const root = fileURLToPath(new URL('../../../', import.meta.url)).replaceAll('\\', '/')
-const button = readFileSync(`${root}system/components/Button.tess`, 'utf8')
+const button = readFileSync(`${root}packages/ui/components/Button.tess`, 'utf8')
 const counter = readFileSync(`${root}examples/kitchen-sink/app/components/Counter.tess`, 'utf8')
 const registry = ComponentRegistry.build([
-  { file: `${root}system/components/Button.tess`, source: button },
+  { file: `${root}packages/ui/components/Button.tess`, source: button },
   { file: `${root}examples/kitchen-sink/app/components/Counter.tess`, source: counter },
 ])
 const dts = generateComponentsDts(registry)
@@ -72,7 +72,7 @@ describe('.tessera/components.d.ts', () => {
   it('types an imported component by its file name: valid usage passes', () => {
     expect(
       errors(`
-        import Button from '../system/components/Button.tess'
+        import Button from '../packages/ui/components/Button.tess'
         import { constant } from '@tessera/core'
         Button({ props: { tone: constant('danger'), size: constant('lg') }, events: { press: (d) => d }, slots: { default: () => ['x'] } })
       `),
@@ -81,7 +81,7 @@ describe('.tessera/components.d.ts', () => {
 
   it('rejects a misspelled variant value, an unknown event and an unknown slot in TypeScript code', () => {
     const e = errors(`
-      import Button from '../system/components/Button.tess'
+      import Button from '../packages/ui/components/Button.tess'
       import { constant } from '@tessera/core'
       Button({ props: { tone: constant('dangr') } })
       Button({ events: { pres: () => {} } })

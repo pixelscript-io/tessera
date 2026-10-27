@@ -272,10 +272,10 @@ export const COMMANDS_DOC: CommandDoc[] = [
   },
   {
     name: 'eject',
-    usage: 'tessera eject <Name> <NewName>',
-    summary: 'Copy a system component into app/components as your own',
+    usage: 'tessera eject <Name> [<NewName>]',
+    summary: 'Copy a system or library component into app/components as your own',
     details:
-      'Copies a system component under a new name and records `forkedFrom` (the component and the version) in its contract, so owning a copy never means silent drift.',
+      'Copies a component under a new name and records `forkedFrom` (the component and the version) in its contract, so owning a copy never means silent drift. A component of the Tessera UI library (`@pixelscriptio/tessera-ui`) can be copied without a new name: `tessera eject Button` writes `app/components/Button.tess`, and from then on your Button replaces the one in the library everywhere in the project.',
   },
   {
     name: 'explain',

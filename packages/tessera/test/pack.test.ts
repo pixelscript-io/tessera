@@ -75,6 +75,7 @@ function tar(file: string, flags: string, into?: string): string {
 }
 
 let tarball: string
+let uiTarball: string
 const env = () => pnpmEnv(tarball.replace(/[^\\/]*$/, ''))
 
 beforeAll(() => {
@@ -84,17 +85,32 @@ beforeAll(() => {
     dir,
     readdirSync(dir).find((f) => f.endsWith('.tgz'))!,
   )
+  // The component library is a package of its own, which the presets depend on.
+  const uiDir = scratch()
+  execSync(`pnpm pack --pack-destination "${uiDir}"`, {
+    cwd: join(repo, 'packages', 'ui'),
+    env: pnpmEnv(uiDir),
+    stdio: 'pipe',
+  })
+  uiTarball = join(
+    uiDir,
+    readdirSync(uiDir).find((f) => f.endsWith('.tgz'))!,
+  )
 }, 120_000)
 
 /**
  * Add a tarball to a project with pnpm. It prefers pnpm's local cache, so a machine that has Vite and Acorn
  * cached needs no network, and one that does not fetches them. A failure carries pnpm's own message.
  */
-function pnpmAdd(file: string, cwd: string, env: NodeJS.ProcessEnv): void {
+function pnpmAdd(file: string | string[], cwd: string, env: NodeJS.ProcessEnv): void {
   try {
     // pnpm 11 fails an install whose dependencies have build scripts nobody approved (esbuild's); the project
     // under test is not asking for that, so turn the check off here.
-    execSync(`pnpm add "${file}" --prefer-offline`, {
+    const files = [file]
+      .flat()
+      .map((f) => `"${f}"`)
+      .join(' ')
+    execSync(`pnpm add ${files} --prefer-offline`, {
       cwd,
       // pnpm 11 reads `pnpm_config_*` (pnpm 10 read `npm_config_*`); set both.
       env: {
@@ -121,7 +137,7 @@ function install(): string {
     join(dir, 'package.json'),
     JSON.stringify({ name: 'my-app', private: true, type: 'module' }),
   )
-  pnpmAdd(tarball, dir, env())
+  pnpmAdd([tarball, uiTarball], dir, env())
   return dir
 }
 
@@ -188,6 +204,24 @@ describe('the packed package', () => {
     expect(JSON.stringify(manifest)).not.toContain('workspace:')
   })
 
+  it('ships the component library as source: the components and their docs, no tests', () => {
+    const list = tar(uiTarball, '-tzf').split(/\r?\n/)
+    for (const entry of [
+      'package/package.json',
+      'package/components/Button.tess',
+      'package/components/Button.docs.md',
+      'package/components/Combobox.tess',
+    ]) {
+      expect(list, entry).toContain(entry)
+    }
+    expect(list.some((f) => f.includes('.test.') || f.includes('__screenshots__'))).toBe(false)
+    const dir = scratch()
+    tar(uiTarball, '-xzf', dir)
+    const manifest = JSON.parse(readFileSync(join(dir, 'package', 'package.json'), 'utf8'))
+    expect(manifest.name).toBe('@pixelscriptio/tessera-ui')
+    expect(JSON.stringify(manifest)).not.toContain('workspace:')
+  })
+
   it('has no node-only code in the entry the browser tests load', () => {
     const dir = scratch()
     tar(tarball, '-xzf', dir)
@@ -248,8 +282,8 @@ describe('the packed package', () => {
       numFailedTests: number
     }
     expect(report.numFailedTests).toBe(0)
-    // Every component of the preset has tests: Button alone is 283.
-    expect(report.numPassedTests).toBeGreaterThan(400)
+    // The preset's own components (Card and Badge) have tests; the library's are tested in its own package.
+    expect(report.numPassedTests).toBeGreaterThan(10)
   }, 600_000)
 
   it('builds the design system as custom elements from the installed package', async () => {

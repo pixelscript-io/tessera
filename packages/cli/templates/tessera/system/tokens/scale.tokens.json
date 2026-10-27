@@ -113,25 +113,25 @@
     },
     "sm": {
       "$value": {
-        "value": 0.25,
+        "value": 0.125,
         "unit": "rem"
       }
     },
     "md": {
       "$value": {
-        "value": 0.4375,
+        "value": 0.1875,
         "unit": "rem"
       }
     },
     "lg": {
       "$value": {
-        "value": 0.625,
+        "value": 0.25,
         "unit": "rem"
       }
     },
     "xl": {
       "$value": {
-        "value": 0.75,
+        "value": 0.375,
         "unit": "rem"
       }
     },

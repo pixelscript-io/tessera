@@ -115,6 +115,8 @@ export function loadComponentRegistry(
     systemDir?: string
     appDir?: string
     routerDir?: string | null
+    /** The Tessera UI library's components (`@pixelscriptio/tessera-ui`); null for none. */
+    uiDir?: string | null
     /** Components that exist only in memory (documentation samples); one with the same file replaces the disk copy. */
     extraFiles?: RegistryFile[]
   } = {},
@@ -122,11 +124,18 @@ export function loadComponentRegistry(
   const systemDir = options.systemDir ?? findUp(root, join('system', 'components'))
   const appDir = options.appDir ?? join(root, 'app', 'components')
   const routerDir = options.routerDir === undefined ? routerComponentsDir(root) : options.routerDir
-  const dirs = [systemDir, routerDir, appDir].filter((d): d is string => !!d && existsSync(d))
+  const uiDir = options.uiDir === undefined ? projectLibraryDir(root) : options.uiDir
+  const exists = (d: string | null | undefined): d is string => !!d && existsSync(d)
+  // The library comes first; a project component with the same name replaces it (see ComponentRegistry).
+  const dirs = [uiDir, systemDir, routerDir, appDir].filter(exists)
   const extra = options.extraFiles ?? []
   const extraPaths = new Set(extra.map((f) => f.file))
   const files = [
-    ...dirs.flatMap(scanComponentFiles).filter((f) => !extraPaths.has(f.file)),
+    ...dirs
+      .flatMap((dir) =>
+        scanComponentFiles(dir).map((f) => (dir === uiDir ? { ...f, library: true } : f)),
+      )
+      .filter((f) => !extraPaths.has(f.file)),
     ...extra,
   ]
   const display = (file: string) => relative(root, file).replaceAll('\\', '/')
@@ -153,6 +162,33 @@ export function routerComponentsDir(root: string): string | null {
     }
   }
   return null
+}
+
+/**
+ * The components of the Tessera UI library, found through the installed package
+ * (`@pixelscriptio/tessera-ui`, which ships them as source in `components`). Null when it is not installed.
+ */
+export function uiComponentsDir(root: string): string | null {
+  try {
+    const require = createRequire(resolve(root, 'package.json'))
+    const dir = join(
+      dirname(require.resolve('@pixelscriptio/tessera-ui/package.json')),
+      'components',
+    )
+    return existsSync(dir) ? dir : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The library components a project builds: the installed library's, when the project has a design system
+ * (`system/tokens`) for them to be styled by. Without one they are left out, so `--preset none` stays empty.
+ */
+export function projectLibraryDir(root: string): string | null {
+  const tokens = findUp(root, join('system', 'tokens'))
+  const has = tokens && readdirSync(tokens).some((n) => n.endsWith('.tokens.json'))
+  return has ? uiComponentsDir(root) : null
 }
 
 export interface ProjectApis {

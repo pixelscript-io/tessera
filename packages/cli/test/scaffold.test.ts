@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, symlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -6,7 +6,7 @@ import { extractContract } from '@tessera/compiler'
 import { page, project, read, run, write } from './helpers'
 
 const BUTTON = readFileSync(
-  fileURLToPath(new URL('../../../system/components/Button.tess', import.meta.url)),
+  fileURLToPath(new URL('../../../packages/ui/components/Button.tess', import.meta.url)),
   'utf8',
 )
 
@@ -155,5 +155,37 @@ describe('tessera eject', () => {
     const contract = extractContract(read(root, 'app/components/B.tess'), 'B.tess')!
     expect(contract.forkedFrom).toEqual({ component: 'A', version: '0.4.2' })
     expect(read(root, 'app/components/B.tess').match(/forkedFrom/g)).toHaveLength(1)
+  })
+})
+
+describe('tessera eject: a component of the library', () => {
+  const ui = fileURLToPath(new URL('../../ui', import.meta.url))
+  /** A project with a design system and the component library installed. */
+  const withLibrary = () => {
+    const root = project({ 'app/pages/index.tess': page() })
+    write(root, 'system/tokens/base.tokens.json', '{}')
+    mkdirSync(join(root, 'node_modules/@pixelscriptio'), { recursive: true })
+    symlinkSync(ui, join(root, 'node_modules/@pixelscriptio/tessera-ui'), 'junction')
+    return root
+  }
+
+  it('copies it under its own name, which then replaces the library component', async () => {
+    const root = withLibrary()
+    const { code, out } = await run(root, 'eject', 'Button')
+    expect(code).toBe(0)
+    expect(out).toContain('Created app/components/Button.tess, forked from Button@')
+    const contract = extractContract(read(root, 'app/components/Button.tess'), 'Button.tess')
+    expect(contract?.name).toBe('Button')
+    expect(contract?.forkedFrom?.component).toBe('Button')
+    // The project's Button wins, without a duplicate-name error.
+    const again = await run(root, 'eject', 'Button')
+    expect(again.code).toBe(1)
+    expect(again.err).toContain('Button is already your own component')
+  })
+
+  it('still copies it under a new name', async () => {
+    const root = withLibrary()
+    expect((await run(root, 'eject', 'Button', 'FancyButton')).code).toBe(0)
+    expect(existsSync(join(root, 'app/components/FancyButton.tess'))).toBe(true)
   })
 })

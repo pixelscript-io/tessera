@@ -23,7 +23,7 @@ function app() {
     recursive: true,
     filter: (src) => !/(\.browser\.test\.ts|__screenshots__|seeded|\.d\.ts)/.test(src),
   })
-  cpSync(join(repo, 'system/components/Button.tess'), join(root, 'app/components/Button.tess'))
+  cpSync(join(repo, 'packages/ui/components/Button.tess'), join(root, 'app/components/Button.tess'))
   cpSync(join(repo, 'system/tokens'), join(root, 'system/tokens'), { recursive: true })
   writeFileSync(join(root, 'package.json'), '{ "name": "scratch" }\n')
   const project = () => new Project(root, { today: '2026-10-22' })

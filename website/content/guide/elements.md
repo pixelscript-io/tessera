@@ -8,7 +8,7 @@ Not every team will write `.tess` files. `tessera elements` builds the design sy
 npx tessera elements
 ```
 
-It builds the components in `system/components` into `dist-elements`, a folder with no dependency on Tessera:
+It builds the components in `system/components` and the Tessera UI library into `dist-elements`, a folder with no dependency on Tessera:
 
 ```text
 dist-elements/

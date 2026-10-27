@@ -12,7 +12,7 @@ Every command runs in the nearest folder above the current one that looks like a
 mkdir my-app
 cd my-app
 npm init -y
-npm install @pixelscriptio/tessera@latest
+npm install @pixelscriptio/tessera@latest @pixelscriptio/tessera-ui@latest
 npx tessera init
 npm run dev
 ```

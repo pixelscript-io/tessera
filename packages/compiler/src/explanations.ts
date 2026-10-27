@@ -553,7 +553,7 @@ export const EXPLANATIONS: Record<string, Explanation> = {
   },
   T4007: {
     cause:
-      'The tag is not a known component. Components are found by contract name across `system/components` and `app/components`.',
+      'The tag is not a known component. Components are found by contract name across `system/components`, `app/components` and the Tessera UI library.',
     fix: 'Fix the tag (the hint suggests the nearest component), or create the component.',
     example: tess(
       '<contract>\n{ "name": "Card", "role": "group", "parts": ["root"] }\n</contract>\n<template><div class="root"><Buton>Go</Buton></div></template>\n',
@@ -620,7 +620,7 @@ export const EXPLANATIONS: Record<string, Explanation> = {
   // --- auto-imports -----------------------------------------------------------------------------------
   T5001: {
     cause:
-      'Two components have the same name. Names are global across `system/components` and `app/components`, and there is no shadowing.',
+      'Two components have the same name. Names are global across `system/components` and `app/components`, and there is no shadowing. The one exception is the Tessera UI library: a component in your project with the name of a library component replaces it, and that is not an error.',
     fix: 'Rename one, or wrap or eject the system component under a new name (`tessera eject`).',
     example: {
       kind: 'registry',

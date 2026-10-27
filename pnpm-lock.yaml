@@ -98,6 +98,9 @@ importers:
       '@pixelscriptio/tessera':
         specifier: workspace:*
         version: link:../../packages/tessera
+      '@pixelscriptio/tessera-ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
     devDependencies:
       '@tessera/compiler':
         specifier: workspace:*
@@ -304,11 +307,23 @@ importers:
 
   packages/tokens: {}
 
+  packages/ui:
+    devDependencies:
+      '@pixelscriptio/tessera':
+        specifier: workspace:*
+        version: link:../tessera
+      '@tessera/a11y':
+        specifier: workspace:*
+        version: link:../a11y
+
   system:
     devDependencies:
       '@pixelscriptio/tessera':
         specifier: workspace:*
         version: link:../packages/tessera
+      '@pixelscriptio/tessera-ui':
+        specifier: workspace:*
+        version: link:../packages/ui
       '@tessera/a11y':
         specifier: workspace:*
         version: link:../packages/a11y

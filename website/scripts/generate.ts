@@ -70,7 +70,7 @@ function errors() {
   if (!loaded.ok) throw new Error('The repository tokens do not build.')
   const env: ExampleEnv = {
     tokens: loaded.tokens,
-    button: readFileSync(join(repo, 'system', 'components', 'Button.tess'), 'utf8'),
+    button: readFileSync(join(repo, 'packages', 'ui', 'components', 'Button.tess'), 'utf8'),
     link: readFileSync(join(repo, 'packages', 'router', 'components', 'Link.tess'), 'utf8'),
   }
 

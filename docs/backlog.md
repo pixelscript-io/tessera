@@ -15,6 +15,8 @@ Written 2026-10-26.
 
 ## Planned already (SPEC.md, roadmap)
 
+- **Tessera UI** (Milestones 39 to 44, `@pixelscriptio/tessera-ui`): the design system as a component library of about 40 components, in phases. Open: **choose an icon library** (or a small built-in set) and how components take icons.
+
 - Milestone 36: scoped state (one copy per subtree, per list item or dialog). Only if real use needs it.
 - Milestone 37: who reads and who changes each piece of state, in `tessera report` and the docs app, with a warning for state nobody reads.
 - Milestones 30, 32, 33: optimistic updates; development mocks from an API description; the cookbook (including a proxy that adds an API key and handles CORS).

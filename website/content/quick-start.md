@@ -17,7 +17,7 @@ mkdir my-app
 cd my-app
 git init
 npm init -y
-npm install @pixelscriptio/tessera@latest
+npm install @pixelscriptio/tessera@latest @pixelscriptio/tessera-ui@latest
 npx tessera init
 npm run dev
 ```
@@ -27,7 +27,7 @@ mkdir my-app
 cd my-app
 git init
 npm init -y
-npm install @pixelscriptio/tessera@latest
+npm install @pixelscriptio/tessera@latest @pixelscriptio/tessera-ui@latest
 npx tessera init
 npm run dev
 ```
@@ -48,11 +48,11 @@ If you would rather not install first, `npm create @pixelscriptio/tessera@latest
 
 ## Choose a starting point
 
-| Preset     | What you get                                                                                                                                                                                                     |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tessera`  | A small design system of its own: warm paper neutrals, one green accent, light and dark themes, three components and a styled index page. The docs (`npx tessera docs`) are styled by the same token files.      |
-| `tailwind` | A complete design system in `system/`, built from Tailwind's default theme: every color, the spacing scale, radii, type, shadows and more, with light and dark themes and three components. A styled index page. |
-| `none`     | No tokens, themes or components, so nothing is checked against a design system yet. An index page and example files with the examples commented out.                                                             |
+| Preset     | What you get                                                                                                                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tessera`  | A small design system of its own: warm paper neutrals, one green accent, light and dark themes, a card and a badge, and a styled index page. The docs (`npx tessera docs`) are styled by the same token files.  |
+| `tailwind` | A complete design system in `system/`, built from Tailwind's default theme: every color, the spacing scale, radii, type, shadows and more, with light and dark themes, a card and a badge. A styled index page. |
+| `none`     | No tokens, themes or components, so nothing is checked against a design system yet. An index page and example files with the examples commented out.                                                            |
 
 Skip the question with `npx tessera init --preset tessera`, `--preset tailwind` or `--preset none`. With no terminal and no flag, `init` uses `tessera` and says so. See [Starter presets](/guide/presets).
 
@@ -68,7 +68,7 @@ my-app/
   .mcp.json               starts tessera mcp, so a tool can look up components and tokens
   system/                 the design system (tessera or tailwind preset)
     tokens/               colors, scale, effects, layout, semantic colors, themes/dark
-    components/           Button, Card, Badge
+    components/           Card, Badge (Button and the rest come from Tessera UI)
   app/
     main.ts               loads the token CSS and starts the router
     layouts/default.tess  wraps every page
@@ -96,7 +96,7 @@ Open `app/pages/index.tess`, change the heading and save: the page updates witho
 </template>
 ```
 
-`Button` is not imported: components in `system/components` and `app/components` are found by name. Misspell it and the compiler says so, with a suggestion.
+`Button` is not imported: components in `system/components` and `app/components`, and those of [Tessera UI](/guide/tessera-ui), are found by name. Misspell it and the compiler says so, with a suggestion.
 
 ## Add a component
 

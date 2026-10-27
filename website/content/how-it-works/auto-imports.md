@@ -4,7 +4,7 @@ You write `<Button>` with no import. This is resolved when the file is compiled,
 
 ## The registry
 
-At startup, and again whenever a component file is added, removed or edited, the Vite plugin scans `system/components`, the router's own `<Link>`, and `app/components`, reads each file's contract, and builds a registry from contract name to file. A duplicate name is an error on every file involved ([T5001](/reference/errors/T5001)); there is no shadowing.
+At startup, and again whenever a component file is added, removed or edited, the Vite plugin scans the Tessera UI library (when installed), `system/components`, the router's own `<Link>`, and `app/components`, reads each file's contract, and builds a registry from contract name to file. A duplicate name is an error on every file involved ([T5001](/reference/errors/T5001)); there is no shadowing, except that a component in your project replaces a library component of the same name.
 
 ## At compile time
 

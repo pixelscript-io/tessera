@@ -5,6 +5,7 @@
   "type": "module",
   "devDependencies": {
     "@tessera/a11y": "workspace:*",
-    "@pixelscriptio/tessera": "workspace:*"
+    "@pixelscriptio/tessera": "workspace:*",
+    "@pixelscriptio/tessera-ui": "workspace:*"
   }
 }

@@ -136,7 +136,7 @@ describe('tessera a11y', () => {
 describe('the setup, in the preset projects', () => {
   it('is the same test file the repository runs on its own components, apart from the fixtures', () => {
     const own = readFileSync(
-      new URL('../../../system/components/a11y.browser.test.ts', import.meta.url),
+      new URL('../../../packages/ui/components/a11y.browser.test.ts', import.meta.url),
       'utf8',
     )
     const generated = testFile({ tokens: true, components: ['Combobox', 'Select'] })

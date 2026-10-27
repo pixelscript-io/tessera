@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -18,9 +19,14 @@ import { VERSION } from '../src/version'
 import { read, run } from './helpers'
 
 const made: string[] = []
-const scratch = () => {
+const library = fileURLToPath(new URL('../../ui', import.meta.url))
+/** A folder to start a project in, with the component library installed above it, as after `npm install`. */
+const scratch = (installed = true) => {
   const dir = mkdtempSync(join(tmpdir(), 'tessera-init-'))
   made.push(dir)
+  if (!installed) return dir
+  mkdirSync(join(dir, 'node_modules/@pixelscriptio'), { recursive: true })
+  symlinkSync(library, join(dir, 'node_modules/@pixelscriptio/tessera-ui'), 'junction')
   return dir
 }
 afterAll(() => {
@@ -60,7 +66,6 @@ describe('tessera init --preset tessera', () => {
       'system/tokens/effects.tokens.json',
       'system/tokens/semantic.tokens.json',
       'system/tokens/themes/dark.tokens.json',
-      'system/components/Button.tess',
       'system/components/Card.tess',
       'system/components/Badge.tess',
       'app/main.ts',
@@ -96,12 +101,8 @@ describe('tessera init --preset tessera', () => {
     expect(manifest.themes.map((t) => t.name)).toEqual(['dark'])
   })
 
-  it("uses the design system's own Button, so there is one copy to maintain", () => {
-    const repoButton = readFileSync(
-      fileURLToPath(new URL('../../../system/components/Button.tess', import.meta.url)),
-      'utf8',
-    )
-    expect(presetFiles('tessera')['system/components/Button.tess']).toBe(repoButton)
+  it('depends on the component library instead of copying its components', () => {
+    expect(presetFiles('tessera')['system/components/Button.tess']).toBeUndefined()
   })
 
   it('is the preset a project gets when nothing says otherwise', async () => {
@@ -132,7 +133,6 @@ describe('tessera init --preset tailwind', () => {
       'system/tokens/semantic.tokens.json',
       'system/tokens/themes/dark.tokens.json',
       'system/tokens/TAILWIND-LICENSE',
-      'system/components/Button.tess',
       'system/components/Card.tess',
       'system/components/Badge.tess',
       'app/main.ts',
@@ -191,47 +191,44 @@ describe('tessera init --preset tailwind', () => {
     )
   })
 
-  it("uses the design system's own Button, so there is one copy to maintain", () => {
-    const repoButton = readFileSync(
-      fileURLToPath(new URL('../../../system/components/Button.tess', import.meta.url)),
-      'utf8',
-    )
-    expect(presetFiles('tailwind')['system/components/Button.tess']).toBe(repoButton)
+  it('depends on the component library instead of copying its components', () => {
+    expect(presetFiles('tailwind')['system/components/Button.tess']).toBeUndefined()
   })
 })
 
-describe("the design system's own components", () => {
-  const dir = fileURLToPath(new URL('../../../system/components', import.meta.url))
-  const names = readdirSync(dir).filter((f) => f.endsWith('.tess'))
-
-  it('lists the components of the milestone, so a missing one is noticed', () => {
-    expect(names).toEqual(
-      expect.arrayContaining([
-        'Accordion.tess',
-        'AccordionItem.tess',
-        'Button.tess',
-        'Checkbox.tess',
-        'Combobox.tess',
-        'Dialog.tess',
-        'Select.tess',
-        'Switch.tess',
-        'TextField.tess',
-      ]),
-    )
-  })
-
+describe('the component library', () => {
   for (const preset of ['tessera', 'tailwind'] as const) {
-    it(`are written by the ${preset} preset, one copy of each`, () => {
-      const files = presetFiles(preset)
-      for (const name of names) {
-        expect(files[`system/components/${name}`], name).toBe(readFileSync(join(dir, name), 'utf8'))
+    it(`is a dependency of the ${preset} preset, which writes only its own Card and Badge`, async () => {
+      const dir = scratch()
+      await run(dir, 'init', '--preset', preset)
+      const manifest = JSON.parse(read(dir, 'package.json')) as {
+        dependencies: Record<string, string>
       }
+      expect(manifest.dependencies['@pixelscriptio/tessera-ui']).toBe(`^${VERSION}`)
+      expect(readdirSync(join(dir, 'system/components')).sort()).toEqual([
+        'Badge.tess',
+        'Card.tess',
+      ])
     })
   }
 
-  it('are not written when no design system is chosen', () => {
-    const files = Object.keys(presetFiles('none'))
-    expect(files.filter((f) => f.startsWith('system/components/'))).toEqual([])
+  it('is added to a package.json that already exists', async () => {
+    const dir = scratch()
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'mine', dependencies: { '@pixelscriptio/tessera': '^0.7.0' } }),
+    )
+    await run(dir, 'init', '--preset', 'tessera')
+    const manifest = JSON.parse(read(dir, 'package.json')) as {
+      dependencies: Record<string, string>
+    }
+    expect(manifest.dependencies['@pixelscriptio/tessera-ui']).toBe(`^${VERSION}`)
+  })
+
+  it('is not a dependency when no design system is chosen', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--preset', 'none')
+    expect(read(dir, 'package.json')).not.toContain('tessera-ui')
   })
 })
 
@@ -250,7 +247,7 @@ describe('tessera init --preset none', () => {
   })
 
   it('passes tessera check', async () => {
-    const dir = scratch()
+    const dir = scratch(false)
     await run(dir, 'init', '--preset', 'none')
     const { code, out } = await run(dir, 'check')
     expect(out).toContain('0 errors, 0 warnings in 2 files.')

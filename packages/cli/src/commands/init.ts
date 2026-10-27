@@ -20,26 +20,12 @@ const TEMPLATES = import.meta.glob('../../templates/**/*', {
   import: 'default',
 }) as Record<string, string>
 
-// The design system's own components (the repository's `system/components`): Button, Checkbox, Switch, TextField,
-// Accordion and the rest. There is one copy of each, and the presets that have a design system write it into the project.
-// `none` has no design system, so it gets none of them.
-const SYSTEM_COMPONENTS = import.meta.glob('../../../../system/components/*.tess', {
-  query: '?raw',
-  eager: true,
-  import: 'default',
-}) as Record<string, string>
-
 /** The files a preset writes, by path relative to the project. */
 export function presetFiles(preset: Preset): Record<string, string> {
   const prefix = `../../templates/${preset}/`
   const files: Record<string, string> = {}
   for (const [key, content] of Object.entries(TEMPLATES)) {
     if (key.startsWith(prefix)) files[key.slice(prefix.length)] = content
-  }
-  if (preset !== 'none') {
-    for (const [key, content] of Object.entries(SYSTEM_COMPONENTS)) {
-      files[`system/components/${key.split('/').pop()}`] = content
-    }
   }
   return files
 }
@@ -106,9 +92,14 @@ const MCP_JSON =
   ) + '\n'
 
 /** Where the package comes from: a `link:` to a checkout (`--link`, for working on Tessera itself) or its version. */
-function dependency(target: string, link: string | undefined): string {
-  return link ? `link:${relative(target, resolve(link)).replaceAll('\\', '/')}` : `^${VERSION}`
+function dependency(target: string, link: string | undefined, sibling = ''): string {
+  return link
+    ? `link:${relative(target, resolve(link, sibling)).replaceAll('\\', '/')}`
+    : `^${VERSION}`
 }
+
+/** The component library that the presets with a design system depend on. */
+const UI = '@pixelscriptio/tessera-ui'
 
 export interface InitResult {
   written: string[]
@@ -204,6 +195,10 @@ export async function init(args: Args, io: Io): Promise<number> {
       }
       added.push('the @pixelscriptio/tessera dependency')
     }
+    if (preset !== 'none' && !(manifest.dependencies?.[UI] ?? manifest.devDependencies?.[UI])) {
+      manifest.dependencies = { ...manifest.dependencies, [UI]: dependency(target, link, '../ui') }
+      added.push(`the ${UI} dependency`)
+    }
     if (added.length) {
       writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
       written.push(`package.json (added ${added.join(', ')})`)
@@ -223,7 +218,10 @@ export async function init(args: Args, io: Io): Promise<number> {
           private: true,
           type: 'module',
           scripts,
-          dependencies: { '@pixelscriptio/tessera': dependency(target, link) },
+          dependencies: {
+            '@pixelscriptio/tessera': dependency(target, link),
+            ...(preset !== 'none' ? { [UI]: dependency(target, link, '../ui') } : {}),
+          },
         },
         null,
         2,

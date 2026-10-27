@@ -41,8 +41,9 @@ export async function elements(args: Args, io: Io): Promise<number> {
   const out = resolve(io.cwd, typeof outGiven === 'string' ? outGiven : 'dist-elements')
 
   const all = [...project.components().registry.entries.values()]
-  const isSystem = (file: string) => forward(file).includes('/system/components/')
-  const chosen = (has(args, 'all') ? all : all.filter((e) => isSystem(e.file))).sort((a, b) =>
+  const isSystem = (e: { file: string; library?: boolean }) =>
+    !!e.library || forward(e.file).includes('/system/components/')
+  const chosen = (has(args, 'all') ? all : all.filter(isSystem)).sort((a, b) =>
     a.name.localeCompare(b.name),
   )
   if (!chosen.length) {

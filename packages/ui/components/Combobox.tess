@@ -181,7 +181,7 @@ effect(() => {
   gap: $space.1;
   color: $color.text.default;
   font-family: var(--t-font-family-sans);
-  font-size: $font.size.base;
+  font-size: $font.size.sm;
 }
 
 .label {

@@ -204,7 +204,7 @@ The design system's own components are built on these behaviors, and each has ge
 
 ## Generated accessibility tests
 
-Every component in `system/components` gets tests generated from its contract. Nothing is registered; adding a component adds its tests. For each component, in the default theme and in dark:
+Every component in `system/components` and `app/components` gets tests generated from its contract. The Tessera UI library has the same tests, run in its own package. Nothing is registered; adding a component adds its tests. For each component, in the default theme and in dark:
 
 - an axe-core run (WCAG 2.0 to 2.2 A and AA, plus best practices) for every combination of variant values, in every state the contract declares: rest, `hover`, `focus-visible`, `pressed`, `checked`, `expanded`, `open` and `disabled` (checked and expanded are reached by pressing it or, for a combobox, with Arrow Down; open sets the dialog's `open` prop), created with a real mouse and keyboard in a real browser;
 - the root has the role the contract declares;

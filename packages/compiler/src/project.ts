@@ -14,6 +14,7 @@ import {
   loadProjectState,
   resolveImportedComponents,
   scanComponentFiles,
+  projectLibraryDir,
   type DesignTokens,
   type ProjectApis,
   type ProjectComponents,
@@ -185,13 +186,14 @@ export class Project {
   }
 
   /**
-   * Every `.tess` file the project owns: its system components (when they are in or above the root), the
-   * router's own components are left out, then `app/components`, `app/layouts` and `app/pages`.
+   * Every `.tess` file the project builds: the component library's (so they are checked against this project's tokens),
+   * its system components (when they are in or above the root), the router's own components are left out, then `app/components`, `app/layouts` and `app/pages`.
    */
   files(): string[] {
     const out: string[] = []
     const systemDir = findUp(this.root, join('system', 'components'))
     for (const dir of [
+      projectLibraryDir(this.root),
       systemDir,
       join(this.root, 'app', 'components'),
       join(this.root, 'app', 'layouts'),

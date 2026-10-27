@@ -21,7 +21,7 @@ system/tokens/
   themes/dark.tokens.json   the dark overrides
   README.md
 system/components/
-  Button.tess  Card.tess  Badge.tess
+  Card.tess  Badge.tess
 app/
   layouts/default.tess   a header with a Light, Dark and Auto switch
   pages/index.tess       a styled index page, in the style of the Tessera site
@@ -55,7 +55,7 @@ system/tokens/
   themes/dark.tokens.json   the dark overrides
   README.md, TAILWIND-LICENSE
 system/components/
-  Button.tess  Card.tess  Badge.tess
+  Card.tess  Badge.tess
 app/
   layouts/default.tess   a header with a Light, Dark and Auto switch
   pages/index.tess       a styled index page
@@ -69,7 +69,7 @@ How it is organized:
 - **Contrast** is checked for every text and background pair in both themes when the files compile. The preset ships with no failures, and a change you make that causes one is [T2107](/reference/errors/T2107).
 - **Not included:** Tailwind's animation shorthands (`spin`, `ping`, `pulse`, `bounce`), which need keyframes rather than values, and its utility classes.
 
-The index page uses only tokens and the three components, so it is a worked example of the system: a hero, buttons, cards and a theme switch. Change any token and it changes with it.
+The index page uses only tokens and the components (the preset's own Card and Badge, and the Button and others from [Tessera UI](/guide/tessera-ui)), so it is a worked example of the system: a hero, buttons, cards and a theme switch. Change any token and it changes with it.
 
 ### Credit
 

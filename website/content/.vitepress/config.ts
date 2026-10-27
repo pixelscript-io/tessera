@@ -11,6 +11,7 @@ const guide = [
   { text: 'Pages and routing', link: '/guide/pages-and-routing' },
   { text: 'Layouts', link: '/guide/layouts' },
   { text: 'Testing', link: '/guide/testing' },
+  { text: 'Tessera UI', link: '/guide/tessera-ui' },
   { text: 'Starter presets', link: '/guide/presets' },
   { text: 'The command line', link: '/guide/cli' },
   { text: 'Importing and exporting tokens', link: '/guide/interchange' },

@@ -30,7 +30,10 @@ function project(preset: 'tessera' | 'tailwind' | 'none'): string {
   writeFileSync(join(root, 'package.json'), '{ "name": "styled" }\n')
   cpSync(join(repo, 'packages/cli/templates', preset), root, { recursive: true })
   if (preset !== 'none') {
-    cpSync(join(repo, 'system/components/Button.tess'), join(root, 'system/components/Button.tess'))
+    cpSync(
+      join(repo, 'packages/ui/components/Button.tess'),
+      join(root, 'system/components/Button.tess'),
+    )
   }
   return root
 }

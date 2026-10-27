@@ -18,7 +18,7 @@ const count = state(0)
 
 ## Components
 
-Every `.tess` file in `system/components/**` and `app/components/**` is registered under its contract `name`, which must match the file name. Subfolders are only organization.
+Every `.tess` file in `system/components/**` and `app/components/**`, and in the [Tessera UI](/guide/tessera-ui) library when it is installed, is registered under its contract `name`, which must match the file name. Subfolders are only organization. A component of your own replaces a library component with the same name.
 
 - Names are global across both folders. A repeated name is an error on each file that repeats it, naming the others (T5001). There is no shadowing: to change a system component, wrap it, or `tessera eject` it under a new name.
 - Resolution happens at compile time. The compiler finds the component tags a file uses and emits a real `import` for each of those, and only those. There is no runtime registry, so an unused component is not in your bundle and each page splits normally.
