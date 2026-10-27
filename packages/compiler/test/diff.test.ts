@@ -211,7 +211,7 @@ describe('diff: tokens', () => {
     token(after, 'space.4').values['base']!.resolved = '90px'
     const breaking = diffSnapshots(snapshot(), after).filter((c) => c.kind === 'breaking')
     expect(breaking.map((c) => c.message)).toEqual([
-      expect.stringMatching(/^\$space\.4 moved past \$space\.\d(, \$space\.\d)* in its scale/),
+      expect.stringMatching(/^\$space\.4 moved past \$space\.\d+(, \$space\.\d+)* in its scale/),
     ])
   })
 

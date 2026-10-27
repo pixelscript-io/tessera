@@ -214,12 +214,30 @@
         "unit": "px"
       }
     },
-    "$type": "dimension",
+    "10": {
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      }
+    },
+    "12": {
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      }
+    },
+    "16": {
+      "$value": {
+        "value": 64,
+        "unit": "px"
+      }
+    },
     "$extensions": {
       "tessera": {
         "tier": "semantic"
       }
     },
+    "$type": "dimension",
     "0-5": {
       "$value": {
         "value": 2,
@@ -282,6 +300,12 @@
     },
     "size": {
       "$type": "dimension",
+      "xs": {
+        "$value": {
+          "value": 0.75,
+          "unit": "rem"
+        }
+      },
       "sm": {
         "$value": {
           "value": 0.875,

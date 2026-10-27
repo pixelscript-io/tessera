@@ -1,0 +1,87 @@
+<contract>
+{
+  "name": "Progress",
+  "role": "progressbar",
+  "description": "How far along something is. Give it a value from 0 to max, or leave the value out when the length of the wait is not known.",
+  "since": "0.8.0",
+  "parts": ["root", "bar"],
+  "variants": {
+    "size": ["md", "sm"], // first value is the default
+    "tone": ["primary", "neutral", "danger"]
+  }
+}
+</contract>
+
+<script>
+const { value, max, label } = props({ value: null, max: 100, label: 'Progress' })
+
+const percent = derived(() => {
+  if (value.value === null) return 0
+  return Math.round(Math.min(Math.max(value.value / max.value, 0), 1) * 100)
+})
+</script>
+
+<template>
+  <div
+    class="root"
+    role="progressbar"
+    :aria-label="label"
+    aria-valuemin="0"
+    :aria-valuemax="max"
+    :aria-valuenow="value === null ? null : value"
+    :data-indeterminate="value === null ? 'true' : null"
+    >
+    <div class="bar" :style="value === null ? null : 'width: ' + percent + '%'"></div>
+  </div>
+</template>
+
+<style>
+.root {
+  position: relative;
+  height: $space.2;
+  overflow: hidden;
+  border-radius: $radius.full;
+  background: $color.surface.hover;
+
+  &[data-size='sm'] {
+    height: $space.1;
+  }
+}
+
+.bar {
+  height: 100%;
+  border-radius: $radius.full;
+  background: $color.action.primary.bg;
+  transition-duration: $motion.duration.fast;
+}
+
+.root[data-tone='neutral'] .bar {
+  background: $color.text.muted;
+}
+
+.root[data-tone='danger'] .bar {
+  background: $color.action.danger.bg;
+}
+
+.root[data-indeterminate='true'] .bar {
+  width: 40%;
+  animation: slide 1.2s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root[data-indeterminate='true'] .bar {
+    animation: none;
+    width: 100%;
+    opacity: $opacity.disabled;
+  }
+}
+</style>

@@ -131,7 +131,7 @@ describe('the names', () => {
 
 describe('tessera elements', () => {
   it('says what it built', () => {
-    expect(output).toContain('Built 11 custom elements into')
+    expect(output).toContain('Built 18 custom elements into')
     for (const tag of ['acme-button', 'acme-checkbox', 'acme-accordion-item', 'acme-text-field'])
       expect(output).toContain(`<${tag}>`)
     expect(output).toMatch(/elements\.js [\d.]+ kB .* gzipped/)

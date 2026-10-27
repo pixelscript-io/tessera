@@ -293,7 +293,7 @@ describe('the packed package', () => {
       `node "${join(dir, 'node_modules', '@pixelscriptio', 'tessera', 'bin', 'tessera.js')}" elements`,
       { cwd: dir },
     )
-    expect(stdout).toContain('Built 11 custom elements into dist-elements')
+    expect(stdout).toContain('Built 18 custom elements into dist-elements')
     for (const file of [
       'elements.js',
       'elements.css',

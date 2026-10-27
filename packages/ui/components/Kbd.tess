@@ -1,0 +1,41 @@
+<contract>
+{
+  "name": "Kbd",
+  "role": "generic",
+  "description": "A key or a shortcut, shown as it is on a keyboard.",
+  "since": "0.8.0",
+  "parts": ["root"],
+  "variants": {
+    "size": ["md", "sm"] // first value is the default
+  },
+  "slots": {
+    "default": "the key, such as Ctrl or K"
+  }
+}
+</contract>
+
+<template>
+  <kbd class="root"><slot /></kbd>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: $space.6;
+  padding: $space.0-5 $space.2;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.sm;
+  background: $color.surface.raised;
+  color: $color.text.default;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.sm;
+
+  &[data-size='sm'] {
+    min-width: $space.5;
+    padding: 0 $space.1;
+    font-size: $font.size.sm;
+  }
+}
+</style>

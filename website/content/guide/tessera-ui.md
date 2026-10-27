@@ -61,6 +61,7 @@ color.surface.raised
 color.text.default
 color.text.muted
 font.size.base
+font.size.xs
 font.size.lg
 font.size.sm
 font.weight.bold
@@ -73,6 +74,9 @@ radius.sm
 shadow.md
 space.0-5
 space.1
+space.10
+space.12
+space.16
 space.2
 space.3
 space.4
@@ -98,4 +102,4 @@ These are the rules a component must meet before it joins the library. They are 
 
 ## What is in it
 
-`Accordion`, `AccordionItem`, `Button`, `Checkbox`, `Combobox`, `Dialog`, `Select`, `Switch` and `TextField`, and more coming in phases: forms and feedback first, then overlays, navigation and data, and pickers. The library is meant to stay around forty components; a component that most apps do not need belongs in the project that does. See the [roadmap](/releases/roadmap).
+`Accordion`, `AccordionItem`, `Alert`, `Avatar`, `Button`, `Checkbox`, `Combobox`, `Dialog`, `Kbd`, `Progress`, `Select`, `Separator`, `Skeleton`, `Spinner`, `Switch` and `TextField`, and more coming in phases: the rest of forms and feedback first (`Textarea`, `RadioGroup`, `FormField`), then overlays, navigation and data, and pickers. The library is meant to stay around forty components; a component that most apps do not need belongs in the project that does. See the [roadmap](/releases/roadmap).

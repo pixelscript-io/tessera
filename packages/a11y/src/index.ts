@@ -182,8 +182,12 @@ function subjectOf(root: HTMLElement, contract: Contract): HTMLElement {
 
 async function settle(root: HTMLElement): Promise<void> {
   flush()
-  // Colors are measured after any transition finishes, not partway through.
-  await Promise.all(root.getAnimations().map((a) => a.finished.catch(() => undefined)))
+  // Colors are measured after any transition finishes, not partway through. An animation that never ends (a spinner,
+  // a skeleton's pulse) is not waited for: it would never finish.
+  const ending = root
+    .getAnimations()
+    .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+  await Promise.all(ending.map((a) => a.finished.catch(() => undefined)))
 }
 
 async function enter(state: State, m: Mounted, subject: HTMLElement): Promise<void> {

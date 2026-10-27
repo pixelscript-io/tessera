@@ -15,7 +15,7 @@ Written 2026-10-26.
 
 ## Planned already (SPEC.md, roadmap)
 
-- **Tessera UI** (Milestones 39 to 44, `@pixelscriptio/tessera-ui`): the design system as a component library of about 40 components, in phases. Open: **choose an icon library** (or a small built-in set) and how components take icons.
+- **Tessera UI** (Milestones 39 to 44, `@pixelscriptio/tessera-ui`): the design system as a component library of about 40 components, in phases. Icons: **Lucide** (lucide.dev) was chosen on 2026-10-27. Open: how a project gets the icons (a dependency, or SVGs copied into the project for the ones it uses) and the `Icon` component; adding a runtime dependency needs the author's go-ahead.
 
 - Milestone 36: scoped state (one copy per subtree, per list item or dialog). Only if real use needs it.
 - Milestone 37: who reads and who changes each piece of state, in `tessera report` and the docs app, with a warning for state nobody reads.
