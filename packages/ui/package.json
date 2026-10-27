@@ -1,6 +1,6 @@
 {
   "name": "@pixelscriptio/tessera-ui",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Tessera UI: accessible, themeable components for Tessera apps, shipped as .tess source.",
   "type": "module",
   "files": [
@@ -15,7 +15,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@pixelscriptio/tessera": "^0.7.0"
+    "@pixelscriptio/tessera": "^0.8.0"
   },
   "devDependencies": {
     "@pixelscriptio/tessera": "workspace:*",

@@ -216,7 +216,7 @@ describe('the component library', () => {
     const dir = scratch()
     writeFileSync(
       join(dir, 'package.json'),
-      JSON.stringify({ name: 'mine', dependencies: { '@pixelscriptio/tessera': '^0.7.0' } }),
+      JSON.stringify({ name: 'mine', dependencies: { '@pixelscriptio/tessera': '^0.8.0' } }),
     )
     await run(dir, 'init', '--preset', 'tessera')
     const manifest = JSON.parse(read(dir, 'package.json')) as {

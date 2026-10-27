@@ -1,3 +1,4 @@
+import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -8,7 +9,24 @@ import { serveDocs } from '../src'
 // preview of every component it lists, library and app, and checks what a person would see: that it rendered, that
 // every piece of sample content is on the page, and that the data the component needs reached it.
 const repo = fileURLToPath(new URL('../../..', import.meta.url)).replaceAll('\\', '/')
-const root = `${repo}examples/kitchen-sink`
+// A copy of the kitchen-sink app, in a folder of its own: the docs reload when a file under their root changes, and other
+// tests write into the kitchen-sink folder while this one runs.
+const root = `${repo}examples/kitchen-sink/.docs-test-previews`
+rmSync(root, { recursive: true, force: true })
+mkdirSync(root, { recursive: true })
+cpSync(`${repo}examples/kitchen-sink/app`, `${root}/app`, {
+  recursive: true,
+  filter: (src) => !/(\.browser\.test\.ts|__screenshots__|seeded)/.test(src),
+})
+writeFileSync(
+  `${root}/package.json`,
+  JSON.stringify({
+    name: 'previews',
+    private: true,
+    type: 'module',
+    dependencies: { '@pixelscriptio/tessera': '*', '@pixelscriptio/tessera-ui': '*' },
+  }),
+)
 
 type Node =
   | string
@@ -56,6 +74,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await browser?.close()
   await close?.()
+  rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 })
 })
 
 /**

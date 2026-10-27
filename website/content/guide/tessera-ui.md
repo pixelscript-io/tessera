@@ -1,6 +1,6 @@
 # Tessera UI
 
-Introduced in v0.7 (Milestone 39).
+Introduced in v0.8 (Milestones 39 to 41).
 
 Tessera UI is the component library for Tessera apps: accessible, themeable components such as `Button`, `TextField`, `Dialog` and `Combobox`, written in the same `.tess` files as your own. It is a package of its own, `@pixelscriptio/tessera-ui`, and it ships as source, so the compiler, the contracts, the generated accessibility tests and the manifest treat its components exactly as they treat yours.
 
