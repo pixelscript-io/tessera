@@ -1,6 +1,6 @@
 # Releases
 
-This page records what each release and milestone delivered, newest first. The current release is 0.7.0. `tessera diff --changelog` generates a section from any two versions.
+This page records what each release and milestone delivered, newest first. The current release is 0.7.0; see [Versioning](#versioning) for what a version number means here. `tessera diff --changelog` generates a section from any two versions.
 
 ## v0.1 (in progress)
 
@@ -43,3 +43,15 @@ There are none yet. When there are, they are listed here with the version that d
 ## Next steps
 
 [The roadmap](/releases/roadmap).
+
+## Versioning
+
+Tessera is at 0.x and will stay there for a long time. The version says how a release may affect you; it does not say how close the project is to finished.
+
+- **The number is `0.MINOR.PATCH`, and the minor keeps counting.** After 0.9 comes 0.10, then 0.11. These are numbers, not decimals, and every tool orders them correctly. A minor does not mean "closer to 1.0".
+- **A minor release adds things, and may change or remove things.** Under semver, 0.x makes no compatibility promise, and a minor is where a break may happen. Every break is listed under "Breaking" in the release notes, with how to update, and with a codemod when a codemod can do it (`tessera diff --changelog` and `tessera codemod`).
+- **A patch release only fixes.** It does not break anything and adds no feature you must learn.
+- **The packages move together.** `@pixelscriptio/tessera`, `@pixelscriptio/tessera-ui` and `@pixelscriptio/create-tessera` always have the same number. The component library asks for the framework of its own minor (`^0.8.0` means 0.8.x), so installing both from the same minor is always safe, and a project's `^0.8.0` takes patches but never a new minor by itself.
+- **1.0 is a promise, and it is not scheduled.** It will be declared, by the author, when all of these are true: the contract and token formats and the public API are stable, with the deprecation window enforced by the tools; the component library has the components it set out to have, tested for accessibility; server rendering has hydration; the security audit has been repeated and its findings fixed; and real projects have run on it through at least one breaking minor with the codemods. Until then no release is called 1.0, a beta or a release candidate.
+
+A test (`packages/tessera/test/versions.test.ts`) checks that the three numbers match, that they are `0.MINOR.PATCH`, and that the library's peer range names the same minor.

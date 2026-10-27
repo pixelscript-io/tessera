@@ -26,7 +26,7 @@ The runtime, the calls in `.tess` files, the `app/apis` folder and the descripti
 - An in-browser playground and versioned docs. The compiler core is browser-safe so the playground does not need a rewrite.
 - Type-checking of templates (`tessera check --types`) and source maps.
 
-## Not planned for v0.x
+## Not planned yet
 
 Server rendering with hydration, and islands (prerendering to static HTML is built; see Next for hydration); a backend framework; native mobile targets; a visual editor or Figma plugin; nested routes, route guards and data loaders. See [What is Tessera?](/introduction/).
 
