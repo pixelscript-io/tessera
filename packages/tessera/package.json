@@ -66,6 +66,7 @@
     "README.md"
   ],
   "scripts": {
+    "prepublishOnly": "node ../../scripts/check-version.mjs",
     "build": "vite build && node scripts/types.mjs && node scripts/components.mjs && node scripts/docs.mjs"
   },
   "dependencies": {

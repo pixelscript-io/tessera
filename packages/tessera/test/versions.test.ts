@@ -1,4 +1,7 @@
-import { readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { VERSION } from '../../cli/src/version'
@@ -32,6 +35,29 @@ describe('versions', () => {
   it('ask of the framework, in the library, the minor it was released with (a caret on 0.x means that)', () => {
     const [, minor] = tessera.version.split('.')
     expect(ui.peerDependencies?.['@pixelscriptio/tessera']).toBe(`^0.${minor}.0`)
+  })
+
+  it('cannot reach 1.0 by publishing: every published package checks its version first, and 1.0.0 fails the check', () => {
+    for (const path of ['../package.json', '../../create-tessera/package.json']) {
+      const scripts = (read(path) as { scripts?: Record<string, string> }).scripts
+      expect(scripts?.prepublishOnly).toBe('node ../../scripts/check-version.mjs')
+    }
+    const script = fileURLToPath(new URL('../../../scripts/check-version.mjs', import.meta.url))
+    const run = (version: string) => {
+      const dir = mkdtempSync(join(tmpdir(), 'tessera-version-'))
+      try {
+        writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'x', version }))
+        return spawnSync(process.execPath, [script], { cwd: dir, encoding: 'utf8' })
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    }
+    for (const ok of ['0.9.0', '0.10.0', '0.100.3']) expect(run(ok).status).toBe(0)
+    for (const bad of ['1.0.0', '1.0.0-rc.1', '2.1.0', '0.9', '00.1.0']) {
+      const result = run(bad)
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('until the author declares 1.0')
+    }
   })
 
   it('compare as numbers: 0.10.0 is after 0.9.0', () => {
