@@ -74,6 +74,8 @@ export interface DocsTokens {
     tier: string
     description?: string
     values: Record<string, { resolved: string; alias?: string }>
+    /** The scopes (`theme=dark`) whose theme file sets this token itself, so a change to the base does not reach them. */
+    overriddenIn?: string[]
   }>
   contrast: ContrastRow[]
 }
@@ -169,18 +171,24 @@ type TokenManifest = NonNullable<ReturnType<Project['tokens']> & { ok: true }>['
 function tokensOf(tokenManifest: TokenManifest | undefined, contrastMinimum: number): DocsTokens {
   return {
     scopes: ['base', ...(tokenManifest?.themes.map((t) => `${t.attribute}=${t.name}`) ?? [])],
-    entries: (tokenManifest?.tokens ?? []).map((t) => ({
-      path: t.path,
-      type: t.type,
-      tier: t.tier,
-      ...(t.description ? { description: t.description } : {}),
-      values: Object.fromEntries(
-        Object.entries(t.values).map(([scope, v]) => [
-          scope,
-          { resolved: v.resolved, ...(v.alias ? { alias: v.alias } : {}) },
-        ]),
-      ),
-    })),
+    entries: (tokenManifest?.tokens ?? []).map((t) => {
+      const overriddenIn = (tokenManifest?.themes ?? [])
+        .filter((theme) => theme.overrides.includes(t.path))
+        .map((theme) => `${theme.attribute}=${theme.name}`)
+      return {
+        path: t.path,
+        type: t.type,
+        tier: t.tier,
+        ...(t.description ? { description: t.description } : {}),
+        values: Object.fromEntries(
+          Object.entries(t.values).map(([scope, v]) => [
+            scope,
+            { resolved: v.resolved, ...(v.alias ? { alias: v.alias } : {}) },
+          ]),
+        ),
+        ...(overriddenIn.length ? { overriddenIn } : {}),
+      }
+    }),
     contrast: contrastPairs(tokenManifest, contrastMinimum),
   }
 }

@@ -4,7 +4,7 @@
   "role": "generic",
   "description": "A text field with a list of options that narrows as you type, for choosing from many. Use a Select for a short fixed list.",
   "since": "0.5.0",
-  "parts": ["root", "label", "field", "input", "listbox", "option", "status"],
+  "parts": ["root", "label", "field", "input", "listbox", "option", "status", "error"],
   "variants": {
     "size": ["md", "sm"] // first value is the default
   },
@@ -47,11 +47,13 @@
 </contract>
 
 <script>
-const { options, value, placeholder, disabled } = props({
+const { options, value, placeholder, disabled, invalid, error } = props({
   options: [],
   value: '',
   placeholder: '',
   disabled: false,
+  invalid: false,
+  error: '',
 })
 
 // Ids of its own, so the label, the list and the options can name each other however many comboboxes there are.
@@ -167,6 +169,8 @@ effect(() => {
         :aria-expanded="isOpen ? 'true' : 'false'"
         :aria-controls="uid + '-list'"
         :aria-activedescendant="activeId"
+        :aria-invalid="invalid || error ? 'true' : null"
+        :aria-describedby="uid + '-error'"
         aria-autocomplete="list"
         autocomplete="off"
         bind:value="text"
@@ -197,6 +201,7 @@ effect(() => {
       </ul>
     </div>
     <div class="status" role="status">{status}</div>
+    <div class="error" :id="uid + '-error'" aria-live="polite">{error}</div>
   </div>
 </template>
 
@@ -241,6 +246,10 @@ effect(() => {
   &:disabled {
     opacity: $opacity.disabled;
     cursor: not-allowed;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: $color.action.danger.text;
   }
 }
 
@@ -292,6 +301,15 @@ effect(() => {
 }
 
 .status:empty {
+  display: none;
+}
+
+.error {
+  color: $color.action.danger.text;
+  font-size: $font.size.sm;
+}
+
+.error:empty {
   display: none;
 }
 </style>

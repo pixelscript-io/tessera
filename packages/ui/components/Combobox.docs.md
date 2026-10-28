@@ -7,6 +7,7 @@ Use a combobox to **choose from a long list** that narrows as the person types: 
 - Arrow Down opens the list (or moves to the next option), Arrow Up the other way, Enter chooses the active option, Escape closes the list and keeps the text, Tab closes it and moves on.
 - `select` fires with `{ value, label }` when an option is chosen, and `input` fires with the text.
 - Typing narrows the list to the labels that contain it. "No results" is announced when none do.
+- Set `error` to a message to say what is wrong. It is shown under the field in the danger color, read with the field after its label, and announced when it appears. `invalid` marks it invalid with no message.
 
 ```tess live
 <script>

@@ -67,6 +67,20 @@ describe('the docs data', () => {
     expect(data.tokens.scopes).toEqual(['base', 'density=compact', 'theme=dark'])
   })
 
+  it('says which themes set a token themselves, so a change to the base is known not to reach them', () => {
+    const manifest = new Project(root, { today: '2026-10-22' }).tokens()
+    if (!manifest?.ok) throw new Error('the example has tokens')
+    const scopeOf = (t: { attribute: string; name: string }) => `${t.attribute}=${t.name}`
+    for (const entry of data.tokens.entries) {
+      const expected = manifest.manifest.themes
+        .filter((t) => t.overrides.includes(entry.path))
+        .map(scopeOf)
+      expect(entry.overriddenIn ?? [], entry.path).toEqual(expected)
+    }
+    expect(data.tokens.entries.some((t) => (t.overriddenIn ?? []).length > 0)).toBe(true)
+    expect(data.tokens.entries.some((t) => (t.overriddenIn ?? []).length === 0)).toBe(true)
+  })
+
   it('measures contrast of text on the backgrounds it is used with, in every theme', () => {
     const rows = data.tokens.contrast.filter(
       (r) => r.foreground === 'color.text.default' && r.background === 'color.surface.default',

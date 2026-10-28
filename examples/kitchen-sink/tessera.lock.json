@@ -52,7 +52,7 @@
     "Combobox": {
       "item": "Combobox",
       "registry": "../../packages/ui",
-      "sha256": "ef531fa82057f18f7261e315474408b186734c0fef069eab9fedf466a4ce6944",
+      "sha256": "fc8286f346c0becf755fe45b5011f478f7102b78df2aa4e6e29f2f7a88ddced5",
       "files": ["Combobox.docs.md", "Combobox.tess"]
     },
     "Dialog": {
@@ -106,7 +106,7 @@
     "Select": {
       "item": "Select",
       "registry": "../../packages/ui",
-      "sha256": "a2a7e52d99e169896261531b4d6c865c587bcc876a3bce901bd353b56b669210",
+      "sha256": "504ee598f69b7a1b13202d78a60278829df8b4b5773a53140fb1ca7fa06ba149",
       "files": ["Select.docs.md", "Select.tess"]
     },
     "Separator": {

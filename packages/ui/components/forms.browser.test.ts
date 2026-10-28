@@ -4,9 +4,11 @@ import { userEvent } from 'vitest/browser'
 import { afterEach, describe, expect, it } from 'vitest'
 import { constant, flush, getRenderer, state } from '@tessera/core'
 import Button from './Button.tess'
+import Combobox from './Combobox.tess'
 import Form from './Form.tess'
 import FormField from './FormField.tess'
 import RadioGroup from './RadioGroup.tess'
+import Select from './Select.tess'
 import Textarea from './Textarea.tess'
 import TextField from './TextField.tess'
 
@@ -49,6 +51,67 @@ const described = (element: Element) =>
   (element.getAttribute('aria-describedby') ?? '')
     .split(' ')
     .map((id) => document.getElementById(id)?.textContent ?? '')
+
+describe('Select and Combobox errors', () => {
+  const options = [
+    { value: 'apple', label: 'Apple' },
+    { value: 'banana', label: 'Banana' },
+  ]
+  for (const [name, component, selector] of [
+    ['Select', Select, 'select'],
+    ['Combobox', Combobox, 'input'],
+  ] as const) {
+    const mount = (props: Record<string, unknown>) =>
+      show(
+        component,
+        {
+          options,
+          value: '',
+          placeholder: '',
+          disabled: false,
+          invalid: false,
+          size: 'md',
+          ...props,
+        },
+        { slots: { label: text('Fruit') } },
+      )
+
+    it(`${name}: an error marks the control invalid and is read with it, and clearing it clears the mark`, () => {
+      const error = state('')
+      const root = mount({ error })
+      const control = root.querySelector(selector)!
+      expect(control.hasAttribute('aria-invalid')).toBe(false)
+      error.value = 'Choose a fruit.'
+      flush()
+      expect(control.getAttribute('aria-invalid')).toBe('true')
+      expect(described(control)).toContain('Choose a fruit.')
+      expect(root.querySelector('[aria-live="polite"]')!.textContent).toBe('Choose a fruit.')
+      error.value = ''
+      flush()
+      expect(control.hasAttribute('aria-invalid')).toBe(false)
+    })
+
+    it(`${name}: invalid marks it with no message, and the label names it without the error in the name`, () => {
+      const root = mount({ invalid: true, error: 'Choose a fruit.' })
+      const control = root.querySelector(selector) as HTMLInputElement | HTMLSelectElement
+      expect(control.getAttribute('aria-invalid')).toBe('true')
+      // The error is described, not part of the name: a screen reader says "Fruit" and then the error.
+      expect(control.labels![0]!.textContent).toBe('Fruit')
+      const plain = mount({ invalid: true })
+      expect(plain.querySelector(selector)!.getAttribute('aria-invalid')).toBe('true')
+    })
+
+    it(`${name}: the error is red like the others, so it is seen as well as read`, () => {
+      const root = mount({ error: 'Choose a fruit.' })
+      const message = root.querySelector('[aria-live="polite"]')!
+      const danger = getComputedStyle(root).getPropertyValue('--t-color-action-danger-text')
+      expect(getComputedStyle(message).color).not.toBe(
+        getComputedStyle(root.querySelector('label')!).color,
+      )
+      expect(danger).not.toBe('')
+    })
+  }
+})
 
 describe('Textarea and TextField errors', () => {
   for (const [name, component, selector] of [

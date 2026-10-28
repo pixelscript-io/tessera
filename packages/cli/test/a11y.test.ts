@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { A11Y_DEV_DEPENDENCIES, VITEST_CONFIG, testFile } from '../src/commands/a11y'
 import { component, project, read, run } from './helpers'
@@ -79,6 +80,20 @@ describe('tessera a11y', () => {
     expect(Object.keys(manifest.devDependencies)).toEqual(
       Object.keys(manifest.devDependencies).slice().sort(),
     )
+  })
+
+  it('covers a component that tessera add copied in, as it covers one the project wrote', async () => {
+    // Since 0.9 a catalogue component is a copy in the project, so its generated tests run against the project's own tokens.
+    const ui = fileURLToPath(new URL('../../ui', import.meta.url))
+    const dir = project({ 'system/components/Card.tess': component('Card') })
+    const added = await run(dir, 'add', 'Dialog', '--from', ui, '--yes', '--fit', 'skip')
+    expect(added.code).toBe(0)
+    expect(existsSync(join(dir, 'system/components/Dialog.tess'))).toBe(true)
+    const { code } = await run(dir, 'a11y')
+    expect(code).toBe(0)
+    const generated = read(dir, 'system/components/a11y.browser.test.ts')
+    // The tests read the folder when they run, so a copied component is covered like one the project wrote.
+    expect(generated).toContain("import.meta.glob('./*.tess'")
   })
 
   it('never overwrites a file, and a second run changes nothing', async () => {

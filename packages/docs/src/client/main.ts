@@ -944,6 +944,17 @@ function tokenPage(group: string): HTMLElement {
         null,
         code(`$${t.path}`),
         t.description ? h('div', { class: 'docs-muted' }, t.description) : null,
+        t.overriddenIn
+          ? h(
+              'div',
+              {
+                class: 'docs-muted',
+                title:
+                  'A theme file sets this token itself, so changing it in the base does not change it there.',
+              },
+              `Also set in ${t.overriddenIn.map((s) => s.split('=')[1]).join(', ')}`,
+            )
+          : null,
       ),
       h('td', null, t.type, h('div', { class: 'docs-muted' }, t.tier)),
       ...scopes.map((s) => {

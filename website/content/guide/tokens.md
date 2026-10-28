@@ -34,6 +34,8 @@ becomes
 
 A theme file in `system/tokens/themes/` overrides values of existing tokens. The file name is the theme name.
 
+A token a theme sets is the theme's own: changing it in the base files does not change it there. If you change `color.action.primary.bg` in `semantic.tokens.json` and the dark theme also sets it, dark keeps its value until you change it in `themes/dark.tokens.json` too. `tessera dev` says so when you save such a change (`color.action.primary.bg changed, but the dark theme sets its own value in …`), and the docs mark the token "Also set in dark".
+
 ```json
 {
   "$extends": "base",

@@ -5,6 +5,7 @@ Use a select to **choose one option from a short list**, on the browser's own se
 - The label is required: it is what assistive technology reads.
 - Give it `options`, a list of `{ value, label }`, and `value` to start with one chosen.
 - `change` fires with `{ value, label }` when the person chooses an option.
+- Set `error` to a message to say what is wrong. It is shown under the select in the danger color, read with the select after its label (not as part of the label), and announced when it appears. `invalid` marks the select invalid with no message.
 
 ```tess live
 <script>

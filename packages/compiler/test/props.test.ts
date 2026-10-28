@@ -72,6 +72,8 @@ describe('the props a component names', () => {
       'value',
       'placeholder',
       'disabled',
+      'invalid',
+      'error',
     ])
     expect(componentProps(read('Dialog')).map((p) => [p.name, p.type])).toEqual([
       ['open', 'boolean'],

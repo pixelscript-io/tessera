@@ -4,7 +4,7 @@
   "role": "generic",
   "description": "A list of options that opens from a field and takes one, on the browser's own select. Use a Combobox to search a long list.",
   "since": "0.5.0",
-  "parts": ["root", "label", "select"],
+  "parts": ["root", "label", "select", "error"],
   "variants": {
     "size": ["md", "sm"] // first value is the default
   },
@@ -44,7 +44,16 @@
 </contract>
 
 <script>
-const { options, value, disabled } = props({ options: [], value: '', disabled: false })
+const { options, value, disabled, invalid, error } = props({
+  options: [],
+  value: '',
+  disabled: false,
+  invalid: false,
+  error: '',
+})
+
+// Ids of its own, so the label and the error can name and describe the select however many there are.
+const uid = `t-select-${Math.random().toString(36).slice(2, 9)}`
 
 // The select owns what is chosen, starts from the prop and follows it when it changes.
 const current = state(value.value)
@@ -59,9 +68,17 @@ function changed(event) {
 </script>
 
 <template>
-  <label class="root">
-    <span class="label"><slot name="label" /></span>
-    <select class="select" :disabled="disabled" bind:value="current" @change="changed($event)">
+  <div class="root">
+    <label class="label" :for="uid + '-select'"><slot name="label" /></label>
+    <select
+      class="select"
+      :id="uid + '-select'"
+      :disabled="disabled"
+      :aria-invalid="invalid || error ? 'true' : null"
+      :aria-describedby="uid + '-error'"
+      bind:value="current"
+      @change="changed($event)"
+      >
       <option
         each="o in options"
         key="o.value"
@@ -71,7 +88,8 @@ function changed(event) {
         {o.label}
       </option>
     </select>
-  </label>
+    <span class="error" :id="uid + '-error'" aria-live="polite">{error}</span>
+  </div>
 </template>
 
 <style>
@@ -111,10 +129,23 @@ function changed(event) {
     opacity: $opacity.disabled;
     cursor: not-allowed;
   }
+
+  &[aria-invalid='true'] {
+    border-color: $color.action.danger.text;
+  }
 }
 
 .root[data-size='sm'] .select {
   padding: $space.1 $space.2;
   font-size: $font.size.sm;
+}
+
+.error {
+  color: $color.action.danger.text;
+  font-size: $font.size.sm;
+}
+
+.error:empty {
+  display: none;
 }
 </style>

@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { loadConfigFile } from '@tessera/compiler/project'
+import { loadConfigFile, Project } from '@tessera/compiler/project'
 import type { InlineConfig, Plugin, ViteDevServer } from 'vite'
 import type { Args } from '../args'
 import { flag, has } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
 import { prerender } from '../prerender'
+import { themeOverrideNotes } from '../theme-notes'
 import { findProjectRoot, openProject } from '../project'
 import { buildReport } from './report'
 
@@ -93,6 +94,43 @@ export async function projectConfig(root: string, args: Args): Promise<InlineCon
   }
 }
 
+/**
+ * Say so when a token changed in the base is one that a theme sets for itself: the theme keeps its own value, which looks
+ * like the change did not work. Reads the tokens after each change to a token file and compares them with before.
+ */
+async function watchThemeOverrides(
+  root: string,
+  server: ViteDevServer,
+  note: (line: string) => void,
+): Promise<void> {
+  const read = async () => {
+    try {
+      const loaded = await loadConfigFile(root)
+      const tokens = new Project(root, { ...loaded?.options }).tokens()
+      return tokens?.ok ? tokens.manifest : undefined
+    } catch {
+      return undefined
+    }
+  }
+  let before = await read()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const changed = (file: string) => {
+    const f = file.replaceAll('\\', '/')
+    if (!f.endsWith('.tokens.json') || f.includes('/node_modules/') || f.includes('/.tessera/'))
+      return
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      void read().then((after) => {
+        if (before && after) for (const line of themeOverrideNotes(before, after, root)) note(line)
+        if (after) before = after
+      })
+    }, 200)
+  }
+  server.watcher.on('change', changed)
+  server.watcher.on('add', changed)
+  server.watcher.on('unlink', changed)
+}
+
 /** The two servers of `tessera dev`. `docs` is absent when the project's config says `docs: false`. */
 export interface DevServers {
   app: ViteDevServer
@@ -103,10 +141,15 @@ export interface DevServers {
  * Start the app, and beside it the docs of the design system, each on its own port: the app on `--port` (default
  * 5173) and the docs on `--docs-port`, or the next free port. `docs: false` in `tessera.config` starts only the app.
  */
-export async function startDev(root: string, args: Args): Promise<DevServers> {
+export async function startDev(
+  root: string,
+  args: Args,
+  options: { note?: (line: string) => void } = {},
+): Promise<DevServers> {
   const { createServer } = await import('vite')
   const app = await createServer(await projectConfig(root, args))
   await app.listen()
+  if (options.note) void watchThemeOverrides(root, app, options.note)
   const config = (await loadConfigFile(root))?.options.config
   if (config?.docs === false) return { app }
   const given = flag(args, 'docs-port')
@@ -132,8 +175,10 @@ export async function startDev(root: string, args: Args): Promise<DevServers> {
 /** `tessera dev`: the app with hot updates, and the design system's docs beside it. */
 export async function dev(args: Args, io: Io): Promise<number> {
   const root = findProjectRoot(io.cwd, args)
-  const { app, docs } = await startDev(root, args)
   const ui = io.ui
+  const { app, docs } = await startDev(root, args, {
+    note: (line) => io.out(ui ? `  ${ui.bold('Note')}  ${line}` : `  Note  ${line}`),
+  })
   const address = (server: ViteDevServer) => server.resolvedUrls?.local[0] ?? ''
   const line = (label: string, server: ViteDevServer) =>
     ui
