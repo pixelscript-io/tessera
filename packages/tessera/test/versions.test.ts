@@ -27,6 +27,30 @@ describe('versions', () => {
     expect(VERSION).toBe(tessera.version)
   })
 
+  it('are the number the Releases page and the home page name, and the page has a Breaking entry for it', () => {
+    const page = (path: string) =>
+      readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
+    const releases = page('../../../website/content/releases/index.md')
+    expect(releases).toContain(`The current release is ${tessera.version};`)
+    expect(releases).toMatch(
+      new RegExp(
+        `\\*\\*${tessera.version.replaceAll('.', '\\.')}: [^\\n]*\\n\\n  \\*\\*Breaking:\\*\\*`,
+      ),
+    )
+    const home = page('../../../website/content/index.md')
+    expect(home).toContain(`\`@pixelscriptio/tessera\` ${tessera.version} is on npm`)
+  })
+
+  it('say that two packages share the number, since the catalogue is not a package', () => {
+    const releases = readFileSync(
+      fileURLToPath(new URL('../../../website/content/releases/index.md', import.meta.url)),
+      'utf8',
+    )
+    const rule = releases.slice(releases.indexOf('## Versioning'))
+    expect(rule).toContain('The two packages move together')
+    expect(rule).not.toContain('`@pixelscriptio/tessera-ui` and')
+  })
+
   it('are 0.MINOR.PATCH: Tessera has not declared 1.0, and a minor may be 10 or more', () => {
     expect(tessera.version).toMatch(/^0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/)
   })
