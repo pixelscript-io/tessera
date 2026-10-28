@@ -12,6 +12,7 @@
     "docs:build": "pnpm --filter website build",
     "landing:check": "pnpm --filter tessera-landing check && pnpm --filter tessera-landing lint",
     "landing:build": "pnpm --filter tessera-landing build",
+    "build:ui-site": "pnpm --filter @tessera/cli build:ui-site",
     "ci": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm docs:build && pnpm landing:check && pnpm landing:build",
     "build": "pnpm --filter @tessera/compiler build && pnpm --filter @tessera/editor build && pnpm --filter @tessera/cli build && pnpm --filter @pixelscriptio/tessera build"
   },

@@ -54,6 +54,18 @@ These copy a set of tokens into `system/<name>/tokens` (`--as <folder>` picks an
 
 Version 0.8 delivered the library as the package `@pixelscriptio/tessera-ui`. It is not published any more, and a project that still lists it stops with a message that says so, with the `tessera add` line for the components its templates use. Remove the package and run that line.
 
+## The Tessera UI site
+
+[tessera-ui.pixelscript.io](https://tessera-ui.pixelscript.io) lists every component with its contract, the tokens it uses and its docs, and is also the registry `tessera add` reads. It is made from the same files, so it cannot say something the registry does not. To build it (and publish it, if you run your own copy):
+
+```bash
+pnpm build:ui-site
+cd packages/ui
+npx wrangler deploy
+```
+
+The build writes `packages/ui/dist`: the pages, `index.json` and `r/`. `packages/ui/wrangler.jsonc` serves that folder as static files, with no code. Its `_headers` lets any origin read the registry and caches it for five minutes. Add your domain to the Worker in the Cloudflare dashboard. The folder is also a registry you can try before deploying: `npx tessera add Button --from packages/ui/dist`.
+
 ## Tokens a component needs
 
 A catalogue component uses only the tokens listed in the next section, which is the interface between the catalogue and a design system. The `tailwind` and `unstyled` presets define all of them. A design system of your own may not, so `add` compares before it writes anything. For each design system in `tessera.config.ts` it reports the tokens the new components use that the system **lacks**, and the ones it defines with **another type** than the component expects (a `radius.sm` that is a color, say):

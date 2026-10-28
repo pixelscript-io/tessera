@@ -1,0 +1,13 @@
+{
+  // Tessera UI: the catalogue site and the registry `tessera add` reads, served as static files.
+  // Build `dist` with `pnpm build:ui-site`, then deploy with `npx wrangler deploy` from this folder.
+  // Add tessera-ui.pixelscript.io as a custom domain to this Worker in the Cloudflare dashboard.
+  // Headers (open CORS and caching for the registry) are in dist/_headers.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tessera-ui",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page",
+  },
+}

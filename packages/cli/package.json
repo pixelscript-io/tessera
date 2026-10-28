@@ -17,7 +17,8 @@
   "scripts": {
     "build": "vite build",
     "generate:tailwind": "vite-node scripts/generate-tailwind.ts",
-    "build:registry": "vite-node scripts/build-registry.ts"
+    "build:registry": "vite-node scripts/build-registry.ts",
+    "build:ui-site": "vite-node scripts/build-site.ts"
   },
   "dependencies": {
     "@tessera/agent": "workspace:*",
