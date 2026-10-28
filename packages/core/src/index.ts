@@ -13,7 +13,16 @@ export {
   type Signal,
   type ReadonlySignal,
 } from './signals'
+export {
+  persisted,
+  urlState,
+  resetState,
+  __beginStateFile,
+  type PersistedOptions,
+  type UrlStateOptions,
+} from './shared'
 export { createDomAdapter, type RendererAdapter } from './adapter'
+export { HydrationMismatch, createHydrationAdapter, type HydrationAdapter } from './hydrate'
 export {
   createRenderer,
   type Renderer,
@@ -54,9 +63,17 @@ export {
   del,
   get,
   invalidate,
+  prefetch,
   patch,
   post,
   put,
+  seedData,
+  exportPrefetched,
+  failedPrefetches,
+  revalidateSeeded,
+  clearAllApis,
+  dataScript,
+  seedFromDocument,
   type Action,
   type Api,
   type ApiOptions,

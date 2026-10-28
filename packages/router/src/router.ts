@@ -1,8 +1,13 @@
 import {
+  HydrationMismatch,
+  createHydrationAdapter,
   createRoot,
   defineComponent,
   flush,
   getRenderer,
+  revalidateSeeded,
+  seedFromDocument,
+  setRenderer,
   state,
   type Component,
 } from '@tessera/core'
@@ -24,6 +29,22 @@ export interface RouteDefinition {
   path: string
   /** Loads the page. A bundler turns each one into its own chunk. */
   load: () => Promise<PageModule>
+  /**
+   * Starts the data the page needs, given what the address says (the parameters of the route and the query). It is
+   * called when the person navigates, before the page has loaded, so the two happen together and the page's own reads
+   * join the requests that are already on their way. The generated routes have it from the `data` of the page's
+   * `<page>` block. It returns the promises of the requests, which must not reject.
+   */
+  prefetch?: (
+    params: Record<string, string>,
+    query: Record<string, string>,
+  ) => Array<Promise<unknown>>
+  /**
+   * Hold the page back until the data it declared is in (`"wait": true` in the `<page>` block): the page before stays
+   * on screen, and the address does not change, until then. Without it the page shows at once, with the states a
+   * read has (loading, error).
+   */
+  wait?: boolean
 }
 
 export interface RouterOptions {
@@ -39,6 +60,16 @@ export interface RouterOptions {
   window?: Window
   /** Announce each new page to screen readers. Default true. */
   announce?: boolean
+  /**
+   * Take the elements of a page that was rendered ahead of time (the container has `data-prerendered`) instead of
+   * making new ones. Default true. When the page is not what the app renders, it is rendered again from nothing.
+   */
+  hydrate?: boolean
+  /**
+   * Wait for the data every page declares before showing it, whatever the page says. A prerender sets it: a page is
+   * written with its data in it, or not at all.
+   */
+  waitForData?: boolean
 }
 
 /**
@@ -144,6 +175,8 @@ export function shouldHandleClick(event: {
 interface CompiledRoute {
   segments: Segment[]
   load: () => Promise<PageModule>
+  prefetch?: RouteDefinition['prefetch']
+  wait?: boolean
 }
 
 const parseQuery = (search: string): Record<string, string> => {
@@ -189,23 +222,33 @@ export class Router {
   private readonly scroll = new Map<number, { x: number; y: number }>()
   private announcer: HTMLElement | undefined
   private cleanup: (() => void)[] = []
+  /** The mounted views, so a render that did not work can be taken back. */
+  private root: (() => void) | undefined
+  /** Navigations that have started and not finished (loaded and shown, replaced by a newer one, or failed). */
+  private inflight = 0
+  private idle: Array<() => void> = []
 
   constructor(private readonly options: RouterOptions) {
-    this.routes = options.routes.map((r) => ({ segments: parsePattern(r.path), load: r.load }))
+    this.routes = options.routes.map((r) => ({
+      segments: parsePattern(r.path),
+      load: r.load,
+      prefetch: r.prefetch,
+      wait: r.wait,
+    }))
     this.win = options.window ?? window
   }
 
-  /** Show the page for the current address and start handling navigation. Resolves once the first page is up. */
+  /**
+   * Show the page for the current address and start handling navigation. Resolves once the first page is up. A page
+   * prerendered at build time is in the container already (`data-prerendered`): it is hydrated, and when it is not what
+   * the app renders, rendered again from nothing.
+   */
   async mount(container: Element): Promise<() => void> {
     activate(this)
-    // A page prerendered at build time is already in the container. The live page replaces it: it is the same page.
-    if (
-      typeof container.hasAttribute === 'function' &&
-      container.hasAttribute('data-prerendered')
-    ) {
-      container.replaceChildren()
-      container.removeAttribute('data-prerendered')
-    }
+    const prerendered =
+      typeof container.hasAttribute === 'function' && container.hasAttribute('data-prerendered')
+    // The answers the prerender wrote into the page are what the first render reads.
+    if (prerendered) seedFromDocument(this.win.document)
     const history = this.win.history
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
     history.replaceState({ key: this.historyKey }, '')
@@ -217,6 +260,20 @@ export class Router {
     this.win.addEventListener('popstate', onPop)
     this.cleanup.push(() => this.win.removeEventListener('popstate', onPop))
 
+    if (!(prerendered && this.options.hydrate !== false && (await this.hydrate(container)))) {
+      if (prerendered) container.replaceChildren()
+      await this.render(container)
+    }
+    if (prerendered) {
+      container.removeAttribute('data-prerendered')
+      // What the page showed from the build is as old as the build: ask again, now that the page is up.
+      revalidateSeeded()
+    }
+    return () => this.unmount()
+  }
+
+  /** The views that show the page, mounted in the container, and the first navigation. */
+  private async render(container: Element): Promise<void> {
     const r = getRenderer()
     const dispose = createRoot((dispose) => {
       // The page is shown in the layout's default slot. The layout's builder is stable, so moving between
@@ -250,10 +307,46 @@ export class Router {
       ).mount(container as never, null as never)
       return dispose
     })
+    this.root = dispose
     this.cleanup.push(dispose)
-
     await this.go(this.win.location.href, { initial: true })
-    return () => this.unmount()
+  }
+
+  /**
+   * The first render, taking the elements that are in the container. Returns whether it worked. When it did not (the
+   * page is not what the app renders, or something threw), everything it made is thrown away and the container is
+   * emptied, for `render` to start from nothing.
+   */
+  private async hydrate(container: Element): Promise<boolean> {
+    const base = getRenderer()
+    const adapter = createHydrationAdapter(base.adapter, container)
+    setRenderer(adapter)
+    try {
+      await this.render(container)
+      adapter.finish()
+      return true
+    } catch (error) {
+      adapter.abort()
+      if (this.root) {
+        const at = this.cleanup.indexOf(this.root)
+        if (at >= 0) this.cleanup.splice(at, 1)
+        this.root()
+        this.root = undefined
+      }
+      this.shown.value = undefined
+      this.pageNode = undefined
+      this.layoutBuilders.clear()
+      this.pageBuilders.clear()
+      this.firstRender = true
+      container.replaceChildren()
+      if (error instanceof HydrationMismatch)
+        console.warn(
+          `[tessera] The prerendered page is not what the app renders, so it was rendered again. ${error.message} Build again with \`tessera build --prerender\`.`,
+        )
+      return false
+    } finally {
+      setRenderer(base.adapter)
+    }
   }
 
   unmount(): void {
@@ -266,7 +359,30 @@ export class Router {
     return this.go(to, { replace: options.replace })
   }
 
+  /**
+   * Resolves when no navigation is in progress: the page that a click or `navigate()` asked for is loaded and shown (or a
+   * newer one took its place, or it failed). It is for tests, which would otherwise sleep for a guessed time.
+   */
+  settled(): Promise<void> {
+    return this.inflight === 0
+      ? Promise.resolve()
+      : new Promise((resolve) => this.idle.push(resolve))
+  }
+
   private async go(
+    to: string,
+    flags: { replace?: boolean; popstate?: boolean; key?: number; initial?: boolean },
+  ): Promise<void> {
+    this.inflight += 1
+    try {
+      await this.navigateTo(to, flags)
+    } finally {
+      this.inflight -= 1
+      if (this.inflight === 0) for (const resolve of this.idle.splice(0)) resolve()
+    }
+  }
+
+  private async navigateTo(
     to: string,
     flags: { replace?: boolean; popstate?: boolean; key?: number; initial?: boolean },
   ): Promise<void> {
@@ -285,6 +401,13 @@ export class Router {
 
     const matched = matchRoute(this.routes, url.pathname)
     const load = matched?.route.load ?? this.options.notFound ?? (async () => BUILT_IN_NOT_FOUND)
+    // The data the page declared starts now, while its code loads: the two do not wait for each other.
+    let pending: Array<Promise<unknown>> = []
+    try {
+      pending = matched?.route.prefetch?.(matched.params, parseQuery(url.search)) ?? []
+    } catch {
+      // A page whose data could not be started asks for it itself.
+    }
     const ticket = ++this.token
     let module: PageModule
     try {
@@ -299,6 +422,12 @@ export class Router {
 
     const layout = await this.loadLayout(module.page?.layout)
     if (ticket !== this.token) return
+
+    // A page that must have its data waits for it: the page before stays, and so does the address.
+    if ((matched?.route.wait || this.options.waitForData) && pending.length) {
+      await Promise.all(pending.map((p) => Promise.resolve(p).catch(() => undefined)))
+      if (ticket !== this.token) return
+    }
 
     const history = this.win.history
     if (!flags.popstate && !flags.initial) {
@@ -378,6 +507,9 @@ export class Router {
 
     if (this.options.announce !== false) this.announce(this.title || url.pathname)
     this.firstRender = false
+    // State kept in the address (`urlState`) reads it again: the query of the new page is the new value.
+    const EventOfWindow = (this.win as Window & { Event?: typeof Event }).Event ?? Event
+    this.win.dispatchEvent(new EventOfWindow('tessera:navigate'))
   }
 
   private announce(message: string): void {

@@ -223,8 +223,8 @@ export function legacyLibraryNotice(root: string): string | undefined {
     '@pixelscriptio/tessera-ui is not a package any more. Since Tessera 0.9 a component is copied into your project, where it is yours to edit.',
     'Remove it from package.json (npm uninstall @pixelscriptio/tessera-ui), then add the components you use:',
     missing.length
-      ? `  npx tessera add ${missing.join(' ')}`
-      : '  npx tessera add <Name>    (npx tessera add --list shows what there is)',
+      ? `  npx @pixelscriptio/tessera add ${missing.join(' ')}`
+      : '  npx @pixelscriptio/tessera add <Name>    (add --list shows what there is)',
   ].join(String.fromCharCode(10))
 }
 

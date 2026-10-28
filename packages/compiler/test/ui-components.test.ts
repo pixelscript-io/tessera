@@ -218,7 +218,7 @@ describe('a project from before 0.9 that lists @pixelscriptio/tessera-ui', () =>
     )
     expect(notice).toContain('is not a package any more')
     expect(notice).toContain('npm uninstall @pixelscriptio/tessera-ui')
-    expect(notice).toContain('npx tessera add Button Card Zebra')
+    expect(notice).toContain('npx @pixelscriptio/tessera add Button Card Zebra')
   })
 
   it('does not name a component the project defines itself', () => {
@@ -237,7 +237,7 @@ describe('a project from before 0.9 that lists @pixelscriptio/tessera-ui', () =>
         '',
       ].join('\n'),
     )
-    expect(legacyLibraryNotice(dir)).toContain('npx tessera add <Name>')
+    expect(legacyLibraryNotice(dir)).toContain('npx @pixelscriptio/tessera add <Name>')
   })
 
   it('is silent for a project that does not list it', () => {

@@ -68,9 +68,13 @@ describe('the language guide in AGENTS.md', () => {
     expect(AGENT_GUIDE).toContain('@input="setName($event)"')
   })
 
-  it('says how to keep data after a reload, since there is no persist yet', () => {
-    expect(AGENT_GUIDE).toContain("typeof localStorage !== 'undefined'")
-    expect(AGENT_GUIDE).toMatch(/no built-in `persist`/i)
+  it('says how to keep data after a reload, in the address, and to put it back in tests, with the helpers that exist', () => {
+    expect(AGENT_GUIDE).toContain("persisted('todos'")
+    expect(AGENT_GUIDE).toContain('urlState(')
+    expect(AGENT_GUIDE).toContain('resetState()')
+    expect(AGENT_GUIDE).toMatch(/never a secret/i)
+    // What was true before they existed is not left behind.
+    expect(AGENT_GUIDE).not.toMatch(/no built-in `persist`/i)
   })
 
   it('says how to clear a field, which only works when the state follows what is typed', () => {

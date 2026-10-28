@@ -202,9 +202,21 @@ class DerivedSignal<T> implements ReadonlySignal<T> {
   }
 }
 
+/** @internal Told about every `state()` made while it is set: shared state, which a state file's body makes. */
+let onStateCreated: ((signal: Signal<unknown>, initial: unknown) => void) | null = null
+
+/** @internal Set by `shared.ts` while the body of a state file runs. */
+export function setStateCreated(hook: typeof onStateCreated): typeof onStateCreated {
+  const previous = onStateCreated
+  onStateCreated = hook
+  return previous
+}
+
 /** A writable reactive value. Read and write with `.value`. */
 export function state<T>(initial: T): Signal<T> {
-  return new StateSignal(initial)
+  const signal = new StateSignal(initial)
+  onStateCreated?.(signal as Signal<unknown>, initial)
+  return signal
 }
 
 /** A lazy, memoized value computed from other signals. Must be pure. */

@@ -89,9 +89,90 @@ The file name is the name: `cart.ts` is `cart`. It must be a name a script can u
 
 The compiler writes `.tessera/state.d.ts`, so TypeScript knows what `cart` is in a `.tess` script. The manifest lists each state file with its members, and the MCP server has two tools, `list_state` and `get_state`, that tell an AI tool what exists and how to change it. `AGENTS.md` says that state is read-only outside its file.
 
+## Keeping state
+
+State is back to its first value when the page reloads. Four things change that, all in the state file, and all safe where there is no browser (a prerender, a test in Node), where they are a plain signal.
+
+### Keeping it in the browser: `persisted`
+
+`persisted(key, initial)` is `state(initial)` that keeps itself in `localStorage` under `key` and reads itself back the next time. It is a signal like any other: assign it and it is kept.
+
+```ts
+// app/state/todos.ts
+import { derived, persisted } from '@pixelscriptio/tessera/core'
+
+export const items = persisted('todos', [] as Array<{ id: number; title: string; done: boolean }>)
+export const remaining = derived(() => items.value.filter((t) => !t.done).length)
+
+export function add(title: string) {
+  items.value = [...items.value, { id: Date.now(), title, done: false }]
+}
+```
+
+What is read back is checked, because anyone can edit the storage. Text that is not what `persisted` wrote, a value another version wrote, or a value your `validate` refuses starts it from `initial` as if nothing were kept. When the storage is missing, full or blocked, the value lives in memory and nothing throws. A change made in another tab is followed.
+
+Options (the third argument):
+
+- `version` (default `1`) changes when the shape of what is kept changes. A value kept by an **older** version goes through `migrate(stored, fromVersion)`, and the result is written back at once, so it runs once; with no `migrate`, or if it throws, the value is forgotten. A value kept by a newer version is forgotten.
+- `validate(value)` returns whether what was read has the right shape (a type guard).
+- `storage` is where to keep it: `sessionStorage` keeps it until the tab closes.
+
+```ts
+export const prefs = persisted(
+  'prefs',
+  { size: 'normal', zoom: 1 },
+  {
+    version: 2,
+    // Version 1 kept only the size, as text.
+    migrate: (old, from) => (from === 1 ? { size: String(old), zoom: 1 } : (old as never)),
+  },
+)
+```
+
+Keep only what the person chose: a theme, a draft, a filter. Anything in the storage can be read by any script on the page, so do not keep a secret in it.
+
+### Keeping it in the address: `urlState`
+
+`urlState(name, initial)` is state shown as the query parameter `name`: `?page=2`. A link to that address opens the page with it set, and the router's navigation and the back button change it.
+
+```ts
+// app/state/list.ts
+import { urlState } from '@pixelscriptio/tessera/core'
+
+export const page = urlState('page', 1)
+export const sort = urlState('sort', 'name')
+```
+
+A string, a number and a boolean need nothing more (a number must be a plain one: `?page=1e3` is not a number and gives the initial value). For another kind, give `parse` and `serialize`, which say how it is written in the address; `serialize` returns `undefined` to leave it out.
+
+```ts
+export const tags = urlState<string[]>('tags', [], {
+  parse: (text) => text.split(','),
+  serialize: (list) => (list.length ? list.join(',') : undefined),
+})
+```
+
+When the value is the initial one the parameter is left out, so the address stays clean (`/list`, not `/list?page=1`). A change **replaces** the address and does not add a history entry, so the back button leaves the page and does not step through the values, and the rest of the address (other parameters, the `#` part) is kept. What is written is encoded, so a value cannot add to the address.
+
+### Putting it back in tests: `resetState`
+
+`resetState()` puts every piece of shared state back to the value it started with: the state in the files of `app/state`, and every `persisted` and `urlState`, which also forget what they stored and what the address said. Call it before each test, so one test's cart is not in the next.
+
+```ts
+import { beforeEach } from 'vitest'
+import { resetState } from '@pixelscriptio/tessera/core'
+
+beforeEach(() => resetState())
+```
+
+State made inside a component is not touched: it is made again with the component. The build marks each file in `app/state` (it puts a call at the top of it), which is how `resetState` knows what is shared; a `state()` made later, in a component, is not.
+
+### Across an edit in the dev server
+
+When you edit a state file while `tessera dev` runs, the file runs again. Each piece of state in it starts from the value it had, as long as the code still starts it from the same first value and the value is plain data (text, numbers, booleans, arrays and objects of them), so an edit does not empty a cart you filled to test it. If you change the first value in the code, the new first value is used. A `Map`, a `Date` or a class instance starts again.
+
 ## What is not built yet
 
-- **Keeping state:** saving it in the browser (`persist`), in the address (`url`), resetting it in tests, and keeping it across a hot update in the dev server. These are Milestone 35. Until then, state is back to its first value when the page reloads.
 - **State for a part of the page,** one copy per list item or dialog (what context does elsewhere), is Milestone 36.
 - **Who reads and who changes each piece of state** in `tessera report`, and a warning for state nothing reads, is Milestone 37.
 - **Auto-imports in state files.** A state file is a `.ts` file, so it imports `state` and `derived`.

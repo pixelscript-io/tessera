@@ -320,7 +320,7 @@ const BLOCKISH = new Set([
   'namespace',
   'do',
 ])
-const SIGNAL_MAKERS = new Set(['state', 'derived', 'constant'])
+const SIGNAL_MAKERS = new Set(['state', 'derived', 'constant', 'persisted', 'urlState'])
 const DATA_VERBS = new Set(['get', 'post', 'put', 'patch', 'del'])
 /** The members of a read and of a write that are signals, read as `.value` in a template. */
 export const READ_SIGNALS: ReadonlySet<string> = new Set(['data', 'error', 'loading', 'refreshing'])

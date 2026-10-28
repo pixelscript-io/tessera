@@ -494,7 +494,7 @@ describe('tessera add: token fit', () => {
         'radius.sm=radius.md',
         ...catalogue,
       ])
-      expect(out).toContain('npx tessera a11y')
+      expect(out).toContain('npx @pixelscriptio/tessera a11y')
     })
   })
 })

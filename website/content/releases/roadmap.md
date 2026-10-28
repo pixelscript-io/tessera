@@ -7,7 +7,6 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 - **A deprecation window** that the tooling enforces (`tessera diff` and the codemods exist; the window does not).
 - **Token importers tested against real exports** from Figma, Tokens Studio and Penpot. The importers are tested on files written to the formats' documentation.
 - **More behaviors and components:** menu, listbox and tooltip, and a `Tabs` component (the `tabs` behavior is built).
-- **Hydration** for prerendered pages. `tessera build --prerender` writes static HTML today, and the router replaces it when the app starts.
 
 ## Shared state, in order
 
@@ -28,7 +27,7 @@ The runtime, the calls in `.tess` files, the `app/apis` folder and the descripti
 
 ## Not planned yet
 
-Server rendering with hydration, and islands (prerendering to static HTML is built; see Next for hydration); a backend framework; native mobile targets; a visual editor or Figma plugin; nested routes, route guards and data loaders. See [What is Tessera?](/introduction/).
+Server rendering with hydration, and islands (prerendering to static HTML with hydration is built); a backend framework; native mobile targets; a visual editor or Figma plugin; nested routes, route guards and data loaders. See [What is Tessera?](/introduction/).
 
 ## What is deferred, and what that means for the docs
 

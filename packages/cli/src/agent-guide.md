@@ -92,7 +92,7 @@ A layout holds what every page shares (a nav, a footer) and is styled once. Each
 
 ### A page and routing
 
-A file in `app/pages` is a page and its path is its URL: `index.tess` is `/`, `about.tess` is `/about`, `blog/[slug].tess` is `/blog/:slug`, `404.tess` is the not-found page. A page has no `<contract>`. It may have a `<page>` block (JSON: `title`, `layout`). Layouts are files in `app/layouts` with a `<slot />`. Links use `<Link to="/about">` with a route that exists; `useRoute()` gives the current `path`, `params` and `query`, and `navigate('/about')` goes there.
+A file in `app/pages` is a page and its path is its URL: `index.tess` is `/`, `about.tess` is `/about`, `blog/[slug].tess` is `/blog/:slug`, `404.tess` is the not-found page. A page has no `<contract>`. It may have a `<page>` block (JSON: `title`, `layout`, and `data` and `wait`, below). Layouts are files in `app/layouts` with a `<slot />`. Links use `<Link to="/about">` with a route that exists; `useRoute()` gives the current `path`, `params` and `query`, and `navigate('/about')` goes there.
 
 ```xml tess kind=page
 <page>
@@ -183,6 +183,8 @@ const task = get('/tasks/:id', { id })
 </style>
 ```
 
+A page that reads from an API can say what it needs in its `<page>` block so the request starts when the person clicks, not after the page's code has loaded: `"data": ["/posts", { "path": "/users/:id", "query": { "limit": 10 } }]` (a path on the default API, or an object with `path`, `api` and `query`; `:id` is filled from the route). The page's own `get` joins that request, so the script does not change. `"wait": true` keeps the current page until the data is in. With `tessera build --prerender` a page with `data` is written with its data in the HTML and hydrated when the script loads. That HTML is public and is built with no sign-in, so declare only data that is the same for everyone, never a read that needs a key or token.
+
 ### State that components share
 
 A `.ts` file in `app/state` is shared state, named after the file, usable in every `.tess` file with no import. It is made of signals and functions, and it is **read-only outside its file**: a component changes it by calling the file's functions.
@@ -207,37 +209,23 @@ A template then reads `{cart.count}` and `each="name in cart.items"`, and handle
 
 ### Keeping data after a reload
 
-State resets when the page reloads, and there is no built-in `persist` yet. To keep something, put the saving in the state file: read it when the file loads, write it in the function that changes it, and guard the browser's storage so a prerender, which has none, does not fail.
+State resets when the page reloads. To keep it, make it with `persisted(key, initial)` instead of `state(initial)`: it is a signal that keeps itself in `localStorage` and reads itself back, checks what it reads, and is a plain signal where there is no storage (a prerender). Keep only what the person chose; anything in the storage can be read by any script, so never a secret.
 
 ```ts
 // app/state/todos.ts
-import { derived, state } from '@pixelscriptio/tessera/core'
+import { derived, persisted } from '@pixelscriptio/tessera/core'
 
-const KEY = 'todos'
-
-function load(): Array<{ id: number; title: string; done: boolean }> {
-  if (typeof localStorage !== 'undefined') {
-    try {
-      return JSON.parse(localStorage.getItem(KEY) ?? '[]')
-    } catch {
-      // A value that is not JSON: start empty.
-    }
-  }
-  return []
-}
-
-export const items = state(load())
+export const items = persisted('todos', [] as Array<{ id: number; title: string; done: boolean }>)
 export const remaining = derived(() => items.value.filter((t) => !t.done).length)
-
-function save() {
-  if (typeof localStorage !== 'undefined') localStorage.setItem(KEY, JSON.stringify(items.value))
-}
 
 export function add(title: string) {
   items.value = [...items.value, { id: Date.now(), title, done: false }]
-  save()
 }
 ```
+
+- When the shape of what is kept changes, raise `version` and give `migrate(old, fromVersion)`: `persisted('todos', [], { version: 2, migrate })`. Without `migrate` an older value is forgotten. `validate` refuses a value of the wrong shape.
+- To keep it in the address, as `?page=2`, use `urlState('page', 1)`: a string, a number or a boolean, or give `parse` and `serialize`. A link to that address opens the page with it set.
+- In tests, call `resetState()` before each one: it puts all shared state back, and forgets what `persisted` and `urlState` kept.
 
 ### Forms
 
@@ -245,7 +233,11 @@ A form is `Form` with fields from the catalogue (`add Form TextField Select Chec
 
 ```xml tess kind=page
 <script>
-const values = state({ name: '', email: '' })
+const plans = [
+  { value: 'free', label: 'Free' },
+  { value: 'pro', label: 'Pro' },
+]
+const values = state({ name: '', email: '', plan: 'free', news: false })
 const errors = state({})
 const saved = state(false)
 const rules = {
@@ -279,6 +271,10 @@ function sent() {
         <TextField :error="errors.email" @input="setValue('email', $event)">
           <span slot="label">Email</span>
         </TextField>
+        <Select :options="plans" value="free" @change="setValue('plan', $event.value)">
+          <span slot="label">Plan</span>
+        </Select>
+        <Checkbox @toggle="setValue('news', $event.checked)">Send me the newsletter</Checkbox>
         <Button type="submit">Save</Button>
       </div>
     </Form>

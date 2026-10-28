@@ -302,6 +302,7 @@ describe('shared state', () => {
         file: 'app/state/cart.ts',
         members: ['items', 'count', 'add()', 'clear()'],
       },
+      { name: 'theme', file: 'app/state/theme.ts', members: ['mode', 'toggle()'] },
     ])
   })
 
@@ -329,7 +330,7 @@ describe('shared state', () => {
 
   it('says what is wrong with a name', () => {
     expect(call('get_state', { name: 'crt' }).text).toBe(
-      'There is no shared state named "crt". State: cart. Did you mean "cart"?',
+      'There is no shared state named "crt". State: cart and theme. Did you mean "cart"?',
     )
   })
 })

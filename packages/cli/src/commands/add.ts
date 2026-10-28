@@ -596,11 +596,11 @@ async function run(args: Args, io: Io, source: RegistrySource): Promise<number> 
       io.out(
         existsSync(join(root, 'system', 'components', 'a11y.browser.test.ts'))
           ? 'Accessibility: npm run test:a11y runs the generated tests on them, in each design system the tests were set up for.'
-          : 'Accessibility: npx tessera a11y --system all sets up the generated tests, which then cover these components in every design system.',
+          : 'Accessibility: npx @pixelscriptio/tessera a11y --system all sets up the generated tests, which then cover these components in every design system.',
       )
     } else {
       io.out(
-        'Next: npx tessera check    (it reports any token the new component needs that your design system lacks)',
+        'Next: npm run check    (it reports any token the new component needs that your design system lacks)',
       )
     }
   }

@@ -30,7 +30,27 @@ const start = async (url: string) => {
 const heading = () => container.querySelector('h1')?.textContent
 const link = (text: string) =>
   [...container.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent === text)!
-const settle = () => new Promise((resolve) => setTimeout(resolve, 500))
+// Wait for the navigation a click started to finish, as the router says, not for a time that a slow machine can exceed.
+const settle = () => router!.settled()
+// The announcement is set a moment after the navigation, on purpose, so a screen reader notices it: wait for the text.
+const announced = async (text: string) => {
+  const end = Date.now() + 10_000
+  while (
+    document.querySelector('[data-tessera-announcer]')?.textContent !== text &&
+    Date.now() < end
+  )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+}
+// Back and forward arrive as a popstate event in a task of their own: wait for it, then for the navigation it starts.
+const traverse = async (direction: 'back' | 'forward') => {
+  const popped = new Promise<void>((resolve) =>
+    addEventListener('popstate', () => resolve(), { once: true }),
+  )
+  if (direction === 'back') history.back()
+  else history.forward()
+  await popped
+  await settle()
+}
 
 beforeEach(() => {
   container = document.createElement('div')
@@ -80,6 +100,7 @@ describe('navigating by click, back and forward', () => {
     expect(document.activeElement).toBe(container.querySelector('main'))
     const live = document.querySelector('[data-tessera-announcer]')!
     expect(live.getAttribute('aria-live')).toBe('polite')
+    await announced('Navigated to Blog')
     expect(live.textContent).toBe('Navigated to Blog')
   })
 
@@ -99,17 +120,14 @@ describe('navigating by click, back and forward', () => {
     await settle()
     expect(heading()).toBe('Why signals')
 
-    history.back()
-    await settle()
+    await traverse('back')
     expect(heading()).toBe('Blog')
     expect(location.pathname).toBe('/blog')
 
-    history.back()
-    await settle()
+    await traverse('back')
     expect(heading()).toBe('Tessera kitchen sink')
 
-    history.forward()
-    await settle()
+    await traverse('forward')
     expect(heading()).toBe('Blog')
   })
 
@@ -198,8 +216,7 @@ describe('layouts', () => {
     expect(nav()).toBeNull()
     expect(focusBack()).toBe(true)
 
-    history.back()
-    await settle()
+    await traverse('back')
     expect(nav()).not.toBeNull()
     expect(heading()).toBe('Blog')
   })
@@ -212,6 +229,7 @@ describe('layouts', () => {
     await settle()
     expect(document.activeElement).toBe(container.querySelector('main'))
     expect(document.title).toBe('Post')
+    await announced('Navigated to Post')
     expect(document.querySelector('[data-tessera-announcer]')!.textContent).toBe(
       'Navigated to Post',
     )

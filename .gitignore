@@ -14,7 +14,7 @@ website/content/.vitepress/theme/tokens.css
 experiments/agent-mcp/work
 .docs-test*
 .format-test
-landing/**/__screenshots__
+**/__screenshots__
 website/content/public/llms.txt
 website/content/public/llms-full.txt
 

@@ -30,7 +30,7 @@ Tessera's files will feel familiar: blocks in one file, an HTML-like template, d
 ## What you give up
 
 - The ecosystem: devtools, component libraries, plugins, a large community, years of production use.
-- Server rendering, hydration and a state library. None exist in Tessera yet.
+- Server rendering at request time (prerendering with hydration exists) and a state library beyond shared state. Neither exists in Tessera yet.
 - Flexibility: dynamic components (a tag chosen from a variable) are not supported, and every component needs a contract.
 - Nested routes, route guards and data loaders.
 

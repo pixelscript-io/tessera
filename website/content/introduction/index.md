@@ -79,7 +79,7 @@ Tessera is at v0.5: the pieces in this site exist and are tested, and the packag
 ## Non-goals for v0.x
 
 - Competing with React, Vue or Svelte on renderer performance or ecosystem.
-- Server rendering, hydration, streaming and islands. The design leaves room for them; they are not built.
+- Server rendering at request time, streaming and islands. The design leaves room for them; they are not built. Prerendering to static HTML, with hydration, is built.
 - A full-stack or backend framework.
 - Native mobile targets.
 - A visual editor or Figma plugin. Tokens move in and out as files.

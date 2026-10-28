@@ -113,7 +113,10 @@ describe('the agent manifest: components', () => {
 
 describe('the agent manifest: shared state', () => {
   it('lists the state of the project, with what each file exports', () => {
-    expect(manifest.state.map((s) => [s.name, s.file])).toEqual([['cart', 'app/state/cart.ts']])
+    expect(manifest.state.map((s) => [s.name, s.file])).toEqual([
+      ['cart', 'app/state/cart.ts'],
+      ['theme', 'app/state/theme.ts'],
+    ])
     expect(manifest.state[0]!.members.map((m) => [m.name, m.kind])).toEqual([
       ['items', 'signal'],
       ['count', 'signal'],

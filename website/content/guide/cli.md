@@ -4,7 +4,7 @@ Introduced in v0.1 (Milestones 11 and 12b).
 
 The `tessera` command comes with the `@pixelscriptio/tessera` package. It starts a project, runs it, checks it without bundling, and manages the accountability tools: the baseline, exemptions and the report. Run it with `npx tessera`, or through the scripts a new project has (`npm run dev`).
 
-Every command runs in the nearest folder above the current one that looks like a project (it has `app/`, `system/components/` or a `tessera.config.ts`). Pass `--root <folder>` to name one.
+Every command runs in the nearest folder above the current one that looks like a project (it has `app/`, `system/components/` or a `tessera.config.ts`). Pass `--root <folder>` to name one. [Every command](/guide/commands) lists all of them, with what each is for.
 
 ## Start a project
 

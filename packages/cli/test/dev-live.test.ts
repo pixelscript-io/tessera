@@ -78,6 +78,17 @@ describe('tessera dev, while it runs', () => {
     expect(text).toContain('Chip')
   })
 
+  it('serves a state file marked as shared state, with the hot object that keeps its values across an edit', async () => {
+    const root = await newProject()
+    const { app } = await start(root, '--port', String(await freePort()))
+    const served = (await app.transformRequest('/app/state/counter.ts'))!.code
+    expect(served).toContain('__beginStateFile')
+    expect(served).toContain('app/state/counter.ts')
+    // A file that is not state is served as it is written.
+    const page = (await app.transformRequest('/app/main.ts'))!.code
+    expect(page).not.toContain('__beginStateFile')
+  })
+
   it('says so when a token changed in the base is one the dark theme sets for itself', async () => {
     const root = await newProject(undefined, 'tailwind')
     const notes: string[] = []

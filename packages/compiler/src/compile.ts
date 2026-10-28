@@ -26,7 +26,7 @@ import { parseTemplate, type TemplateNode } from './template'
 import { PUBLIC_PACKAGES } from './packages'
 import { AUTO_IMPORTS } from './autoimport-ts'
 import { pageSlug } from './routes'
-import { parseJsonc, JsonSyntaxError } from '@tessera/contract'
+import { parseJsonc, JsonSyntaxError, type JsonNode } from '@tessera/contract'
 
 export type FileKind = 'component' | 'page' | 'layout'
 
@@ -105,10 +105,22 @@ const CORE_APIS = ['state', 'derived', 'effect', 'onCleanup', 'onMount'] as cons
 const ROUTER_APIS = ['navigate', 'useRoute'] as const
 const FRAMEWORK_APIS = [...CORE_APIS, ...ROUTER_APIS] as const
 
-/** The `<page>` block of a page: its title, and its layout (a name in `app/layouts`, or `false` for none). */
-interface PageMeta {
+/** One read a page needs: a path on an api (the default one unless `api` names another), with the query it is asked with. */
+export interface PageDataEntry {
+  path: string
+  api?: string
+  query?: Record<string, string | number | boolean>
+}
+
+/**
+ * The `<page>` block of a page: its title, its layout (a name in `app/layouts`, or `false` for none), the data it
+ * needs (asked for when the person navigates, and written into the page by a prerender), and whether it waits for it.
+ */
+export interface PageMeta {
   title?: string
   layout?: string | false
+  data?: PageDataEntry[]
+  wait?: boolean
 }
 
 /**
@@ -192,7 +204,17 @@ export function compile(source: string, options: CompileOptions): CompileResult 
   // Page block.
   const pageMeta: PageMeta = {}
   const pageBlock = kind === 'page' ? blocks.get('page') : undefined
-  if (pageBlock) Object.assign(pageMeta, parsePageBlock(pageBlock, report, options.layouts))
+  if (pageBlock)
+    Object.assign(
+      pageMeta,
+      parsePageBlock(pageBlock, report, options.layouts, {
+        // `app/pages/posts/[id].tess` is a route with the parameter `id`.
+        params: [...(options.path ?? options.file).matchAll(/\[([A-Za-z_]\w*)\]/g)].map(
+          (m) => m[1]!,
+        ),
+        apis: (options.apis ?? []).map((api) => api.name),
+      }),
+    )
   if (kind === 'layout' && blocks.get('page')) {
     report.error(
       'T4013',
@@ -622,7 +644,12 @@ function assemble(
     `  return $ctx.root(${generated.root}${generated.rootClass ? `, ${JSON.stringify(generated.rootClass)}` : ''})`,
     `}${hmr ? `, ${JSON.stringify(options.hmrId)}` : ''})`,
   ]
-  if (page) lines.push('', `export const page = ${JSON.stringify(page)}`)
+  // The module says its title and layout; what it needs and whether it waits are the route's, read by the router.
+  if (page)
+    lines.push(
+      '',
+      `export const page = ${JSON.stringify({ title: page.title, layout: page.layout })}`,
+    )
   if (hmr) lines.push('', 'if (import.meta.hot) import.meta.hot.accept()')
   return lines.join('\n') + '\n'
 }
@@ -658,13 +685,150 @@ export function extractContractInfo(
     : undefined
 }
 
-const PAGE_FIELDS = ['title', 'layout']
+const PAGE_FIELDS = ['title', 'layout', 'data', 'wait']
+const DATA_FIELDS = ['path', 'api', 'query']
+/** A page that needs more than this is asking for something else: a list on its own page. */
+const MAX_DATA = 20
+
+/**
+ * Read the `data` of a `<page>` block: a list of paths, or objects with a `path`, and optionally an `api` and a
+ * `query`. What is wrong is reported (T6005, and T5004 for an api that does not exist); what can be read is kept.
+ */
+function parsePageData(
+  list: { type: 'array'; items: JsonNode[] },
+  at: (offset: number) => number,
+  report: Reporter,
+  check: { params?: readonly string[]; apis?: readonly string[] } | undefined,
+): PageDataEntry[] {
+  const out: PageDataEntry[] = []
+  if (list.items.length > MAX_DATA)
+    report.error(
+      'T6005',
+      at(list.items[MAX_DATA]!.start),
+      `A page can declare at most ${MAX_DATA} reads in "data".`,
+    )
+  for (const item of list.items.slice(0, MAX_DATA)) {
+    let entry: PageDataEntry | undefined
+    if (item.type === 'string') entry = { path: item.value }
+    else if (item.type === 'object') {
+      const found: Partial<PageDataEntry> = {}
+      for (const prop of item.props) {
+        const value = prop.value
+        if (prop.key === 'path') {
+          if (value.type === 'string') found.path = value.value
+          else report.error('T6005', at(value.start), '"path" must be text, such as "/posts/:id".')
+        } else if (prop.key === 'api') {
+          if (value.type === 'string') found.api = value.value
+          else
+            report.error('T6005', at(value.start), '"api" must be the name of an API in app/apis.')
+        } else if (prop.key === 'query') {
+          if (value.type !== 'object')
+            report.error(
+              'T6005',
+              at(value.start),
+              '"query" must be an object, such as { "limit": 10 }.',
+            )
+          else {
+            const query: Record<string, string | number | boolean> = {}
+            for (const q of value.props) {
+              const v = q.value
+              if (v.type === 'string' || v.type === 'number' || v.type === 'boolean')
+                query[q.key] = v.value
+              else
+                report.error(
+                  'T6005',
+                  at(v.start),
+                  `The query value "${q.key}" must be text, a number or true or false.`,
+                )
+            }
+            found.query = query
+          }
+        } else {
+          const close = nearest(prop.key, DATA_FIELDS)
+          report.error(
+            'T6005',
+            at(prop.keyStart),
+            `A read in "data" has no field "${prop.key}".`,
+            close
+              ? `Did you mean "${close}"?`
+              : `Fields: ${DATA_FIELDS.map((f) => `"${f}"`).join(', ')}.`,
+          )
+        }
+      }
+      if (found.path === undefined) {
+        report.error(
+          'T6005',
+          at(item.start),
+          'A read in "data" needs a "path", such as { "path": "/posts" }.',
+        )
+        continue
+      }
+      entry = found as PageDataEntry
+    } else {
+      report.error(
+        'T6005',
+        at(item.start),
+        'Each read in "data" is a path, such as "/posts/:id", or an object with a "path".',
+      )
+      continue
+    }
+    const { path } = entry
+    if (!/^\/(?!\/)/.test(path) && !/^https?:\/\/[^\s]+$/i.test(path)) {
+      report.error(
+        'T6005',
+        at(item.start),
+        `The path "${path}" is not one a read can ask for: it starts with / (on the api's own address) or is a full http or https address.`,
+      )
+      continue
+    }
+    if (check?.params) {
+      for (const used of path.matchAll(/\/:([A-Za-z_]\w*)/g)) {
+        if (check.params.includes(used[1]!)) continue
+        report.error(
+          'T6005',
+          at(item.start),
+          `"${path}" asks for ":${used[1]}", which this route does not have. ${
+            check.params.length
+              ? `Its parameters: ${check.params.map((p) => `"${p}"`).join(', ')}.`
+              : 'This route has no parameters.'
+          }`,
+        )
+      }
+    }
+    if (entry.api !== undefined && check?.apis && !check.apis.includes(entry.api)) {
+      const close = nearest(entry.api, [...check.apis])
+      report.error(
+        'T5004',
+        at(item.start),
+        `"${entry.api}" is not an API.`,
+        close
+          ? `Did you mean "${close}"?`
+          : check.apis.length
+            ? `APIs: ${check.apis.map((a) => `"${a}"`).join(', ')}.`
+            : 'The project has no APIs. Add app/apis/<name>.ts.',
+      )
+    }
+    out.push(entry)
+  }
+  return out
+}
+
+/**
+ * Read the `<page>` block of a source, as a host that builds the routes needs it: the title, the layout, the data and
+ * whether the page waits for it. Nothing is reported: a block that is wrong gives what can be read of it, and the
+ * compile of the page says what is wrong.
+ */
+export function readPageMeta(source: string): PageMeta {
+  const block = parseSfc(source, new Reporter('', source)).get('page')
+  return block ? parsePageBlock(block, new Reporter('', source)) : {}
+}
 
 /** Read the `<page>` block: JSON with comments, an object with a `title`. */
 function parsePageBlock(
   block: { content: string; contentStart: number },
   report: Reporter,
   layouts?: readonly string[],
+  check?: { params?: readonly string[]; apis?: readonly string[] },
 ): PageMeta {
   const meta: PageMeta = {}
   let root
@@ -720,6 +884,22 @@ function parsePageBlock(
       if (prop.value.type !== 'string') {
         report.error('T6005', block.contentStart + prop.value.start, '"title" must be a string.')
       } else meta.title = prop.value.value
+    } else if (prop.key === 'data') {
+      if (prop.value.type !== 'array') {
+        report.error(
+          'T6005',
+          block.contentStart + prop.value.start,
+          '"data" must be a list of the reads the page needs, such as ["/posts/:id"].',
+        )
+      } else meta.data = parsePageData(prop.value, (o) => block.contentStart + o, report, check)
+    } else if (prop.key === 'wait') {
+      if (prop.value.type !== 'boolean') {
+        report.error(
+          'T6005',
+          block.contentStart + prop.value.start,
+          '"wait" must be true or false.',
+        )
+      } else meta.wait = prop.value.value
     } else {
       const close = nearest(prop.key, PAGE_FIELDS)
       report.error(

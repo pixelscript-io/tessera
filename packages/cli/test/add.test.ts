@@ -83,7 +83,7 @@ describe('tessera add', () => {
     )
     expect(existsSync(join(root, 'system/components/Button.docs.md'))).toBe(true)
     expect(out).toContain('system/components/Button.tess')
-    expect(out).toContain('tessera check')
+    expect(out).toContain('npm run check')
   })
 
   it('brings the components a component needs', async () => {

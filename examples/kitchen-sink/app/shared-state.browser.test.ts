@@ -1,7 +1,7 @@
 import 'virtual:tessera/tokens.css'
 import { userEvent } from 'vitest/browser'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { flush, getRenderer } from '@pixelscriptio/tessera/core'
+import { flush, getRenderer, resetState, state } from '@pixelscriptio/tessera/core'
 import * as cart from './state/cart'
 import CartAdd from './components/CartAdd.tess'
 import CartCount from './components/CartCount.tess'
@@ -55,5 +55,24 @@ describe('shared state: app/state/cart.ts', () => {
     flush()
     expect(items()).toEqual(['From a script'])
     expect(total()).toBe('1 in the cart')
+  })
+})
+
+describe('resetState: shared state back to where it started, for tests', () => {
+  it('puts the cart back, because the build marked the file as shared state', async () => {
+    await userEvent.click(button('Add to cart'))
+    await userEvent.click(button('Add to cart'))
+    expect(total()).toBe('2 in the cart')
+    resetState()
+    flush()
+    expect(total()).toBe('0 in the cart')
+    expect(items()).toEqual([])
+  })
+
+  it('leaves a state a component made alone', () => {
+    const local = state(1)
+    local.value = 2
+    resetState()
+    expect(local.value).toBe(2)
   })
 })

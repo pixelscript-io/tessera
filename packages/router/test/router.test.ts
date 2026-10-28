@@ -285,4 +285,102 @@ describe('shouldHandleClick', () => {
   })
 })
 
+describe('the tessera:navigate event', () => {
+  it('fires on the window after a page is shown, so state kept in the address can read it again', async () => {
+    await start('/')
+    const heard: string[] = []
+    const listener = () => heard.push(window.location.pathname + window.location.search)
+    window.addEventListener('tessera:navigate', listener)
+    await router.navigate('/about?tab=2')
+    window.removeEventListener('tessera:navigate', listener)
+    expect(heard).toEqual(['/about?tab=2'])
+  })
+
+  it('does not fire for the first page, which nothing is moving from', async () => {
+    const heard: string[] = []
+    const listener = () => heard.push('x')
+    window.addEventListener('tessera:navigate', listener)
+    await start('/about')
+    window.removeEventListener('tessera:navigate', listener)
+    expect(heard).toEqual([])
+  })
+
+  it('fires after the back button, too, once the address is the page the person went back to', async () => {
+    await start('/')
+    await router.navigate('/about')
+    const heard: string[] = []
+    const listener = () => heard.push(window.location.pathname)
+    window.addEventListener('tessera:navigate', listener)
+    window.history.back()
+    await vi.advanceTimersByTimeAsync(50)
+    await router.settled()
+    window.removeEventListener('tessera:navigate', listener)
+    expect(heard).toEqual(['/'])
+  })
+})
+
+describe('settled: waiting for a navigation to finish', () => {
+  const slow = (name: string, ms: number): (() => Promise<PageModule>) => {
+    const load = page(name)
+    return () => new Promise((resolve) => setTimeout(() => resolve(load()), ms))
+  }
+
+  it('resolves at once when nothing is loading', async () => {
+    await start('/')
+    await expect(router.settled()).resolves.toBeUndefined()
+  })
+
+  it('waits for the page that a click or a call started to load and show, so a test need not sleep', async () => {
+    window.history.replaceState(null, '', '/')
+    router = createRouter({
+      routes: [
+        { path: '/', load: page('home') },
+        { path: '/slow', load: slow('slow', 300) },
+      ],
+    })
+    await router.mount(container)
+    void router.navigate('/slow')
+    let done = false
+    const waiting = router.settled().then(() => (done = true))
+    await vi.advanceTimersByTimeAsync(100)
+    expect(done).toBe(false)
+    expect(container.querySelector('h1')!.textContent).toBe('home')
+    await vi.advanceTimersByTimeAsync(300)
+    await waiting
+    expect(container.querySelector('h1')!.textContent).toBe('slow')
+  })
+
+  it('waits for the newest navigation when a newer one replaces an older one', async () => {
+    window.history.replaceState(null, '', '/')
+    router = createRouter({
+      routes: [
+        { path: '/', load: page('home') },
+        { path: '/a', load: slow('a', 400) },
+        { path: '/b', load: slow('b', 100) },
+      ],
+    })
+    await router.mount(container)
+    void router.navigate('/a')
+    void router.navigate('/b')
+    const waiting = router.settled()
+    await vi.advanceTimersByTimeAsync(500)
+    await waiting
+    expect(container.querySelector('h1')!.textContent).toBe('b')
+  })
+
+  it('resolves, and does not hang, when a page fails to load', async () => {
+    window.history.replaceState(null, '', '/')
+    router = createRouter({
+      routes: [
+        { path: '/', load: page('home') },
+        { path: '/broken', load: () => Promise.reject(new Error('offline')) },
+      ],
+    })
+    await router.mount(container)
+    const failed = router.navigate('/broken').catch((e: Error) => e.message)
+    await router.settled()
+    await expect(failed).resolves.toBe('offline')
+  })
+})
+
 void flush

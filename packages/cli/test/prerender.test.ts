@@ -98,7 +98,10 @@ describe('tessera build --prerender', () => {
   })
 
   it('has the content, the title and the styles in the HTML, and the live script after them', () => {
-    const about = read('about/index.html')
+    const raw = read('about/index.html')
+    // Every element says the order it was made in, which is how the page is hydrated.
+    expect(raw).toMatch(/<h1 data-h="\d+">About<\/h1>/)
+    const about = raw.replace(/ data-h="\d+"/g, '')
     expect(about).toContain('<title>About us</title>')
     expect(about).toContain('<h1>About</h1>')
     // Text is escaped; markup in the page is kept.

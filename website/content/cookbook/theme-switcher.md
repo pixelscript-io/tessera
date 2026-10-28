@@ -53,6 +53,64 @@ setTheme(saved ?? 'auto')
 
 Put this in `app/main.ts`, above `createApp()`.
 
+## One button that remembers
+
+The same thing as shared state, with one button. `persisted` keeps the choice in the browser and reads it back, so the file needs no storage code of its own:
+
+```ts
+// app/state/theme.ts
+import { effect, persisted } from '@pixelscriptio/tessera/core'
+import { setTheme } from '@pixelscriptio/tessera/tokens'
+
+export const mode = persisted<'light' | 'dark'>('theme', 'light', {
+  validate: (value): value is 'light' | 'dark' => value === 'light' || value === 'dark',
+})
+
+// A prerender has no page to set the theme on.
+effect(() => {
+  if (typeof document !== 'undefined') setTheme(mode.value === 'dark' ? 'dark' : null)
+})
+
+export function toggle() {
+  mode.value = mode.value === 'dark' ? 'light' : 'dark'
+}
+```
+
+Load the file before the first render, so the page starts in the right theme and does not flash. In `app/main.ts`:
+
+```ts
+import './state/theme'
+```
+
+The button is then a component like any other, and it names `theme` with no import:
+
+```xml tess
+<contract>
+{
+  "name": "ThemeToggle",
+  "role": "group",
+  "parts": ["root"],
+  "description": "A button that switches between the light and the dark theme."
+}
+</contract>
+
+<template>
+  <div class="root">
+    <Button tone="neutral" emphasis="outline" size="sm" @press="theme.toggle">
+      {theme.mode === 'dark' ? 'Light theme' : 'Dark theme'}
+    </Button>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+}
+</style>
+```
+
+`validate` is there because the storage can hold anything: a value that is not one of the two themes starts the page in the light theme. See [Sharing state](/guide/shared-state#keeping-state) for `persisted` and its version and migration.
+
 ## Next steps
 
 [A multi-brand app](/cookbook/multi-brand).

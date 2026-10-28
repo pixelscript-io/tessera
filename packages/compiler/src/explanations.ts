@@ -811,7 +811,7 @@ export const EXPLANATIONS: Record<string, Explanation> = {
   },
   T6005: {
     cause:
-      'The `<page>` block is not an object of known fields: `title` (a string) and `layout` (a name or `false`).',
+      'The `<page>` block is not an object of known fields: `title` (a string), `layout` (a name or `false`), `data` (a list of reads, each a path or `{ "path", "api", "query" }`) and `wait` (true or false).',
     fix: 'Fix the field the message names.',
     example: pageExample(page('<page>\n{ "titel": "About" }\n</page>\n')),
   },

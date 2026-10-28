@@ -14,6 +14,7 @@ const guide = [
   { text: 'Tessera UI', link: '/guide/tessera-ui' },
   { text: 'Starter presets', link: '/guide/presets' },
   { text: 'The command line', link: '/guide/cli' },
+  { text: 'Every command', link: '/guide/commands' },
   { text: 'Importing and exporting tokens', link: '/guide/interchange' },
   { text: 'The design system docs', link: '/guide/docs-app' },
   { text: 'Custom elements and React', link: '/guide/elements' },

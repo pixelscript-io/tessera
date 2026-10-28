@@ -48,7 +48,10 @@ export function createStringNode(tag: string): StringNode {
  * The renderer adapter for a tree of `StringNode`s. Properties that a browser would show as attributes (`value`,
  * `checked`, `selected`) become attributes, so the HTML has what a page would have when it first loads.
  */
-export function createStringAdapter(): RendererAdapter<StringNode, StringNode> {
+export function createStringAdapter(
+  options: { marks?: boolean } = {},
+): RendererAdapter<StringNode, StringNode> & { reset(): void } {
+  let made = 0
   const detach = (node: StringNode) => {
     const parent = node.parent
     if (!parent?.children) return
@@ -69,7 +72,16 @@ export function createStringAdapter(): RendererAdapter<StringNode, StringNode> {
     else el.attrs?.set(name, value)
   }
   return {
-    createElement: (tag) => createStringNode(tag),
+    createElement: (tag) => {
+      const node = createStringNode(tag)
+      // With marks, each element says the order it was made in, which is how a browser finds it again to hydrate.
+      if (options.marks) node.attrs!.set('data-h', String(++made))
+      return node
+    },
+    /** Start the numbering again: the next page is rendered from the beginning. */
+    reset() {
+      made = 0
+    },
     createText: (text) => ({ kind: 'text', text, parent: null }),
     setAttribute: set,
     setProperty(el, name, value) {

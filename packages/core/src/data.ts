@@ -8,6 +8,7 @@ import {
   type ReadonlySignal,
   type Signal,
 } from './signals'
+import { isPlainData } from './shared'
 
 /**
  * Data from a server: `get` reads, `post`, `put`, `patch` and `del` write.
@@ -139,6 +140,12 @@ export interface Api {
   put<T = unknown, I = Body>(path: string, options?: WriteOptions<T>): Action<T, I>
   patch<T = unknown, I = Body>(path: string, options?: WriteOptions<T>): Action<T, I>
   del<T = unknown, I = Body>(path: string, options?: WriteOptions<T>): Action<T, I>
+  /**
+   * Start a read before anything shows it, so the answer is on its way when the page that needs it appears (the router
+   * does this for the data a page declares). The read that comes later joins this request and uses its answer. Resolves
+   * when the answer is in, and never rejects: a failure is for the read to show.
+   */
+  prefetch(path: string, params?: Params, options?: ReadOptions<unknown>): Promise<void>
   /** Make the reads under and over `path` ask again: now if something is showing them, at their next use if not. */
   invalidate(path: string): void
   /** Forget every answer. Reads that are showing something start again. */
@@ -176,6 +183,66 @@ interface Entry {
   staleAfter: number
   focus: boolean
   request: RequestOptions
+  /** Asked for ahead of the page (`prefetch`): what a prerender writes into the page. */
+  prefetched: boolean
+  /** Why a prefetch could not get it. A read that asks again later clears `error`, so this is kept apart. */
+  prefetchError?: ApiError
+  /** Came with the page, not from the server: shown at once, and asked again after the page is up. */
+  seeded: boolean
+}
+
+/** Answers that came with the page, by address, for the first read of each (`seedData`). */
+const seeds = new Map<string, unknown>()
+
+/** What an api offers the page as a whole. */
+interface Internals {
+  exportPrefetched(): Array<{ url: string; data: unknown }>
+  failedPrefetches(): Array<{ url: string; message: string }>
+  revalidate(): void
+  clear(): void
+}
+const registry = new Set<WeakRef<Internals>>()
+
+const live = (): Internals[] => {
+  const out: Internals[] = []
+  for (const ref of [...registry]) {
+    const api = ref.deref()
+    if (api) out.push(api)
+    else registry.delete(ref)
+  }
+  return out
+}
+
+/**
+ * Give reads the answers that came with the page: each is used by the first read of its address, as if it had just
+ * been fetched, and shown without a request. Anything that is not an address with an answer is ignored.
+ */
+export function seedData(list: ReadonlyArray<{ url: string; data: unknown }>): void {
+  for (const item of list) {
+    if (item && typeof item === 'object' && typeof item.url === 'string' && 'data' in item)
+      seeds.set(item.url, item.data)
+  }
+}
+
+/** What was prefetched and answered, by address: what a prerender writes into the page. Only data JSON can carry. */
+export function exportPrefetched(): Array<{ url: string; data: unknown }> {
+  return live().flatMap((api) => api.exportPrefetched())
+}
+
+/** What was prefetched and could not be had, with why: a prerender does not write a page whose declared data it lacks. */
+export function failedPrefetches(): Array<{ url: string; message: string }> {
+  return live().flatMap((api) => api.failedPrefetches())
+}
+
+/** Ask again for every answer that came with the page and is being shown, now that the page is up. */
+export function revalidateSeeded(): void {
+  for (const api of live()) api.revalidate()
+}
+
+/** Forget every answer of every api, and the ones waiting to be used. */
+export function clearAllApis(): void {
+  seeds.clear()
+  for (const api of live()) api.clear()
 }
 
 const PLACEHOLDER = /\/:([A-Za-z_]\w*)/g
@@ -436,10 +503,29 @@ export function createApi(initial: ApiOptions = {}): Api {
         staleAfter: staleAfter(),
         focus: true,
         request: { retry: 2 },
+        prefetched: false,
+        seeded: false,
       }
       entries.set(key, entry)
+      // An answer that came with the page is this one's, and is used only once.
+      if (seeds.has(url)) {
+        entry.data.value = seeds.get(url)
+        entry.fetched = true
+        entry.updatedAt = Date.now()
+        entry.seeded = true
+        seeds.delete(url)
+      }
     }
     return entry
+  }
+
+  /** Drop an answer nothing is using after the time answers are kept. */
+  function expireLater(entry: Entry): void {
+    if (entry.gc) clearTimeout(entry.gc)
+    entry.gc = setTimeout(() => {
+      if (entry.subscribers === 0 && entries.get(entry.key) === entry) entries.delete(entry.key)
+    }, keepFor())
+    ;(entry.gc as { unref?: () => void }).unref?.()
   }
 
   /** Fetch now, or (if a request is running) once more when it is done. Resolves when it is over; never rejects. */
@@ -519,10 +605,7 @@ export function createApi(initial: ApiOptions = {}): Api {
     if (entry.subscribers > 0) return
     // Nobody is waiting for it: stop it, and keep what was fetched for a while in case someone asks again.
     entry.controller?.abort()
-    entry.gc = setTimeout(() => {
-      if (entry.subscribers === 0 && entries.get(entry.key) === entry) entries.delete(entry.key)
-    }, keepFor())
-    ;(entry.gc as { unref?: () => void }).unref?.()
+    expireLater(entry)
   }
 
   function invalidatePaths(paths: string[]): void {
@@ -597,6 +680,38 @@ export function createApi(initial: ApiOptions = {}): Api {
     }
   }
 
+  function prefetch(
+    path: string,
+    params: Params = {},
+    options: ReadOptions<unknown> = {},
+  ): Promise<void> {
+    const { path: filled, rest, missing, invalid } = fill(path, unwrapValues(params))
+    // A value that is not there yet, or one that cannot be used, means there is nothing to ask for: the read says why.
+    if (missing || invalid) return Promise.resolve()
+    const url = join(filled) + queryString(rest)
+    const entry = entryFor(`GET ${url}`, url, filled)
+    entry.prefetched = true
+    if (entry.subscribers === 0) {
+      entry.request = {
+        headers: options.headers,
+        parse: options.parse as RequestOptions['parse'],
+        retry: options.retry ?? 2,
+      }
+      entry.staleAfter = options.staleAfter ?? staleAfter()
+      // Nobody has asked for it yet: if nobody does, it goes after the time answers are kept.
+      expireLater(entry)
+    }
+    const started =
+      !entry.promise &&
+      (!entry.fetched || entry.stale || Date.now() - entry.updatedAt > entry.staleAfter)
+        ? run(entry)
+        : (entry.promise ?? Promise.resolve())
+    // What a prefetch found out stays found out: the read that comes later may ask again and clear the error.
+    return started.then(() => {
+      entry.prefetchError = entry.fetched ? undefined : entry.error.peek()
+    })
+  }
+
   function action<T, I>(method: string, path: string, options: WriteOptions<T> = {}): Action<T, I> {
     const running = state(0)
     const error = state<ApiError | Error | undefined>(undefined)
@@ -666,8 +781,9 @@ export function createApi(initial: ApiOptions = {}): Api {
     }
   }
 
-  return {
+  const api: Api = {
     get,
+    prefetch,
     post: (path, options) => action('POST', path, options),
     put: (path, options) => action('PUT', path, options),
     patch: (path, options) => action('PATCH', path, options),
@@ -687,7 +803,40 @@ export function createApi(initial: ApiOptions = {}): Api {
       }
     },
   }
+
+  const internals: Internals = {
+    exportPrefetched: () =>
+      [...entries.values()]
+        .filter(
+          (e) =>
+            e.prefetched &&
+            e.fetched &&
+            !e.error.value &&
+            e.data.peek() !== undefined &&
+            isPlainData(e.data.peek()),
+        )
+        .map((e) => ({ url: e.url, data: e.data.peek() })),
+    failedPrefetches: () =>
+      [...entries.values()]
+        .filter((e) => e.prefetched && !e.fetched && e.prefetchError)
+        .map((e) => ({ url: e.url, message: e.prefetchError!.message })),
+    revalidate() {
+      for (const entry of entries.values()) {
+        if (!entry.seeded || entry.subscribers === 0) continue
+        entry.seeded = false
+        void run(entry)
+      }
+    },
+    clear: clearAll,
+  }
+  // The registry holds the internals weakly; the api holds them for as long as it lives.
+  registry.add(new WeakRef(internals))
+  held.set(api, internals)
+  return api
 }
+
+/** Keeps what an api offers the page alive as long as the api is. */
+const held = new WeakMap<object, Internals>()
 
 /** The browser telling us the person is back: the tab became visible, or the window got focus. */
 function browserFocus(callback: () => void): () => void {
@@ -713,5 +862,37 @@ export const put = shared.put
 export const patch = shared.patch
 /** Delete (`delete` is a reserved word). */
 export const del = shared.del
+export const prefetch = shared.prefetch
 export const invalidate = shared.invalidate
 export const clearApi = shared.clear
+
+/** The id of the script the prerender writes the answers into. */
+const DATA_SCRIPT_ID = 'tessera-data'
+
+/**
+ * The answers of what a page declared, as a script the browser does not run (it is JSON), to put in the page's HTML.
+ * Characters that could end the script or be read as markup are written as escapes, so whatever a server answered
+ * cannot add to the page. Empty when there is nothing to write.
+ */
+export function dataScript(entries: ReadonlyArray<{ url: string; data: unknown }>): string {
+  if (entries.length === 0) return ''
+  const json = JSON.stringify({ v: 1, entries }).replace(
+    /[<>&\u2028\u2029]/g,
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  )
+  return `<script type="application/json" id="${DATA_SCRIPT_ID}">${json}</script>`
+}
+
+/** Read what `dataScript` wrote into the page, if it is there and is what it should be, and hand it to the reads. */
+export function seedFromDocument(doc: {
+  getElementById(id: string): { textContent: string | null } | null
+}): void {
+  const text = doc.getElementById(DATA_SCRIPT_ID)?.textContent
+  if (!text) return
+  try {
+    const parsed = JSON.parse(text) as { v?: unknown; entries?: unknown }
+    if (parsed && parsed.v === 1 && Array.isArray(parsed.entries)) seedData(parsed.entries)
+  } catch {
+    // Not what was written: the page asks for its data as it would have.
+  }
+}

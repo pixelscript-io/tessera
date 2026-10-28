@@ -8,6 +8,8 @@ import { loadConfigFile } from './config-file'
 import { Project } from './project'
 import { validateConfig, type TesseraConfig } from './config'
 import { generateApisDts } from './apis'
+import { readPageMeta, type PageMeta } from './compile'
+import { PUBLIC_PACKAGES } from './packages'
 import { generateStateDts } from './shared-state'
 import { generateComponentsDts } from './dts'
 import { generateRoutesDts, generateRoutesModule, routeDiagnostics } from './routes'
@@ -79,6 +81,25 @@ export function tessera(options: TesseraOptions = {}): Plugin {
   const styles = new Map<string, string>()
 
   const tokensDir = () => project.tokensDir()
+  /** Is this a file of `app/state`: a script that is not a declaration or a test, in the state folder? */
+  const isStateFile = (id: string): boolean =>
+    /\.(?:ts|js|mts|mjs)$/.test(id) &&
+    !/\.(?:d|test|spec)\.(?:ts|js|mts|mjs)$/.test(id) &&
+    id.replaceAll('\\', '/').startsWith(`${project.state().dir}/`)
+
+  /**
+   * Put the call that marks a state file first in it. What the file's body makes with `state()` is then shared state:
+   * `resetState()` puts it back, and in the dev server an edit of the file keeps the values. `import.meta.hot` is
+   * undefined in a build, where the call only does the first. The name is written as JSON so it cannot end the string.
+   */
+  const markStateFile = (code: string, file: string) => ({
+    code:
+      `import { __beginStateFile } from '${PUBLIC_PACKAGES.core}'\n` +
+      `__beginStateFile(${JSON.stringify(file)}, import.meta.hot)\n` +
+      code,
+    map: null,
+  })
+
   const loadTokens = (): DesignTokens | null => project.tokens()
   /** The tokens of one of the configured design systems, by name, whichever is active. */
   const tokensOfSystem = (name: string, fail: (message: string) => never): DesignTokens | null => {
@@ -345,12 +366,29 @@ export function tessera(options: TesseraOptions = {}): Plugin {
         const current = loadRoutes()
         const errors = routeErrors()
         if (errors) this.error(errors)
+        // What each page says it needs (its `<page>` block) goes into its route, so the router can ask for it when the
+        // person navigates. A page that changes is read again.
+        const pages = new Map<string, PageMeta>()
+        for (const route of current.manifest.routes) {
+          const file = join(current.dir, route.file)
+          try {
+            pages.set(route.file, readPageMeta(readFileSync(file, 'utf8')))
+            this.addWatchFile(file)
+          } catch {
+            // A page that cannot be read is compiled, and its error said, by its own request.
+          }
+        }
+        const apis = project.apis().apis.map((api) => ({
+          name: api.name,
+          importPath: `/${relative(root, api.file).replaceAll('\\', '/')}`,
+        }))
         // Adding a page changes the list; the dev server's watcher does that, a build reads it once.
         return generateRoutesModule(
           current.manifest,
           `/${pagesDisplay()}`,
           current.layouts,
           `/${relative(root, current.layoutsDir).replaceAll('\\', '/')}`,
+          { pages, apis },
         )
       }
       const [path, query] = id.split('?')
@@ -379,8 +417,10 @@ export function tessera(options: TesseraOptions = {}): Plugin {
             loc: { file: id, line: problems[0]!.line, column: problems[0]!.column },
           })
         }
-        return null
+        return rawId === id && isStateFile(id) ? markStateFile(code, file) : null
       }
+      if (rawId === id && isStateFile(id))
+        return markStateFile(code, relative(root, id).replaceAll('\\', '/'))
 
       if (!id.endsWith('.tess')) return null
       // `?raw`, `?url` and `?inline` imports want the file as text, not a compiled component.
