@@ -32,6 +32,33 @@ export interface TesseraConfig {
   autoImports?: boolean
   /** Lower the severity of rules for paths, with a reason and optionally an expiry. */
   severity?: SeverityRule[]
+  /**
+   * The design systems in `system/`: each is a folder of tokens (`system/<path>/tokens`) that the shared
+   * `system/components` are styled by. `path` is the folder under `system/` and defaults to the lower-cased name.
+   */
+  systems?: SystemEntry[]
+  /** The name of the system the app builds with and the docs show first. Default: the first of `systems`. */
+  defaultSystem?: string
+  /** `false` turns off the docs that `tessera dev` serves beside the app. Default `true`. */
+  docs?: boolean
+}
+
+export interface SystemEntry {
+  name: string
+  /** Folder under `system/`, such as `/tailwind`. Default: the name in lower case. */
+  path?: string
+}
+
+const folderOf = (system: SystemEntry): string =>
+  (system.path ?? system.name.toLowerCase()).replace(/^[\\/]+|[\\/]+$/g, '').replaceAll('\\', '/')
+
+/** The folder under `system/` that holds the tokens of the active system, or undefined if the config names none. */
+export function activeSystemFolder(config: TesseraConfig): string | undefined {
+  const wanted = config.defaultSystem
+  const systems = config.systems ?? []
+  if (wanted === undefined) return systems[0] ? folderOf(systems[0]) : undefined
+  const found = systems.find((s) => s.name.toLowerCase() === wanted.toLowerCase())
+  return found ? folderOf(found) : wanted
 }
 
 export interface ResolvedConfig {
@@ -108,9 +135,9 @@ export function resolveConfig(config: TesseraConfig = {}): ResolvedConfig {
 }
 
 export interface ConfigIssue {
-  code: 'T2112'
+  code: 'T2112' | 'T2115'
   message: string
-  /** Index into `severity`. */
+  /** Index into `severity` (T2112) or `systems` (T2115; 0 when the problem is the default). */
   index: number
 }
 
@@ -146,5 +173,55 @@ export function validateConfig(config: TesseraConfig): ConfigIssue[] {
       })
     }
   })
+  issues.push(...validateSystems(config))
+  return issues
+}
+
+/** Problems with `systems` and `defaultSystem`: a missing name, two the same, a folder outside `system/`, a default not in the list. */
+function validateSystems(config: TesseraConfig): ConfigIssue[] {
+  const issues: ConfigIssue[] = []
+  const systems = config.systems ?? []
+  const names = new Map<string, number>()
+  const folders = new Map<string, number>()
+  systems.forEach((system, index) => {
+    const bad = (message: string) => issues.push({ code: 'T2115', index, message })
+    const where = `systems[${index}]`
+    if (typeof system.name !== 'string' || !system.name.trim()) {
+      bad(`${where} has no name. Give each system a name, such as { name: 'Tailwind' }.`)
+      return
+    }
+    const folder = folderOf(system)
+    if (!folder || folder.split('/').includes('..') || /^[A-Za-z]:/.test(folder)) {
+      bad(
+        `${where} (${system.name}) has the path "${system.path}", which is not a folder inside system/. Use a name such as "/${system.name.toLowerCase()}".`,
+      )
+      return
+    }
+    const sameName = names.get(system.name.toLowerCase())
+    if (sameName !== undefined) {
+      bad(
+        `${where} repeats the name "${system.name}" (see systems[${sameName}]). System names must be different.`,
+      )
+      return
+    }
+    names.set(system.name.toLowerCase(), index)
+    const sameFolder = folders.get(folder)
+    if (sameFolder !== undefined) {
+      bad(
+        `${where} (${system.name}) uses the folder "${folder}", which systems[${sameFolder}] already uses. Give each system its own path.`,
+      )
+    } else folders.set(folder, index)
+  })
+  if (
+    config.defaultSystem !== undefined &&
+    systems.length &&
+    !names.has(config.defaultSystem.toLowerCase())
+  ) {
+    issues.push({
+      code: 'T2115',
+      index: 0,
+      message: `defaultSystem is "${config.defaultSystem}", which is not in systems. The systems are: ${systems.map((s) => s.name).join(', ')}.`,
+    })
+  }
   return issues
 }

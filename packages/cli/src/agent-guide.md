@@ -8,7 +8,7 @@ A `.tess` file is a component, a page or a layout. It has up to five blocks, in 
 
 Files in `app/components` are components, imported by tag name with no `import` (`<Chip>` finds `Chip.tess`). The file name equals the contract `name`. The contract is JSON, and it is the component's whole public surface: its `parts` (the class names other code may style), its `variants` (the first value is the default), its `slots` and its `events`.
 
-The components of the Tessera UI library (`@pixelscriptio/tessera-ui`, which the presets install) are used the same way, with no `import`: `<Button>`, `<TextField>`, `<Dialog>`. Look a component up with `npx @pixelscriptio/tessera manifest` or the MCP server before using it. To change one, run `npx @pixelscriptio/tessera eject Button`: the copy in `app/components` replaces the library's.
+The components in `system/components` (a new project has `Button` and `Card`) are used the same way, with no `import`: `<Button>`, `<Card>`. Look a component up with `npx @pixelscriptio/tessera manifest` or the MCP server before using it, and edit its file in `system/components` to change it.
 
 ```xml tess
 <contract>

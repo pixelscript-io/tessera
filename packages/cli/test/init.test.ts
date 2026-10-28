@@ -5,7 +5,6 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -19,14 +18,10 @@ import { VERSION } from '../src/version'
 import { read, run } from './helpers'
 
 const made: string[] = []
-const library = fileURLToPath(new URL('../../ui', import.meta.url))
-/** A folder to start a project in, with the component library installed above it, as after `npm install`. */
-const scratch = (installed = true) => {
+/** A folder to start a project in. */
+const scratch = () => {
   const dir = mkdtempSync(join(tmpdir(), 'tessera-init-'))
   made.push(dir)
-  if (!installed) return dir
-  mkdirSync(join(dir, 'node_modules/@pixelscriptio'), { recursive: true })
-  symlinkSync(library, join(dir, 'node_modules/@pixelscriptio/tessera-ui'), 'junction')
   return dir
 }
 afterAll(() => {
@@ -53,109 +48,107 @@ export const DOCS_TOKENS = [
 
 const files = (dir: string, paths: string[]) => paths.map((p) => [p, existsSync(join(dir, p))])
 
-describe('tessera init --preset tessera', () => {
-  it('writes a design system of its own, three components and a styled page', async () => {
-    const dir = scratch()
-    const { code, out } = await run(dir, 'init', 'my-app', '--preset', 'tessera')
-    expect(code).toBe(0)
-    expect(out).toContain('Started a Tessera project (tessera preset) in my-app.')
-    const root = join(dir, 'my-app')
-    for (const [file, there] of files(root, [
-      'system/tokens/colors.tokens.json',
-      'system/tokens/scale.tokens.json',
-      'system/tokens/effects.tokens.json',
-      'system/tokens/semantic.tokens.json',
-      'system/tokens/themes/dark.tokens.json',
-      'system/components/Card.tess',
-      'system/components/Badge.tess',
-      'app/main.ts',
-      'app/layouts/default.tess',
-      'app/pages/index.tess',
-      'app/apis/default.ts',
-      'app/apis/default.api.json',
-    ])) {
-      expect(there, String(file)).toBe(true)
-    }
-    // Nothing from Tailwind.
-    expect(existsSync(join(root, 'system/tokens/TAILWIND-LICENSE'))).toBe(false)
-  })
+/** What every preset starts with: the app, its two components, and the shared state and API examples. */
+const STARTER = [
+  'package.json',
+  'tessera.config.ts',
+  'tsconfig.json',
+  '.gitignore',
+  'app/main.ts',
+  'app/tess.d.ts',
+  'app/layouts/default.tess',
+  'app/pages/index.tess',
+  'app/apis/default.ts',
+  'app/apis/default.api.json',
+  'app/state/counter.ts',
+  'system/components/Button.tess',
+  'system/components/Button.docs.md',
+  'system/components/Card.tess',
+  'system/components/Card.docs.md',
+]
 
-  it('passes tessera check, with no contrast failure in either theme', async () => {
-    const dir = scratch()
-    await run(dir, 'init', '--preset', 'tessera')
-    const { code, out } = await run(dir, 'check')
-    expect(out).toContain('0 errors, 0 warnings in 27 files.')
-    expect(code).toBe(0)
-  })
+for (const [preset, folder, name] of [
+  ['tailwind', 'tailwind', 'Tailwind'],
+  ['unstyled', 'unstyled', 'Unstyled'],
+] as const) {
+  describe(`tessera init --preset ${preset}`, () => {
+    it('writes the starter app, a Button and a Card, and the tokens of its own design system', async () => {
+      const dir = scratch()
+      const { code, out } = await run(dir, 'init', 'my-app', '--preset', preset)
+      expect(code).toBe(0)
+      expect(out).toContain(`Started a Tessera project (${preset} preset) in my-app.`)
+      expect(out).toContain('npm install')
+      expect(out).toContain('npm run dev')
+      const root = join(dir, 'my-app')
+      for (const [file, there] of files(root, [
+        ...STARTER,
+        `system/${folder}/tokens/colors.tokens.json`,
+        `system/${folder}/tokens/scale.tokens.json`,
+        `system/${folder}/tokens/effects.tokens.json`,
+        `system/${folder}/tokens/themes/dark.tokens.json`,
+      ])) {
+        expect(there, String(file)).toBe(true)
+      }
+      // Two components only, and tokens only in the system's own folder.
+      expect(readdirSync(join(root, 'system/components')).sort()).toEqual([
+        'Button.docs.md',
+        'Button.tess',
+        'Card.docs.md',
+        'Card.tess',
+      ])
+      expect(existsSync(join(root, 'system/tokens'))).toBe(false)
+      // A project needs no Vite config or HTML page of its own.
+      expect(existsSync(join(root, 'vite.config.ts'))).toBe(false)
+      expect(existsSync(join(root, 'index.html'))).toBe(false)
+    })
 
-  it('has the tokens the docs follow, the same names the Tailwind preset uses', async () => {
-    const dir = scratch()
-    await run(dir, 'init', '--preset', 'tessera')
-    await run(dir, 'tokens', 'build')
-    const manifest = JSON.parse(read(dir, '.tessera/tokens/manifest.json')) as {
-      tokens: Array<{ path: string }>
-      themes: Array<{ name: string }>
-    }
-    const paths = new Set(manifest.tokens.map((t) => t.path))
-    for (const path of DOCS_TOKENS) expect(paths.has(path), path).toBe(true)
-    expect(manifest.themes.map((t) => t.name)).toEqual(['dark'])
-  })
+    it('names its design system in the config, and does not depend on a component library', async () => {
+      const dir = scratch()
+      await run(dir, 'init', '--preset', preset)
+      const config = read(dir, 'tessera.config.ts')
+      expect(config).toContain(`systems: [{ name: '${name}', path: '/${folder}' }]`)
+      expect(config).toContain(`defaultSystem: '${name}'`)
+      expect(config).toContain('// docs: false')
+      const manifest = JSON.parse(read(dir, 'package.json')) as {
+        dependencies: Record<string, string>
+      }
+      expect(Object.keys(manifest.dependencies)).toEqual(['@pixelscriptio/tessera'])
+    })
 
-  it('depends on the component library instead of copying its components', () => {
-    expect(presetFiles('tessera')['system/components/Button.tess']).toBeUndefined()
-  })
+    it('passes tessera check, with no contrast failure in either theme', async () => {
+      const dir = scratch()
+      await run(dir, 'init', '--preset', preset)
+      const { code, out } = await run(dir, 'check')
+      expect(out).toMatch(/0 errors, 0 warnings in \d+ files\./)
+      expect(code).toBe(0)
+    })
 
-  it('is the preset a project gets when nothing says otherwise', async () => {
-    const dir = scratch()
-    const { out } = await run(dir, 'init')
-    expect(out).toContain('(tessera preset)')
-  })
-})
+    it('has the tokens the docs follow, and a dark theme', async () => {
+      const dir = scratch()
+      await run(dir, 'init', '--preset', preset)
+      await run(dir, 'tokens', 'build')
+      const manifest = JSON.parse(read(dir, '.tessera/tokens/manifest.json')) as {
+        tokens: Array<{ path: string }>
+        themes: Array<{ name: string }>
+      }
+      const paths = new Set(manifest.tokens.map((t) => t.path))
+      for (const path of DOCS_TOKENS) expect(paths.has(path), path).toBe(true)
+      expect(manifest.themes.map((t) => t.name)).toEqual(['dark'])
+    })
 
-describe('tessera init --preset tailwind', () => {
-  it('writes a full design system, three components and a styled page', async () => {
-    const dir = scratch()
-    const { code, out } = await run(dir, 'init', 'my-app', '--preset', 'tailwind')
-    expect(code).toBe(0)
-    expect(out).toContain('Started a Tessera project (tailwind preset) in my-app.')
-    expect(out).toContain('npm install')
-    expect(out).toContain('npm run dev')
-    const root = join(dir, 'my-app')
-    for (const [file, there] of files(root, [
-      'package.json',
-      'tessera.config.ts',
-      'tsconfig.json',
-      '.gitignore',
-      'system/tokens/colors.tokens.json',
-      'system/tokens/scale.tokens.json',
-      'system/tokens/effects.tokens.json',
-      'system/tokens/layout.tokens.json',
-      'system/tokens/semantic.tokens.json',
-      'system/tokens/themes/dark.tokens.json',
-      'system/tokens/TAILWIND-LICENSE',
-      'system/components/Card.tess',
-      'system/components/Badge.tess',
-      'app/main.ts',
-      'app/tess.d.ts',
-      'app/layouts/default.tess',
-      'app/pages/index.tess',
-    ])) {
-      expect(there, String(file)).toBe(true)
-    }
-    // A project needs no Vite config or HTML page of its own.
-    expect(existsSync(join(root, 'vite.config.ts'))).toBe(false)
-    expect(existsSync(join(root, 'index.html'))).toBe(false)
+    it('has the same Button and Card as the Tessera UI catalogue, so there is one copy of each', () => {
+      const ui = (file: string) =>
+        readFileSync(fileURLToPath(new URL(`../../ui/components/${file}`, import.meta.url)), 'utf8')
+      const written = presetFiles(preset)
+      for (const file of ['Button.tess', 'Button.docs.md', 'Card.tess', 'Card.docs.md']) {
+        expect(written[`system/components/${file}`], file).toBe(ui(file))
+      }
+    })
   })
+}
 
-  it('passes tessera check, with no contrast failure in either theme', async () => {
-    const dir = scratch()
-    await run(dir, 'init', '--preset', 'tailwind')
-    const { code, out } = await run(dir, 'check')
-    expect(out).toContain('0 errors, 0 warnings in 27 files.')
-    expect(code).toBe(0)
-  })
-
-  it('has the design system the spec lists, built from Tailwind', async () => {
+describe('tessera init --preset tailwind: the tokens', () => {
+  it('are built from Tailwind, with its license', async () => {
     const dir = scratch()
     await run(dir, 'init', '--preset', 'tailwind')
     const { out } = await run(dir, 'tokens', 'build')
@@ -186,83 +179,55 @@ describe('tessera init --preset tailwind', () => {
     ]) {
       expect(paths.has(path), path).toBe(true)
     }
-    expect(read(dir, 'system/tokens/themes/dark.tokens.json')).toContain(
+    expect(existsSync(join(dir, 'system/tailwind/tokens/TAILWIND-LICENSE'))).toBe(true)
+    expect(read(dir, 'system/tailwind/tokens/themes/dark.tokens.json')).toContain(
       'prefers-color-scheme: dark',
     )
   })
-
-  it('depends on the component library instead of copying its components', () => {
-    expect(presetFiles('tailwind')['system/components/Button.tess']).toBeUndefined()
-  })
 })
 
-describe('the component library', () => {
-  for (const preset of ['tessera', 'tailwind'] as const) {
-    it(`is a dependency of the ${preset} preset, which writes only its own Card and Badge`, async () => {
-      const dir = scratch()
-      await run(dir, 'init', '--preset', preset)
-      const manifest = JSON.parse(read(dir, 'package.json')) as {
-        dependencies: Record<string, string>
-      }
-      expect(manifest.dependencies['@pixelscriptio/tessera-ui']).toBe(`^${VERSION}`)
-      expect(readdirSync(join(dir, 'system/components')).sort()).toEqual([
-        'Badge.tess',
-        'Card.tess',
-      ])
-    })
-  }
-
-  it('is added to a package.json that already exists', async () => {
+describe('tessera init --preset unstyled: the tokens', () => {
+  it('have plain values: square corners, no shadow, and a README with examples of changing them', async () => {
     const dir = scratch()
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: 'mine', dependencies: { '@pixelscriptio/tessera': '^0.8.0' } }),
-    )
-    await run(dir, 'init', '--preset', 'tessera')
-    const manifest = JSON.parse(read(dir, 'package.json')) as {
-      dependencies: Record<string, string>
+    await run(dir, 'init', '--preset', 'unstyled')
+    await run(dir, 'tokens', 'build')
+    const manifest = JSON.parse(read(dir, '.tessera/tokens/manifest.json')) as {
+      tokens: Array<{ path: string; values: { base: { css: string } } }>
     }
-    expect(manifest.dependencies['@pixelscriptio/tessera-ui']).toBe(`^${VERSION}`)
-  })
-
-  it('is not a dependency when no design system is chosen', async () => {
-    const dir = scratch()
-    await run(dir, 'init', '--preset', 'none')
-    expect(read(dir, 'package.json')).not.toContain('tessera-ui')
+    const css = (path: string) => manifest.tokens.find((t) => t.path === path)?.values.base.css
+    expect(css('radius.md')).toBe('0px')
+    expect(css('color.surface.default')).toBe('#ffffff')
+    expect(manifest.tokens.length).toBeLessThan(80)
+    expect(existsSync(join(dir, 'system/unstyled/tokens/TAILWIND-LICENSE'))).toBe(false)
+    expect(read(dir, 'system/unstyled/tokens/README.md')).toContain('Round the corners.')
   })
 })
 
-describe('tessera init --preset none', () => {
-  it('writes no tokens, themes or components, and the examples commented out', async () => {
-    const dir = scratch()
-    await run(dir, 'init', '--preset', 'none')
-    expect(existsSync(join(dir, 'system/components'))).toBe(false)
-    expect(existsSync(join(dir, 'system/tokens/base.tokens.json'))).toBe(false)
-    // Inert examples: not *.tokens.json and not *.tess, so nothing reads them until they are renamed.
-    expect(existsSync(join(dir, 'system/tokens/base.tokens.json.example'))).toBe(true)
-    expect(existsSync(join(dir, 'app/components/Example.tess.example'))).toBe(true)
-    expect(read(dir, 'app/main.ts')).toContain("// import 'virtual:tessera/tokens.css'")
-    expect(read(dir, 'app/pages/index.tess')).toContain('<!--')
-    expect(read(dir, 'system/README.md')).toContain('Rename `tokens/base.tokens.json.example`')
-  })
-
-  it('passes tessera check', async () => {
-    const dir = scratch(false)
-    await run(dir, 'init', '--preset', 'none')
-    const { code, out } = await run(dir, 'check')
-    expect(out).toContain('0 errors, 0 warnings in 2 files.')
-    expect(code).toBe(0)
-  })
-
-  it('has tokens after the example is renamed, as its README says', async () => {
-    const dir = scratch()
-    await run(dir, 'init', '--preset', 'none')
-    writeFileSync(
-      join(dir, 'system/tokens/base.tokens.json'),
-      read(dir, 'system/tokens/base.tokens.json.example').replace(/\n\s*"\$comment"[^\n]*/g, ''),
+describe('the starter app', () => {
+  it('shows a counter from shared state and a list from an API call, with the same page in every preset', () => {
+    for (const preset of ['tailwind', 'unstyled'] as const) {
+      const page = presetFiles(preset)['app/pages/index.tess']!
+      expect(page, preset).toContain('counter.bump()')
+      expect(page, preset).toContain("get('/objects')")
+    }
+    expect(presetFiles('tailwind')['app/pages/index.tess']).toBe(
+      presetFiles('unstyled')['app/pages/index.tess'],
     )
-    const { out } = await run(dir, 'tokens', 'build')
-    expect(out).toMatch(/Built \d+ tokens/)
+    expect(presetFiles('tailwind')['app/state/counter.ts']).toContain('export function bump')
+  })
+})
+
+describe('earlier presets', () => {
+  it('say what to use now', async () => {
+    const dir = scratch()
+    const tessera = await run(dir, 'init', '--preset', 'tessera')
+    expect(tessera.code).toBe(1)
+    expect(tessera.err).toContain('There is no preset "tessera".')
+    expect(tessera.err).toContain('--preset tailwind')
+    expect(tessera.err).toContain('tessera add tokens:tessera')
+    const none = await run(dir, 'init', '--preset', 'none')
+    expect(none.code).toBe(1)
+    expect(none.err).toContain('--preset unstyled')
   })
 })
 
@@ -276,15 +241,16 @@ describe('tessera init: where and how it runs', () => {
       err: () => {},
       async choose(question, choices) {
         asked = `${question}: ${choices.map((c) => c.value).join(', ')}`
-        return 'none'
+        return 'unstyled'
       },
     }
     expect(await main(['init'], io)).toBe(0)
-    expect(asked).toBe('Which starting point?: tessera, tailwind, none')
-    expect(existsSync(join(dir, 'system/components'))).toBe(false)
+    expect(asked).toBe('Which starting point?: tailwind, unstyled')
+    expect(existsSync(join(dir, 'system/unstyled/tokens/colors.tokens.json'))).toBe(true)
+    expect(existsSync(join(dir, 'system/tailwind'))).toBe(false)
   })
 
-  it('does not ask when --preset is given, and uses tessera with no terminal and no flag, saying so', async () => {
+  it('does not ask when --preset is given, and uses tailwind with no terminal and no flag, saying so', async () => {
     const dir = scratch()
     let asked = false
     let output = ''
@@ -294,7 +260,7 @@ describe('tessera init: where and how it runs', () => {
       err: () => {},
       async choose() {
         asked = true
-        return 'none'
+        return 'unstyled'
       },
     }
     await main(['init', '--preset', 'tailwind'], io)
@@ -303,7 +269,7 @@ describe('tessera init: where and how it runs', () => {
     const other = scratch()
     const quiet: Io = { cwd: other, out: (t) => void (output += t + '\n'), err: () => {} }
     await main(['init'], quiet)
-    expect(output).toContain('No --preset given and no terminal to ask in, so using "tessera".')
+    expect(output).toContain('No --preset given and no terminal to ask in, so using "tailwind".')
     expect(existsSync(join(other, 'system/components/Card.tess'))).toBe(true)
   })
 
@@ -311,7 +277,7 @@ describe('tessera init: where and how it runs', () => {
     const { code, err } = await run(scratch(), 'init', '--preset', 'bootstrap')
     expect(code).toBe(1)
     expect(err).toContain('There is no preset "bootstrap".')
-    expect(err).toContain('Presets: tessera, tailwind, none.')
+    expect(err).toContain('Presets: tailwind, unstyled.')
   })
 
   it('works beside an existing package.json: adds scripts and the dependency, keeps everything else', async () => {
@@ -326,7 +292,7 @@ describe('tessera init: where and how it runs', () => {
       }),
     )
     writeFileSync(join(dir, '.gitignore'), 'node_modules\ncoverage')
-    const { code, out } = await run(dir, 'init', '--preset', 'none')
+    const { code, out } = await run(dir, 'init', '--preset', 'unstyled')
     expect(code).toBe(0)
     const manifest = JSON.parse(read(dir, 'package.json'))
     expect(manifest).toMatchObject({
@@ -353,7 +319,7 @@ describe('tessera init: where and how it runs', () => {
       join(dir, 'package.json'),
       JSON.stringify({ name: 'mine', dependencies: { '@pixelscriptio/tessera': '^0.1.0' } }),
     )
-    const { out } = await run(dir, 'init', '--preset', 'none')
+    const { out } = await run(dir, 'init', '--preset', 'unstyled')
     expect(out).not.toContain('npm install')
     expect(out).toContain('npm run dev')
   })
@@ -380,7 +346,7 @@ describe('tessera init: where and how it runs', () => {
       'init',
       'app',
       '--preset',
-      'none',
+      'unstyled',
       '--link',
       join(dir, 'tessera', 'packages', 'tessera'),
     )
@@ -397,7 +363,7 @@ describe('tessera init: where and how it runs', () => {
 })
 
 describe('tessera init: files for AI tools', () => {
-  for (const preset of ['tessera', 'tailwind', 'none']) {
+  for (const preset of ['tailwind', 'unstyled']) {
     it(`writes AGENTS.md, llms.txt, CLAUDE.md and .mcp.json (${preset} preset)`, async () => {
       const dir = scratch()
       const { code } = await run(dir, 'init', 'my-app', '--preset', preset)
@@ -420,7 +386,7 @@ describe('tessera init: files for AI tools', () => {
 
   it('never tells a tool to run a bare "npx tessera", which can fetch an unrelated package', async () => {
     const dir = scratch()
-    await run(dir, 'init', 'my-app', '--preset', 'tessera')
+    await run(dir, 'init', 'my-app', '--preset', 'tailwind')
     const root = join(dir, 'my-app')
     // The one sentence that explains the danger is the only place the bare form appears.
     const explained = read(root, 'AGENTS.md').replaceAll(/a bare `npx tessera` can download/gi, '')
@@ -432,7 +398,7 @@ describe('tessera init: files for AI tools', () => {
 
   it('lists the components of the preset, and agent-files then finds nothing to change', async () => {
     const dir = scratch()
-    await run(dir, 'init', 'my-app', '--preset', 'tessera')
+    await run(dir, 'init', 'my-app', '--preset', 'tailwind')
     const root = join(dir, 'my-app')
     expect(read(root, 'AGENTS.md')).toContain('`Button`')
     expect(read(root, 'llms.txt')).toContain('Button:')
@@ -445,7 +411,7 @@ describe('tessera init: files for AI tools', () => {
     const dir = scratch()
     mkdirSync(join(dir, 'my-app'))
     writeFileSync(join(dir, 'my-app', 'AGENTS.md'), '# Mine\n')
-    const { out } = await run(dir, 'init', 'my-app', '--preset', 'none')
+    const { out } = await run(dir, 'init', 'my-app', '--preset', 'unstyled')
     expect(readFileSync(join(dir, 'my-app', 'AGENTS.md'), 'utf8')).toBe('# Mine\n')
     expect(out).toContain('AGENTS.md')
     expect(existsSync(join(dir, 'my-app', 'CLAUDE.md'))).toBe(true)

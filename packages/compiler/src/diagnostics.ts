@@ -15,6 +15,7 @@ export const COMPILER_CODES = {
   T2112: 'Invalid severity exemption',
   T2113: 'Deprecated token used',
   T2114: 'Unknown variant value in a selector',
+  T2115: 'Invalid design systems in the config',
   T4001: 'Invalid block',
   T4002: 'Missing template',
   T4003: 'Template syntax error',

@@ -271,6 +271,7 @@ export function buildTailwindTokens(css: string): TailwindFiles {
     dangerHover: string
     dangerText: string
     focus: string
+    success: string
     brandStart: string
     brandEnd: string
   }): Json => ({
@@ -298,6 +299,7 @@ export function buildTailwindTokens(css: string): TailwindFiles {
         },
       },
       focus: { ring: c(v.focus) },
+      status: { success: c(v.success), danger: c(v.dangerText) },
       brand: { start: c(v.brandStart), end: c(v.brandEnd) },
     },
   })
@@ -319,6 +321,7 @@ export function buildTailwindTokens(css: string): TailwindFiles {
     dangerHover: 'red.700',
     dangerText: 'red.700',
     focus: 'indigo.600',
+    success: 'green.700',
     brandStart: 'indigo.500',
     brandEnd: 'violet.500',
   })
@@ -339,6 +342,7 @@ export function buildTailwindTokens(css: string): TailwindFiles {
     dangerHover: 'red.700',
     dangerText: 'red.300',
     focus: 'indigo.400',
+    success: 'green.400',
     brandStart: 'indigo.400',
     brandEnd: 'violet.400',
   })

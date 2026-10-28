@@ -228,6 +228,8 @@ function config() {
       '',
       'The file may also set `contracts` (`"required"` or `"optional"`, to relax the contract requirement for `app/components`), `tokens` (the tokens folder), `baseline` (the baseline file) and `today` (a date, for tests). These three take paths relative to the project.',
       '',
+      '`systems` lists the design systems in `system/`, each a folder of tokens, and `defaultSystem` names the one the app and the docs use; see [Design systems in `system/`](/guide/presets#design-systems-in-system). A mistake in either is [T2115](/reference/errors/T2115).',
+      '',
       '## severity',
       '',
       ...table(rule.members),

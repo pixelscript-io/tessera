@@ -9,8 +9,21 @@ import type { Ui } from '../ui'
 import { VERSION } from '../version'
 import { agentFileContents } from './agent'
 
-export const PRESETS = ['tessera', 'tailwind', 'none'] as const
+export const PRESETS = ['tailwind', 'unstyled'] as const
 export type Preset = (typeof PRESETS)[number]
+
+/** The design system each preset writes: its name in the config, and its folder under `system/`. */
+export const SYSTEMS: Record<Preset, { name: string; folder: string }> = {
+  tailwind: { name: 'Tailwind', folder: 'tailwind' },
+  unstyled: { name: 'Unstyled', folder: 'unstyled' },
+}
+
+/** The presets of earlier versions, and what to use now. */
+const RENAMED: Record<string, string> = {
+  tessera:
+    'The tessera preset is now a design system you add: start with --preset tailwind, then run tessera add tokens:tessera.',
+  none: 'The none preset is now called unstyled: --preset unstyled.',
+}
 
 // Every file of every preset, as text, keyed by its path in the template folder. Bundled at build time, so the
 // published package needs no template folder at run time.
@@ -20,12 +33,24 @@ const TEMPLATES = import.meta.glob('../../templates/**/*', {
   import: 'default',
 }) as Record<string, string>
 
-/** The files a preset writes, by path relative to the project. */
+// The components every project starts with, taken from the Tessera UI catalogue so there is one copy of each.
+const STARTER_COMPONENTS = import.meta.glob('../../../ui/components/{Button,Card}.{tess,docs.md}', {
+  query: '?raw',
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+
+/** The files a preset writes, by path relative to the project: the starter app, its two components, and its tokens. */
 export function presetFiles(preset: Preset): Record<string, string> {
-  const prefix = `../../templates/${preset}/`
   const files: Record<string, string> = {}
-  for (const [key, content] of Object.entries(TEMPLATES)) {
-    if (key.startsWith(prefix)) files[key.slice(prefix.length)] = content
+  for (const folder of ['base', preset]) {
+    const prefix = `../../templates/${folder}/`
+    for (const [key, content] of Object.entries(TEMPLATES)) {
+      if (key.startsWith(prefix)) files[key.slice(prefix.length)] = content
+    }
+  }
+  for (const [key, content] of Object.entries(STARTER_COMPONENTS)) {
+    files[`system/components/${key.slice(key.lastIndexOf('/') + 1)}`] = content
   }
   return files
 }
@@ -39,10 +64,23 @@ const TYPES = `declare module '*.tess' {
 declare module 'virtual:tessera/tokens.css'
 `
 
-const CONFIG = `// Style rules, severity exemptions and options for Tessera. Every field is optional. See the docs for the list.
-// export default { severity: [{ files: 'app/legacy/**', rules: '*', level: 'warn', reason: 'old screens', expires: '2027-01-01' }] }
-export default {}
-`
+/** The project's config: the design systems in `system/`, and which one is active. */
+function configFor(preset: Preset): string {
+  const { name, folder } = SYSTEMS[preset]
+  return [
+    '// Style rules, severity exemptions and options for Tessera. Every field is optional. See the docs for the list.',
+    'export default {',
+    '  // The design systems in system/. Each is a folder of tokens (system/<path>/tokens); the components in',
+    '  // system/components are styled by the active one. Add one with `tessera add tokens:<name>`.',
+    `  systems: [{ name: '${name}', path: '/${folder}' }],`,
+    `  defaultSystem: '${name}',`,
+    '  // `npm run dev` also serves the docs of this design system. Uncomment to serve only the app.',
+    '  // docs: false,',
+    "  // severity: [{ files: 'app/legacy/**', rules: '*', level: 'warn', reason: 'old screens', expires: '2027-01-01' }],",
+    '}',
+    '',
+  ].join('\n')
+}
 
 const TSCONFIG = `{
   "compilerOptions": {
@@ -92,14 +130,9 @@ const MCP_JSON =
   ) + '\n'
 
 /** Where the package comes from: a `link:` to a checkout (`--link`, for working on Tessera itself) or its version. */
-function dependency(target: string, link: string | undefined, sibling = ''): string {
-  return link
-    ? `link:${relative(target, resolve(link, sibling)).replaceAll('\\', '/')}`
-    : `^${VERSION}`
+function dependency(target: string, link: string | undefined): string {
+  return link ? `link:${relative(target, resolve(link)).replaceAll('\\', '/')}` : `^${VERSION}`
 }
-
-/** The component library that the presets with a design system depend on. */
-const UI = '@pixelscriptio/tessera-ui'
 
 export interface InitResult {
   written: string[]
@@ -108,11 +141,11 @@ export interface InitResult {
 }
 
 /**
- * `tessera init [folder] [--preset tessera|tailwind|none]`: start a project, in an empty folder or beside an existing
+ * `tessera init [folder] [--preset tailwind|unstyled]`: start a project, in an empty folder or beside an existing
  * `package.json`. It never overwrites a file; what already exists is left alone and reported.
  *
  * The preset is chosen here (not at install time, which cannot prompt): in a terminal it asks, `--preset`
- * answers it, and with neither it uses `tessera`.
+ * answers it, and with neither it uses `tailwind`.
  */
 export async function init(args: Args, io: Io): Promise<number> {
   const target = resolve(io.cwd, args.positional[0] ?? '.')
@@ -121,30 +154,29 @@ export async function init(args: Args, io: Io): Promise<number> {
   let preset: Preset
   if (typeof given === 'string') {
     if (!(PRESETS as readonly string[]).includes(given)) {
-      throw new CliError(`There is no preset "${given}".`, `Presets: ${PRESETS.join(', ')}.`)
+      throw new CliError(
+        `There is no preset "${given}".`,
+        RENAMED[given] ?? `Presets: ${PRESETS.join(', ')}.`,
+      )
     }
     preset = given as Preset
   } else if (io.choose) {
     preset = (await io.choose('Which starting point?', [
       {
-        value: 'tessera',
-        label:
-          'tessera: a small design system of our own (warm paper neutrals, one green accent), with a styled page; the docs use it too',
-      },
-      {
         value: 'tailwind',
         label:
-          "tailwind: a full design system built from Tailwind's default theme, with a styled page",
+          "tailwind: tokens built from Tailwind's default theme (colors, spacing, type, shadows), with a Button and a Card",
       },
       {
-        value: 'none',
-        label: 'none: no tokens or themes; example files with the examples commented out',
+        value: 'unstyled',
+        label:
+          'unstyled: the same tokens with plain values (black on white, square corners, no shadows) to make your own, with a Button and a Card',
       },
     ])) as Preset
   } else {
-    preset = 'tessera'
+    preset = 'tailwind'
     io.out(
-      'No --preset given and no terminal to ask in, so using "tessera". Pass --preset tailwind or --preset none for another.',
+      'No --preset given and no terminal to ask in, so using "tailwind". Pass --preset unstyled for the other.',
     )
   }
 
@@ -195,10 +227,6 @@ export async function init(args: Args, io: Io): Promise<number> {
       }
       added.push('the @pixelscriptio/tessera dependency')
     }
-    if (preset !== 'none' && !(manifest.dependencies?.[UI] ?? manifest.devDependencies?.[UI])) {
-      manifest.dependencies = { ...manifest.dependencies, [UI]: dependency(target, link, '../ui') }
-      added.push(`the ${UI} dependency`)
-    }
     if (added.length) {
       writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
       written.push(`package.json (added ${added.join(', ')})`)
@@ -220,7 +248,6 @@ export async function init(args: Args, io: Io): Promise<number> {
           scripts,
           dependencies: {
             '@pixelscriptio/tessera': dependency(target, link),
-            ...(preset !== 'none' ? { [UI]: dependency(target, link, '../ui') } : {}),
           },
         },
         null,
@@ -231,7 +258,7 @@ export async function init(args: Args, io: Io): Promise<number> {
 
   for (const [file, content] of Object.entries(presetFiles(preset))) put(file, content)
   put('app/tess.d.ts', TYPES)
-  put('tessera.config.ts', CONFIG)
+  put('tessera.config.ts', configFor(preset))
   put('tsconfig.json', TSCONFIG)
   // Prettier knows `.tess` through the plugin. A project that already has Prettier configuration keeps its own.
   if (!PRETTIER_CONFIGS.some((name) => existsSync(join(target, name)))) {
@@ -325,7 +352,7 @@ function printSummary(
   io.out('')
   io.out(
     ui.dim(
-      'Then: npx @pixelscriptio/tessera docs for the design system docs, npm run check to validate, npx @pixelscriptio/tessera a11y for accessibility tests.',
+      'The docs for this design system open beside the app. Then: npm run check to validate, npx @pixelscriptio/tessera a11y for accessibility tests, npx @pixelscriptio/tessera add <Name> for more components.',
     ),
   )
 }

@@ -74,7 +74,7 @@ export function planTokenImport(
   // The import itself failed: nothing to compare, and nothing can be saved.
   if (errors.length) return empty(errors, notes)
 
-  const dir = forward(project.tokensDir() ?? join(project.root, 'system', 'tokens'))
+  const dir = forward(project.tokensDirOrDefault())
   const produced = [...result.base, ...result.themes].map((f) => ({
     abs: `${dir}/${forward(f.path)}`,
     text: f.content,

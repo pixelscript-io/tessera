@@ -4,10 +4,11 @@ import { applyBaseline, applySeverity, type Baseline, type BaselineResult } from
 import { apisOf, buildAgentManifest, stateOf, type AgentManifest } from './agent-manifest'
 import { compile, kindFromPath, type CompileResult, type FileKind } from './compile'
 import { componentProps } from './props'
-import type { TesseraConfig } from './config'
+import { activeSystemFolder, type TesseraConfig } from './config'
 import type { CompilerDiagnostic } from './diagnostics'
 import {
   findUp,
+  systemTokensDir,
   loadComponentRegistry,
   loadDesignTokens,
   loadProjectApis,
@@ -27,7 +28,7 @@ export interface ProjectOptions {
   /** Set to `optional` to let `app/components` skip contracts. */
   contracts?: 'required' | 'optional'
   config?: TesseraConfig
-  /** Folder of `*.tokens.json` files. Defaults to the nearest `system/tokens` above the project root. */
+  /** Folder of `*.tokens.json` files. Defaults to the active system's `system/<name>/tokens` (see `defaultSystem`), or `system/tokens`. */
   tokens?: string
   /** Baseline file. Defaults to `tessera.baseline.json` in the project root, if it exists. */
   baseline?: string
@@ -79,7 +80,16 @@ export class Project {
   }
 
   tokensDir(): string | undefined {
-    return this.options.tokens ?? findUp(this.root, join('system', 'tokens'))
+    return this.options.tokens ?? systemTokensDir(this.root, activeSystemFolder(this.config))
+  }
+
+  /** Where the tokens are, or where they would go in a project that has none yet: the active system's folder. */
+  tokensDirOrDefault(): string {
+    const folder = activeSystemFolder(this.config)
+    return (
+      this.tokensDir() ??
+      join(this.root, 'system', ...(folder ? [...folder.split('/'), 'tokens'] : ['tokens']))
+    )
   }
 
   tokens(): DesignTokens | null {

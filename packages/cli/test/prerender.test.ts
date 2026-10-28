@@ -38,7 +38,7 @@ beforeAll(async () => {
     join(root, 'package.json'),
     '{ "name": "site", "dependencies": { "@pixelscriptio/tessera-ui": "*" } }\n',
   )
-  for (const [file, content] of Object.entries(presetFiles('tessera'))) write(file, content)
+  for (const [file, content] of Object.entries(presetFiles('tailwind'))) write(file, content)
   write(
     'app/pages/about.tess',
     '<page>\n{ "title": "About us" }\n</page>\n<template><main><h1>About</h1><p>We make <b>things</b> & "stuff".</p><Link href="/">Home</Link></main></template>\n',
@@ -126,7 +126,7 @@ describe('tessera build --prerender', () => {
       join(dir, 'package.json'),
       '{ "name": "plain", "dependencies": { "@pixelscriptio/tessera-ui": "*" } }\n',
     )
-    for (const [file, content] of Object.entries(presetFiles('tessera'))) {
+    for (const [file, content] of Object.entries(presetFiles('tailwind'))) {
       mkdirSync(dirname(join(dir, file)), { recursive: true })
       writeFileSync(join(dir, file), content)
     }

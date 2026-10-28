@@ -1,0 +1,84 @@
+<script>
+import { setTheme } from '@pixelscriptio/tessera/tokens'
+
+const light = () => setTheme(null)
+const dark = () => setTheme('dark')
+const auto = () => setTheme('auto')
+</script>
+
+<template>
+  <div class="root">
+    <header class="header">
+      <nav class="bar" aria-label="Main">
+        <p class="brand">
+          <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          My Tessera app
+        </p>
+        <div class="theme" role="group" aria-label="Theme">
+          <Button tone="neutral" emphasis="ghost" size="sm" @press="light">Light</Button>
+          <Button tone="neutral" emphasis="ghost" size="sm" @press="dark">Dark</Button>
+          <Button tone="neutral" emphasis="ghost" size="sm" @press="auto">Auto</Button>
+        </div>
+      </nav>
+    </header>
+    <slot />
+  </div>
+</template>
+
+<style>
+.root {
+  min-height: 100vh;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: $color.surface.default;
+  border-bottom: 1px solid $color.border.default;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space.4;
+  max-width: 67.5rem;
+  margin: 0 auto;
+  padding: $space.3 $space.6;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: $space.2;
+  margin: 0;
+  font-size: $font.size.base;
+  font-weight: $font.weight.bold;
+}
+
+.mark {
+  display: grid;
+  grid-template-columns: repeat(2, 7px);
+  gap: $space.0-5;
+}
+
+.mark i {
+  width: 7px;
+  height: 7px;
+  border-radius: $radius.sm;
+  background: $color.text.default;
+}
+
+.mark i:nth-child(2) {
+  background: $color.action.primary.bg;
+}
+
+.theme {
+  display: flex;
+  gap: $space.1;
+}
+</style>

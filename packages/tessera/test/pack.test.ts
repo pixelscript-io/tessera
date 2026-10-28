@@ -138,7 +138,7 @@ function install(): string {
     join(dir, 'package.json'),
     JSON.stringify({ name: 'my-app', private: true, type: 'module' }),
   )
-  pnpmAdd([tarball, uiTarball], dir, env())
+  pnpmAdd(tarball, dir, env())
   return dir
 }
 
@@ -242,7 +242,7 @@ describe('the packed package', () => {
 
   it('runs the generated accessibility tests in a project that set them up with tessera a11y', async () => {
     const dir = install()
-    run(dir, 'init', '--preset', 'tessera')
+    run(dir, 'init', '--preset', 'tailwind')
     const out = run(dir, 'a11y')
     expect(out).toContain('Set up the generated accessibility tests.')
     for (const file of ['system/components/a11y.browser.test.ts', 'vitest.config.ts']) {
@@ -283,18 +283,18 @@ describe('the packed package', () => {
       numFailedTests: number
     }
     expect(report.numFailedTests).toBe(0)
-    // The preset's own components (Card and Badge) have tests; the library's are tested in its own package.
+    // The two starter components (Button and Card) have generated tests; the rest of Tessera UI is tested in its own package.
     expect(report.numPassedTests).toBeGreaterThan(10)
   }, 600_000)
 
   it('builds the design system as custom elements from the installed package', async () => {
     const dir = install()
-    run(dir, 'init', '--preset', 'tessera')
+    run(dir, 'init', '--preset', 'tailwind')
     const { stdout } = await execAsync(
       `node "${join(dir, 'node_modules', '@pixelscriptio', 'tessera', 'bin', 'tessera.js')}" elements`,
       { cwd: dir },
     )
-    expect(stdout).toContain('Built 25 custom elements into dist-elements')
+    expect(stdout).toContain('Built 2 custom elements into dist-elements')
     for (const file of [
       'elements.js',
       'elements.css',
@@ -313,7 +313,7 @@ describe('the packed package', () => {
 
   it('prerenders an app from the installed package, with no framework source to bundle', async () => {
     const dir = install()
-    run(dir, 'init', '--preset', 'tessera')
+    run(dir, 'init', '--preset', 'tailwind')
     const { stdout } = await execAsync(
       `node "${join(dir, 'node_modules', '@pixelscriptio', 'tessera', 'bin', 'tessera.js')}" build --prerender`,
       { cwd: dir },
@@ -330,7 +330,7 @@ describe('the packed package', () => {
 
   it('formats .tess files through Prettier, from an editor or from the command line', () => {
     const dir = install()
-    run(dir, 'init', '--preset', 'none')
+    run(dir, 'init', '--preset', 'unstyled')
     // init wrote the Prettier configuration, so an editor's Prettier finds the plugin.
     expect(JSON.parse(readFileSync(join(dir, '.prettierrc.json'), 'utf8'))).toEqual({
       plugins: ['@pixelscriptio/tessera/prettier'],
@@ -357,7 +357,7 @@ describe('the packed package', () => {
 
   it('has type declarations that resolve, with no @tessera/* import left in them', () => {
     const dir = install()
-    run(dir, 'init', '--preset', 'none')
+    run(dir, 'init', '--preset', 'unstyled')
     writeFileSync(
       join(dir, 'app', 'types-check.ts'),
       `import { state, derived } from '@pixelscriptio/tessera/core'
@@ -396,7 +396,7 @@ void wrong
 
   it('types the routes of an app: a literal route is accepted and a made-up one is an error', async () => {
     const dir = install()
-    run(dir, 'init', '--preset', 'none')
+    run(dir, 'init', '--preset', 'unstyled')
     // `tessera build` writes .tessera/routes.d.ts, as the dev server does.
     run(dir, 'build')
     expect(readFileSync(join(dir, '.tessera', 'routes.d.ts'), 'utf8')).toContain(
@@ -412,10 +412,17 @@ export const bad: RoutePattern = '/nope'
 `,
     )
     const tsc = join(repo, 'node_modules', 'typescript', 'bin', 'tsc')
-    execFileSync(process.execPath, [tsc, '-p', join(dir, 'tsconfig.json')], {
-      cwd: dir,
-      stdio: 'pipe',
-    })
+    try {
+      execFileSync(process.execPath, [tsc, '-p', join(dir, 'tsconfig.json')], {
+        cwd: dir,
+        stdio: 'pipe',
+        encoding: 'utf8',
+      })
+    } catch (error) {
+      throw new Error(`tsc failed:\n${(error as { stdout?: string }).stdout ?? ''}`, {
+        cause: error,
+      })
+    }
   }, 120_000)
 })
 
@@ -488,7 +495,7 @@ async function axeViolations(page: Page): Promise<string[]> {
     .map((v) => `${v.id} (${v.impact}, ${v.nodes.length})`)
 }
 
-describe.each(['tessera', 'tailwind', 'none'] as const)(
+describe.each(['tailwind', 'unstyled'] as const)(
   'a new project from the packed package: the %s preset',
   (preset) => {
     it('installs, serves the index page with no config files of its own, builds, and previews', async () => {
@@ -526,20 +533,16 @@ describe.each(['tessera', 'tailwind', 'none'] as const)(
         await page.waitForSelector('h1')
 
         expect(await page.title()).toBe('Welcome to Tessera')
-        expect(await page.textContent('h1')).toBe(
-          preset !== 'none' ? 'Build interfaces from a system you can trust' : 'Welcome to Tessera',
-        )
+        expect(await page.textContent('h1')).toBe('Build interfaces from a system you can trust')
 
-        if (preset !== 'none') {
+        {
           // Styled by its tokens: the page has no margin and the preset's surface in light, and the button works.
           const light = await page.evaluate(() => {
             const cs = getComputedStyle(document.body)
             return { margin: cs.margin, background: cs.backgroundColor }
           })
           expect(light.margin).toBe('0px')
-          expect(light.background).toBe(
-            preset === 'tessera' ? 'rgb(250, 249, 246)' : 'rgb(255, 255, 255)',
-          )
+          expect(light.background).toBe('rgb(255, 255, 255)')
           const button = page.getByRole('button', { name: /Clicked/ })
           expect(await button.textContent()).toContain('Clicked 0 times')
           await button.click()
@@ -555,12 +558,6 @@ describe.each(['tessera', 'tailwind', 'none'] as const)(
           expect(
             await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
           ).not.toBe(light.background)
-          expect(await axeViolations(page)).toEqual([])
-        } else {
-          // No tokens: no token CSS is loaded and nothing is styled, but it renders and is accessible.
-          expect(await page.textContent('body')).toContain(
-            'Run npx tessera check to validate the project.',
-          )
           expect(await axeViolations(page)).toEqual([])
         }
 
@@ -654,11 +651,11 @@ describe('@pixelscriptio/create-tessera, as `npm create @pixelscriptio/tessera` 
       'bin',
       'create-tessera.js',
     )
-    const out = execFileSync(process.execPath, [bin, 'my-site', '--preset', 'none'], {
+    const out = execFileSync(process.execPath, [bin, 'my-site', '--preset', 'unstyled'], {
       cwd: dir,
       encoding: 'utf8',
     })
-    expect(out).toContain('Started a Tessera project (none preset) in my-site.')
+    expect(out).toContain('Started a Tessera project (unstyled preset) in my-site.')
     expect(out).toContain('npm install')
     expect(existsSync(join(dir, 'my-site', 'app', 'pages', 'index.tess'))).toBe(true)
     const manifest = JSON.parse(readFileSync(join(dir, 'my-site', 'package.json'), 'utf8'))

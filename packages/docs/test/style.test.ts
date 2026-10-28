@@ -1,9 +1,10 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 import { afterAll, describe, expect, it } from 'vitest'
+import { presetFiles } from '../../cli/src/commands/init'
 import { serveDocs } from '../src'
 
 // The docs take their look from the project's own semantic tokens, so the app and the docs share the token files.
@@ -24,16 +25,19 @@ afterAll(async () => {
   rmSync(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 })
 })
 
-/** A project made of a preset's files (and the design system's Button), or of none. */
-function project(preset: 'tessera' | 'tailwind' | 'none'): string {
+/** A project made of a preset's files (the starter app, Button and Card, and its tokens), or of none. */
+function project(preset: 'tailwind' | 'unstyled' | 'none'): string {
   const root = mkdtempSync(join(scratch, `${preset}-`)).replaceAll('\\', '/')
   writeFileSync(join(root, 'package.json'), '{ "name": "styled" }\n')
-  cpSync(join(repo, 'packages/cli/templates', preset), root, { recursive: true })
-  if (preset !== 'none') {
-    cpSync(
-      join(repo, 'packages/ui/components/Button.tess'),
-      join(root, 'system/components/Button.tess'),
-    )
+  // A project with a tokens folder that holds no tokens: the docs fall back to their own look.
+  if (preset === 'none') {
+    mkdirSync(join(root, 'system/tokens'), { recursive: true })
+    writeFileSync(join(root, 'system/tokens/README.md'), 'No tokens yet.\n')
+  } else {
+    for (const [file, content] of Object.entries(presetFiles(preset))) {
+      mkdirSync(dirname(join(root, file)), { recursive: true })
+      writeFileSync(join(root, file), content)
+    }
   }
   return root
 }
@@ -85,40 +89,36 @@ const rgb = (hex: string) => {
 }
 
 describe('the docs are styled by the project’s tokens', () => {
-  it('takes its colors and type from the tessera preset, in light and in dark', async () => {
-    const root = project('tessera')
+  it('takes its colors and type from the unstyled preset, in light and in dark', async () => {
+    const root = project('unstyled')
     const light = await open(root, 'light', '#/components/Button')
     expect(await colors(light)).toMatchObject({
-      page: rgb('#faf9f6'), // color.surface.default
-      text: rgb('#17160f'), // color.text.default
-      nav: rgb('#faf9f6'), // the sidebar is flat: the page color, divided by a hairline
+      page: rgb('#ffffff'), // color.surface.default
+      text: rgb('#111111'), // color.text.default
+      nav: rgb('#ffffff'), // the sidebar is flat: the page color, divided by a hairline
     })
     // The font is the token's, not the docs' own.
-    expect((await colors(light)).font).toContain('ui-sans-serif')
+    expect((await colors(light)).font).toContain('system-ui')
 
     const dark = await open(root, 'dark', '#/components/Button')
     expect(await colors(dark)).toMatchObject({
-      page: rgb('#13120e'),
-      text: rgb('#edeae2'),
-      nav: rgb('#13120e'),
+      page: rgb('#111111'),
+      text: rgb('#f5f5f5'),
+      nav: rgb('#111111'),
     })
   }, 120_000)
 
   it('follows a change to a token, and the theme switcher moves the whole page', async () => {
-    const root = project('tessera')
-    const file = join(root, 'system/tokens/semantic.tokens.json')
-    // The page color becomes white, in the file the app also reads.
-    writeFileSync(
-      file,
-      readFileSync(file, 'utf8').replace(
-        '"surface": {\n      "default": {\n        "$value": "{color.stone.50}"',
-        '"surface": {\n      "default": {\n        "$value": "{color.white}"',
-      ),
-    )
+    const root = project('unstyled')
+    const file = join(root, 'system/unstyled/tokens/colors.tokens.json')
+    // The page color becomes red, in the file the app also reads.
+    const tokens = JSON.parse(readFileSync(file, 'utf8'))
+    tokens.color.surface.default.$value = { colorSpace: 'srgb', components: [1, 0, 0] }
+    writeFileSync(file, JSON.stringify(tokens))
     const page = await open(root, 'light')
-    expect((await colors(page)).page).toBe(rgb('#ffffff'))
+    expect((await colors(page)).page).toBe(rgb('#ff0000'))
     await page.locator('#switch-theme').selectOption('dark')
-    expect((await colors(page)).page).toBe(rgb('#13120e'))
+    expect((await colors(page)).page).toBe(rgb('#111111'))
   }, 120_000)
 
   it('falls back to its own look for a project without tokens', async () => {
@@ -126,7 +126,7 @@ describe('the docs are styled by the project’s tokens', () => {
     expect(await colors(page)).toMatchObject({ page: rgb('#faf9f6'), text: rgb('#17160f') })
   }, 120_000)
 
-  for (const preset of ['tessera', 'tailwind', 'none'] as const) {
+  for (const preset of ['tailwind', 'unstyled', 'none'] as const) {
     it(`passes axe with the ${preset} preset, in light and dark`, async () => {
       const root = project(preset)
       for (const scheme of ['light', 'dark'] as const) {

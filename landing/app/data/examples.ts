@@ -31,7 +31,7 @@ export const LINT: Example = {
 export const ELEMENTS: Example = {
   label: 'tessera elements',
   title: 'The design system as custom elements.',
-  body: 'Each component, with its tokens, themes and accessibility, built into a folder with no dependency on Tessera. React wrappers and types included. The tessera preset is 11 elements in about 9 kB of JavaScript and 3 kB of CSS, gzipped.',
+  body: 'Each component, with its tokens, themes and accessibility, built into a folder with no dependency on Tessera. React wrappers and types included. Each element is small, and the JavaScript and CSS are shared.',
   lines: [
     line(
       ['<link', 'tag'],

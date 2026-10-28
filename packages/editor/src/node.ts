@@ -1,6 +1,7 @@
 import { dirname, join } from 'node:path'
 import {
   findUp,
+  systemTokensDir,
   loadComponentRegistry,
   loadDesignTokens,
   loadProjectApis,
@@ -25,7 +26,7 @@ export class EditorProject {
 
   /** The design tokens a file belongs to, or undefined if there are none or they do not build. */
   tokens(file: string): StyleTokens | undefined {
-    const dir = findUp(dirname(file), join('system', 'tokens'))
+    const dir = systemTokensDir(dirname(file))
     if (!dir) return undefined
     if (!this.tokenCache.has(dir)) {
       const loaded = loadDesignTokens(dir)

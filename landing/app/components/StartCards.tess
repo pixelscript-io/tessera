@@ -16,7 +16,7 @@ import { DOCS_COMMAND, QUICK_COMMAND } from '../data/code'
     <div class="inner">
       <CommandCard
         title="Start a project"
-        body="The tessera preset, the default, gives you a small design system with light and dark themes. The docs use the same tokens."
+        body="Pick Tailwind tokens or plain ones, and get a page, a Button and a Card. The docs open beside your app, styled by the same tokens."
         :commands="QUICK_COMMAND"
         />
       <CommandCard

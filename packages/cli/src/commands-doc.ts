@@ -12,12 +12,12 @@ export interface CommandDoc {
 export const COMMANDS_DOC: CommandDoc[] = [
   {
     name: 'init',
-    usage: 'tessera init [folder] [--preset tessera|tailwind|none]',
+    usage: 'tessera init [folder] [--preset tailwind|unstyled]',
     summary: 'Start a project, in an empty folder or beside an existing package.json',
     details:
-      'Writes the app (a layout, an index page, `main.ts`) and, per the preset, the design system. `tessera` writes a small design system of its own (warm paper neutrals, one green accent: colors, spacing, radii, type, shadows, light and dark themes, three components) and a styled index page; the docs are styled by the same tokens. `tailwind` writes a full `system/` built from the default theme of Tailwind (every color, the spacing scale, radii, type, shadows, easing and more as tokens, light and dark themes, three components) and a styled index page. `none` writes no tokens, themes or components, and example files with the examples commented out. In a terminal it asks which preset; `--preset` answers it, and with neither it uses `tessera`. It adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency to an existing `package.json`, never overwrites a file, and lists what it left alone. It also writes the files an AI coding tool reads: `AGENTS.md` (the rules and how a Tessera app is written), `llms.txt`, `CLAUDE.md` (which imports `AGENTS.md`) and `.mcp.json` (which starts `tessera mcp`).',
+      'Writes the same app in both presets: a layout, an index page with a button that counts (shared state in `app/state`) and a list from an API call (`app/apis`), `main.ts`, a Button and a Card in `system/components`, and `tessera.config.ts` naming the design system. The presets differ in the tokens, in `system/<name>/tokens`: `tailwind` is built from the default theme of Tailwind (every color, the spacing scale, radii, type, shadows, easing and more, with light and dark themes), and `unstyled` has the same token names with plain values (black on white, square corners, no shadows) for making the design yourself. In a terminal it asks which preset; `--preset` answers it, and with neither it uses `tailwind`. It adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency to an existing `package.json`, never overwrites a file, and lists what it left alone. It also writes the files an AI coding tool reads: `AGENTS.md` (the rules and how a Tessera app is written), `llms.txt`, `CLAUDE.md` (which imports `AGENTS.md`) and `.mcp.json` (which starts `tessera mcp`).',
     options: [
-      { flag: '--preset <name>', description: 'tessera, tailwind or none. Skips the question.' },
+      { flag: '--preset <name>', description: 'tailwind or unstyled. Skips the question.' },
       {
         flag: '--link <folder>',
         description:

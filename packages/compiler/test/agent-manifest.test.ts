@@ -13,7 +13,9 @@ describe('the agent manifest: components', () => {
       'AccordionItem',
       'Alert',
       'Avatar',
+      'Badge',
       'Button',
+      'Card',
       'CartAdd',
       'CartCount',
       'Checkbox',
@@ -65,7 +67,7 @@ describe('the agent manifest: components', () => {
 
   it('writes usage examples that are valid for the contract', () => {
     expect(component('Button').usage).toEqual([
-      ['<Button>', '  Save changes', '  <Icon slot="icon" name="plus" />', '</Button>'].join('\n'),
+      ['<Button>', '  Save changes', '</Button>'].join('\n'),
       '<Button tone="neutral" size="md" emphasis="outline" @press="onPress">content</Button>',
     ])
   })

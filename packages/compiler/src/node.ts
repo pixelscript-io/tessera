@@ -60,6 +60,41 @@ export function findUp(start: string, relativePath: string): string | undefined 
   }
 }
 
+/** The token folders in a `system` folder: `<name>/tokens` for each design system, by name. */
+function systemFolders(system: string): string[] {
+  return readdirSync(system, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && existsSync(join(system, e.name, 'tokens')))
+    .map((e) => e.name)
+    .sort((a, b) => a.localeCompare(b))
+}
+
+/**
+ * The design tokens a project builds with, found by walking up from `start` to the nearest `system` folder that has
+ * them: `system/<active>/tokens` for the named system; with none named, the earlier layout `system/tokens`, or the
+ * first system by name. A named system that is not there is not replaced by another one.
+ */
+export function systemTokensDir(start: string, active?: string): string | undefined {
+  let dir = start
+  for (;;) {
+    const system = join(dir, 'system')
+    if (existsSync(system)) {
+      if (active !== undefined) {
+        const named = join(system, ...active.split('/'), 'tokens')
+        if (existsSync(named)) return named
+      }
+      const flat = join(system, 'tokens')
+      if (existsSync(flat)) return flat
+      if (active === undefined) {
+        const [first] = systemFolders(system)
+        if (first) return join(system, first, 'tokens')
+      }
+    }
+    const parent = dirname(dir)
+    if (parent === dir) return undefined
+    dir = parent
+  }
+}
+
 export type DesignTokens =
   | { ok: true; dir: string; tokens: StyleTokens; css: string; manifest: TokenManifest }
   | { ok: false; dir: string; diagnostics: TokenDiagnostic[] }
@@ -201,10 +236,10 @@ export function uiComponentsDir(root: string): string | null {
 
 /**
  * The library components a project builds: the installed library's, when the project has a design system
- * (`system/tokens`) for them to be styled by. Without one they are left out, so `--preset none` stays empty.
+ * (`system/<name>/tokens`, or `system/tokens`) for them to be styled by. Without one they are left out.
  */
 export function projectLibraryDir(root: string): string | null {
-  const tokens = findUp(root, join('system', 'tokens'))
+  const tokens = systemTokensDir(root)
   const has = tokens && readdirSync(tokens).some((n) => n.endsWith('.tokens.json'))
   return has ? uiComponentsDir(root) : null
 }

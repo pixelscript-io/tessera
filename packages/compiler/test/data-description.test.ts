@@ -283,4 +283,11 @@ describe('types for the editor and for TypeScript', () => {
     expect(text).toContain("'DELETE /todos/:id': { returns: void }")
     expect(text).not.toContain('namespace plain')
   })
+
+  it('writes the default API, whose name is a reserved word, as a namespace TypeScript accepts', () => {
+    const text = generateApisDts([{ ...todos, name: 'default' }])
+    expect(text).not.toContain('namespace default')
+    expect(text).toContain('namespace _default {')
+    expect(text).toContain('interface Todo {')
+  })
 })

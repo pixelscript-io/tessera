@@ -14,7 +14,7 @@ import { loadTokenDir } from '../src/node'
 
 const dir = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 const SYSTEM = loadTokenDir(dir('../../../system/tokens'))
-const TAILWIND = loadTokenDir(dir('../../cli/templates/tailwind/system/tokens'))
+const TAILWIND = loadTokenDir(dir('../../cli/templates/tailwind/system/tailwind/tokens'))
 
 const color = (r: number, g: number, b: number) => ({
   $type: 'color',

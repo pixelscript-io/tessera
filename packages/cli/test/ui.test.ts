@@ -289,10 +289,10 @@ describe('other commands in a terminal', () => {
 
   it('shows init as a banner, the folders it filled, and numbered next steps', async () => {
     const dir = project({})
-    const { out } = await runPretty(dir, pretty, 'init', 'my-app', '--preset', 'none')
+    const { out } = await runPretty(dir, pretty, 'init', 'my-app', '--preset', 'unstyled')
     const text = stripAnsi(out)
     expect(text).toContain(`Tessera ${VERSION}`)
-    expect(text).toContain('✓ Started a Tessera project in my-app (none preset)')
+    expect(text).toContain('✓ Started a Tessera project in my-app (unstyled preset)')
     expect(text).toMatch(/app\/ +\d+ files/)
     expect(text).toContain('1  cd my-app')
     expect(text).toContain('2  npm install')

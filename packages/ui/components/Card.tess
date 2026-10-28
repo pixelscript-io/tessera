@@ -1,0 +1,65 @@
+<contract>
+{
+  "name": "Card",
+  "role": "generic",
+  "description": "A raised surface that groups related content, with an optional heading.",
+  "parts": ["root", "header", "body"],
+  "variants": {
+    "padding": ["md", "sm", "lg"] // first value is the default
+  },
+  "slots": {
+    "default": "the card content",
+    "header": "an optional heading"
+  },
+  "contrast": [{ "foreground": "body", "background": "root" }],
+  "preview": {
+    "slots": {
+      "default": "A card holds related content."
+    }
+  }
+}
+</contract>
+
+<template>
+  <div class="root">
+    <div class="header"><slot name="header" /></div>
+    <div class="body"><slot /></div>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.3;
+  padding: $space.6;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.lg;
+  background: $color.surface.raised;
+  color: $color.text.default;
+  box-shadow: $shadow.sm;
+
+  &[data-padding='sm'] {
+    padding: $space.4;
+  }
+
+  &[data-padding='lg'] {
+    padding: $space.8;
+  }
+}
+
+.header {
+  font-size: $font.size.lg;
+  font-weight: 600;
+}
+
+.header:empty {
+  display: none;
+}
+
+.body {
+  color: $color.text.muted;
+  font-size: $font.size.base;
+  line-height: 1.6;
+}
+</style>

@@ -142,9 +142,11 @@ describe('the token interface of the library', () => {
     expect([...used].sort()).toEqual([...listed].sort())
   })
 
-  for (const preset of ['tessera', 'tailwind']) {
+  for (const preset of ['tailwind', 'unstyled']) {
     it(`is defined by the ${preset} preset, and every component compiles against it`, () => {
-      const presetTokens = loadDesignTokens(`${root}packages/cli/templates/${preset}/system/tokens`)
+      const presetTokens = loadDesignTokens(
+        `${root}packages/cli/templates/${preset}/system/${preset}/tokens`,
+      )
       expect(presetTokens.ok).toBe(true)
       if (!presetTokens.ok) return
       expect(listed.filter((path) => !presetTokens.tokens.has(path))).toEqual([])

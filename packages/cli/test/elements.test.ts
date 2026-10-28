@@ -35,7 +35,7 @@ beforeAll(async () => {
     join(root, 'package.json'),
     '{ "name": "acme-system", "dependencies": { "@pixelscriptio/tessera-ui": "*" } }\n',
   )
-  for (const [file, content] of Object.entries(presetFiles('tessera'))) {
+  for (const [file, content] of Object.entries(presetFiles('tailwind'))) {
     mkdirSync(dirname(join(root, file)), { recursive: true })
     writeFileSync(join(root, file), content)
   }
@@ -379,16 +379,11 @@ describe('the elements in a page with no framework', () => {
     await p.emulateMedia({ colorScheme: 'light' })
     await p.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
     await p.waitForTimeout(500)
-    const dark = await p
-      .locator('#save button')
-      .evaluate((e) => getComputedStyle(e).backgroundColor)
+    const dark = await background()
     await p.evaluate(() => document.documentElement.removeAttribute('data-theme'))
     await p.waitForTimeout(500)
-    const light = await p
-      .locator('#save button')
-      .evaluate((e) => getComputedStyle(e).backgroundColor)
+    const light = await background()
     expect(dark).not.toBe(light)
-    void background
     await p.close()
   }, 120_000)
 })

@@ -14,7 +14,7 @@ import {
   type CompilerDiagnostic,
   type TesseraConfig,
 } from '@tessera/compiler'
-import { loadConfigFile } from '@tessera/compiler/project'
+import { loadConfigFile, systemTokensDir } from '@tessera/compiler/project'
 import { buildTokens, formatDiagnostic as formatTokenDiagnostic } from '@tessera/tokens'
 import { loadTokenDir } from '@tessera/tokens/node'
 import type { Args } from '../args'
@@ -86,16 +86,13 @@ function collect(root: string, paths: string[]): { files: string[]; unsupported:
   return { files, unsupported }
 }
 
-/** The design tokens: a folder given, the project's configured one, or `system/tokens`. */
+/** The design tokens: a folder given, the project's configured one, or the project's `system/<name>/tokens` (or `system/tokens`). */
 function loadTokens(root: string, given: string | undefined, configured: string | undefined) {
-  const dir = given
-    ? resolve(root, given)
-    : (configured ??
-      (existsSync(join(root, 'system', 'tokens')) ? join(root, 'system', 'tokens') : undefined))
+  const dir = given ? resolve(root, given) : (configured ?? systemTokensDir(root))
   if (!dir || !existsSync(dir)) {
     throw new CliError(
       'There are no design tokens to check against.',
-      'Pass --tokens <folder> with DTCG token files, or put them in system/tokens (see `tessera tokens import`).',
+      'Pass --tokens <folder> with DTCG token files, or put them in system/<name>/tokens (see `tessera tokens import`).',
     )
   }
   const built = buildTokens(loadTokenDir(dir))

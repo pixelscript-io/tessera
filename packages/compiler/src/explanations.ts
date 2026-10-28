@@ -369,6 +369,16 @@ export const EXPLANATIONS: Record<string, Explanation> = {
     fixed:
       "severity: [{ files: 'app/legacy/**', rules: '*', level: 'warn', reason: 'old screens', expires: '2027-03-01' }]",
   },
+  T2115: {
+    cause:
+      'The `systems` or `defaultSystem` of `tessera.config.ts` is invalid: a system has no name, two systems share a name or a folder, a path leaves the `system/` folder, or the default is not one of the systems.',
+    fix: 'Give every system a different name and folder under `system/`, and set `defaultSystem` to one of the names.',
+    example: {
+      kind: 'config',
+      config: { systems: [{ name: 'Tailwind' }], defaultSystem: 'Tessera' },
+    },
+    fixed: "systems: [{ name: 'Tailwind', path: '/tailwind' }], defaultSystem: 'Tailwind'",
+  },
   T2113: {
     cause:
       'A style uses a token that is marked deprecated (`$extensions.tessera.deprecated`). It still works; the warning says what to use instead, so it can be removed safely later.',

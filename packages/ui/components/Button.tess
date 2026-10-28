@@ -21,13 +21,7 @@
   },
   "preview": {
     "slots": {
-      "default": "Save changes",
-      "icon": {
-        "component": "Icon",
-        "props": {
-          "name": "plus"
-        }
-      }
+      "default": "Save changes"
     }
   }
 }

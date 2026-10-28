@@ -11,7 +11,10 @@ const generated = buildTailwindTokens(css)
 describe('the Tailwind preset tokens', () => {
   it('are what the generator produces from the committed theme, so they cannot drift from their source', () => {
     for (const [file, content] of Object.entries(generated)) {
-      const committed = readFileSync(root(`templates/tailwind/system/tokens/${file}`), 'utf8')
+      const committed = readFileSync(
+        root(`templates/tailwind/system/tailwind/tokens/${file}`),
+        'utf8',
+      )
       expect(committed, file).toBe(JSON.stringify(content, null, 2) + '\n')
     }
   })
@@ -89,7 +92,7 @@ describe('the Tailwind preset tokens', () => {
   it('credit Tailwind and say they are data, not a dependency', () => {
     const license = readFileSync(root('tailwind/LICENSE'), 'utf8')
     expect(license).toContain('MIT License')
-    const readme = readFileSync(root('templates/tailwind/system/tokens/README.md'), 'utf8')
+    const readme = readFileSync(root('templates/tailwind/system/tailwind/tokens/README.md'), 'utf8')
     expect(readme).toContain('derived from the default theme of Tailwind CSS')
     expect(readme).toContain('your project does not depend on Tailwind')
     expect(generated['colors.tokens.json']!['$description']).toBe(

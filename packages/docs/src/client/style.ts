@@ -8,6 +8,7 @@ export const STYLE = `
 body { margin: 0; font: 15px/1.65 var(--d-sans); font-feature-settings: 'ss01', 'cv11'; -webkit-font-smoothing: antialiased; background: var(--d-bg); color: var(--d-fg); }
 a { color: var(--d-link); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.docs-main p a, .docs-main li a { text-decoration: underline; text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--d-accent); outline-offset: 2px; }
 h1, h2, h3 { text-wrap: balance; }
 .docs-eyebrow { margin: 0 0 14px; font: 500 11px/1 var(--d-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--d-muted); display: flex; align-items: center; gap: 8px; }

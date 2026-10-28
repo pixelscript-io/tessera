@@ -1,6 +1,6 @@
 # 8. Data from an API
 
-Most pages show something that lives on a server. A project from the `tessera` preset already does: open `app/pages/index.tess` and find the line
+Most pages show something that lives on a server. A new project already does: open `app/pages/index.tess` and find the line
 
 ```text
 const devices = get('/objects')

@@ -17,7 +17,7 @@ mkdir my-app
 cd my-app
 git init
 npm init -y
-npm install @pixelscriptio/tessera@latest @pixelscriptio/tessera-ui@latest
+npm install @pixelscriptio/tessera@latest
 npx tessera init
 npm run dev
 ```
@@ -27,7 +27,7 @@ mkdir my-app
 cd my-app
 git init
 npm init -y
-npm install @pixelscriptio/tessera@latest @pixelscriptio/tessera-ui@latest
+npm install @pixelscriptio/tessera@latest
 npx tessera init
 npm run dev
 ```
@@ -48,13 +48,14 @@ If you would rather not install first, `npm create @pixelscriptio/tessera@latest
 
 ## Choose a starting point
 
-| Preset     | What you get                                                                                                                                                                                                    |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tessera`  | A small design system of its own: warm paper neutrals, one green accent, light and dark themes, a card and a badge, and a styled index page. The docs (`npx tessera docs`) are styled by the same token files.  |
-| `tailwind` | A complete design system in `system/`, built from Tailwind's default theme: every color, the spacing scale, radii, type, shadows and more, with light and dark themes, a card and a badge. A styled index page. |
-| `none`     | No tokens, themes or components, so nothing is checked against a design system yet. An index page and example files with the examples commented out.                                                            |
+| Preset     | What you get                                                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `tailwind` | Tokens built from Tailwind's default theme (every color, the spacing scale, radii, type, shadows and more) with light and dark themes. |
+| `unstyled` | The same token names with plain values: black on white, square corners, no shadows. For making the design yourself.                    |
 
-Skip the question with `npx tessera init --preset tessera`, `--preset tailwind` or `--preset none`. With no terminal and no flag, `init` uses `tessera` and says so. See [Starter presets](/guide/presets).
+Both write the same app: a layout, an index page with a button that counts and a list from an API call, the `api` and `state` folders with an example each, and a Button and a Card in `system/components`.
+
+Skip the question with `npx tessera init --preset tailwind` or `--preset unstyled`. With no terminal and no flag, `init` uses `tailwind` and says so. See [Starter presets](/guide/presets).
 
 ## What you have
 
@@ -66,13 +67,15 @@ my-app/
   AGENTS.md               for an AI tool: the rules, and how a Tessera app is written
   CLAUDE.md, llms.txt     the same, for Claude Code and for tools that read llms.txt
   .mcp.json               starts tessera mcp, so a tool can look up components and tokens
-  system/                 the design system (tessera or tailwind preset)
-    tokens/               colors, scale, effects, layout, semantic colors, themes/dark
-    components/           Card, Badge (Button and the rest come from Tessera UI)
+  system/                 the design system
+    tailwind/tokens/      (or unstyled/tokens) colors, scale, effects, semantic colors, themes/dark
+    components/           Button and Card
   app/
     main.ts               loads the token CSS and starts the router
     layouts/default.tess  wraps every page
     pages/index.tess      the page at /
+    apis/                 the API the page calls
+    state/                shared state: the counter
 ```
 
 The four files for AI tools mean you can start a model in this folder and ask it to build something: it has the rules, the language and where the documentation is ([AI coding tools](/guide/agents#a-new-project-is-ready-for-an-ai-tool)).
@@ -96,7 +99,7 @@ Open `app/pages/index.tess`, change the heading and save: the page updates witho
 </template>
 ```
 
-`Button` is not imported: components in `system/components` and `app/components`, and those of [Tessera UI](/guide/tessera-ui), are found by name. Misspell it and the compiler says so, with a suggestion.
+`Button` is not imported: components in `system/components` and `app/components` are found by name. Misspell it and the compiler says so, with a suggestion.
 
 ## Add a component
 
@@ -108,7 +111,7 @@ This writes `app/components/Note.tess` with a valid contract. Use `<Note>` in an
 
 ## Change a token
 
-With the `tessera` or `tailwind` preset, open `system/tokens/semantic.tokens.json` and change `color.action.primary.bg` to another color, say `{color.red.700}` (tessera) or `{color.emerald.600}` (tailwind). The buttons change everywhere, and `npx tessera check` still passes unless the new color has too little contrast with white text, in which case it says which pair fails.
+With the `tailwind` preset, open `system/tailwind/tokens/semantic.tokens.json` and change `color.action.primary.bg` to another color, say `{color.emerald.600}`. (With `unstyled`, set it in `system/unstyled/tokens/colors.tokens.json`.) The buttons change everywhere, and `npx tessera check` still passes unless the new color has too little contrast with white text, in which case it says which pair fails.
 
 Then try the opposite on purpose: in a component's `<style>`, write `padding: 13px`.
 
@@ -123,7 +126,7 @@ ERROR  T2102  app/components/Note.tess:14:12
 
 ## Add Tessera to an existing codebase
 
-Run `npx tessera init --preset none` in a folder that already has a `package.json`. It adds the scripts and the dependency, writes the files that are missing, and never overwrites one. Then record today's violations as a baseline, so enforcement fails only on new ones:
+Run `npx tessera init --preset unstyled` in a folder that already has a `package.json`. It adds the scripts and the dependency, writes the files that are missing, and never overwrites one. Then record today's violations as a baseline, so enforcement fails only on new ones:
 
 ```bash
 npx tessera baseline

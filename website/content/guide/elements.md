@@ -21,7 +21,7 @@ dist-elements/
   README.md             how to use it, for the team that gets the folder
 ```
 
-For the `tessera` preset that is 11 elements in about 9 kB of JavaScript and 3 kB of CSS, gzipped. Publish the folder to npm, serve it from your own host, or copy it into an app.
+Each element is small, and the JavaScript and CSS are shared by all of them. Publish the folder to npm, serve it from your own host, or copy it into an app.
 
 ## Use from HTML or any framework
 

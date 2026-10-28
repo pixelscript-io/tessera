@@ -26,9 +26,9 @@ The test tools (`vitest` 4 or newer, `@vitest/browser-playwright`, `playwright`,
 - a disabled component is disabled to assistive technology;
 - for a component with a behavior (`press`, `toggle`, `disclosure`, `dialog` or `combobox`), a visible focus outline and that behavior's whole conformance suite: keys, pointer, `data-state`, Tab reachability, disabled and re-enabled, and for a dialog the focus trap, the scroll lock and where focus returns.
 
-A component that cannot be shown without data, such as a combobox with no options, is given some in `fixtures`: `tessera a11y` writes example options for the design system's `Combobox` and `Select`, and you add your own the same way.
+A component that cannot be shown without data, such as a combobox with no options, is given some by the `preview` in its contract, and `tessera a11y` uses it.
 
-Adding a component adds its tests: there is nothing to register. A new project from the `tessera` or `tailwind` preset runs 478 of them, of which the `Button` alone is 283. They found a real mistake in the first project they were run in: the preset's `Card` declared the role `group` but did not set it, and is now `generic`.
+Adding a component adds its tests: there is nothing to register. A new project runs a few hundred of them for its Button and Card, and adding a component such as `Dialog` adds its suite. They found a real mistake in the first project they were run in: the preset's `Card` declared the role `group` but did not set it, and is now `generic`.
 
 What generated tests do not cover is listed in [Behaviors and accessibility tests](/guide/behaviors): reading order, the quality of labels, color alone carrying meaning, and anything a person has to judge. They reduce the number of accessibility defects a team ships; they do not certify a product.
 

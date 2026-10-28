@@ -102,7 +102,9 @@ describe('components', () => {
       'AccordionItem',
       'Alert',
       'Avatar',
+      'Badge',
       'Button',
+      'Card',
       'CartAdd',
       'CartCount',
       'Checkbox',
@@ -147,9 +149,7 @@ describe('components', () => {
       values: ['primary', 'neutral', 'danger'],
       default: 'primary',
     })
-    expect(button.usage[0]).toBe(
-      ['<Button>', '  Save changes', '  <Icon slot="icon" name="plus" />', '</Button>'].join('\n'),
-    )
+    expect(button.usage[0]).toBe(['<Button>', '  Save changes', '</Button>'].join('\n'))
     expect(button.source).toContain('<contract>')
   })
 
@@ -157,7 +157,7 @@ describe('components', () => {
     const r = call('get_component', { name: 'Buton' })
     expect(r.isError).toBe(true)
     expect(r.text).toBe(
-      'There is no component named Buton. Components: Accordion, AccordionItem, Alert, Avatar, Button, CartAdd, CartCount, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Form, FormField, Icon, Kbd, Link, Popover, Progress, Quote, RadioGroup, Select, Separator, SiteNav, Skeleton, Spinner, Switch, TaskList, Textarea, TextField, Tooltip.',
+      'There is no component named Buton. Components: Accordion, AccordionItem, Alert, Avatar, Badge, Button, Card, CartAdd, CartCount, Checkbox, Combobox, ConfirmBar, Counter, Dialog, Form, FormField, Icon, Kbd, Link, Popover, Progress, Quote, RadioGroup, Select, Separator, SiteNav, Skeleton, Spinner, Switch, TaskList, Textarea, TextField, Tooltip.',
     )
     expect(call('get_component', { name: 'Conf' }).text).toContain('Did you mean ConfirmBar?')
     expect(call('get_component', {}).text).toBe('"name" is required and must be a string.')

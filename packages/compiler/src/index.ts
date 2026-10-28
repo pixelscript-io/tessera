@@ -61,6 +61,8 @@ export {
   defineConfig,
   resolveConfig,
   validateConfig,
+  activeSystemFolder,
+  type SystemEntry,
   DEFAULT_GOVERNED,
   type TesseraConfig,
   type SeverityRule,

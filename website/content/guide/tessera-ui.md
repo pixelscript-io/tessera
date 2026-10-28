@@ -12,7 +12,7 @@ It is not a second system beside yours. Its components are styled only with toke
 npm install @pixelscriptio/tessera-ui@latest
 ```
 
-The starter presets (`tessera` and `tailwind`) add it for you. With it installed, every component is available by its name, with no import, like a component in `app/components` (see [Auto-imports](/guide/auto-imports)):
+The starter presets do not add it: a new project starts with its own Button and Card in `system/components`. A project that lists the package in its `package.json` has every component available by its name; with it installed, every component is available by its name, with no import, like a component in `app/components` (see [Auto-imports](/guide/auto-imports)):
 
 ```xml tess kind=page
 <template>
@@ -22,7 +22,7 @@ The starter presets (`tessera` and `tailwind`) add it for you. With it installed
 </template>
 ```
 
-The library is only used by a project that has a design system, meaning tokens in `system/tokens`. Without tokens its components would have nothing to be styled by, so `--preset none` stays empty even if the package is installed.
+The library is only used by a project that has a design system, meaning tokens in `system/<name>/tokens` (or `system/tokens`). Without tokens its components would have nothing to be styled by.
 
 ## Making a component your own
 
@@ -40,7 +40,7 @@ Until you eject, the library's component is not yours to edit, and a new version
 
 ## Tokens a library component may use
 
-A library component uses only the tokens listed here, which is the interface between the library and a design system. The `tessera` and `tailwind` presets define all of them, and a design system of your own has to as well, or `tessera check` reports the missing one in the component that uses it.
+A library component uses only the tokens listed here, which is the interface between the library and a design system. The `tailwind` and `unstyled` presets define all of them, and a design system of your own has to as well, or `tessera check` reports the missing one in the component that uses it.
 
 ```text token-interface
 color.action.danger.bg
@@ -72,6 +72,7 @@ radius.lg
 radius.md
 radius.sm
 shadow.md
+shadow.sm
 space.0-5
 space.1
 space.10

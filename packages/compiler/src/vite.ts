@@ -309,7 +309,9 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       if (id === RESOLVED_TOKENS_ID) {
         const loaded = loadTokens()
         if (!loaded)
-          this.error('No design tokens found. Put *.tokens.json files in a "system/tokens" folder.')
+          this.error(
+            'No design tokens found. Put *.tokens.json files in a "system/<name>/tokens" folder.',
+          )
         if (!loaded.ok) this.error(loaded.diagnostics.map(formatTokenDiagnostic).join('\n\n'))
         for (const file of tokenFiles(loaded.dir)) this.addWatchFile(file)
         return loaded.css + PAGE_RESET

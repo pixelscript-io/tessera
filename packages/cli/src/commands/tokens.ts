@@ -24,7 +24,7 @@ async function tokensFolder(io: Io, args: Args): Promise<{ dir: string; root: st
   try {
     const project = await openProject(io.cwd, args)
     return {
-      dir: project.tokensDir() ?? join(project.root, 'system', 'tokens'),
+      dir: project.tokensDirOrDefault(),
       root: project.root,
     }
   } catch (error) {
