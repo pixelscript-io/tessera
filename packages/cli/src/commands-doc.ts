@@ -12,12 +12,17 @@ export interface CommandDoc {
 export const COMMANDS_DOC: CommandDoc[] = [
   {
     name: 'init',
-    usage: 'tessera init [folder] [--preset tailwind|unstyled]',
+    usage: 'tessera init [folder] [--starter todo|page|blank] [--tokens tailwind|none]',
     summary: 'Start a project, in an empty folder or beside an existing package.json',
     details:
-      'Writes the same app in both presets: a layout, an index page with a button that counts (shared state in `app/state`) and a list from an API call (`app/apis`), `main.ts`, a Button and a Card in `system/components`, and `tessera.config.ts` naming the design system. The presets differ in the tokens, in `system/<name>/tokens`: `tailwind` is built from the default theme of Tailwind (every color, the spacing scale, radii, type, shadows, easing and more, with light and dark themes), and `unstyled` has the same token names with plain values (black on white, square corners, no shadows) for making the design yourself. In a terminal it asks which preset; `--preset` answers it, and with neither it uses `tailwind`. It adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency to an existing `package.json`, never overwrites a file, and lists what it left alone. It also writes the files an AI coding tool reads: `AGENTS.md` (the rules and how a Tessera app is written), `llms.txt`, `CLAUDE.md` (which imports `AGENTS.md`) and `.mcp.json` (which starts `tessera mcp`).',
+      'Writes `main.ts`, a Button and a Card in `system/components`, `tessera.config.ts` naming the design system, and the starter app you choose: `todo` (a to-do list that adds, ticks off, filters and removes, kept in the browser and the address, with its state in `app/state/todos.ts`), `page` (a layout, and an index page with a button that counts and a list from an API call, to show what Tessera does) or `blank` (one empty page and no layout). It also writes the tokens you choose, in `system/<name>/tokens`: `tailwind` is built from the default theme of Tailwind (every color, the spacing scale, radii, type, shadows, easing and more, with light and dark themes), and `none` has the same token names with plain values (black on white, square corners, no shadows) for making the design yourself. In a terminal it asks the two questions, the starter app first; `--starter` and `--tokens` answer them, and with neither and no terminal it uses `page` and `tailwind` and says so. `--preset tailwind|unstyled` is the older spelling of `--tokens`. It adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency to an existing `package.json`, never overwrites a file, and lists what it left alone. It also writes the files an AI coding tool reads: `AGENTS.md` (the rules and how a Tessera app is written), `llms.txt`, `CLAUDE.md` (which imports `AGENTS.md`) and `.mcp.json` (which starts `tessera mcp`).',
     options: [
-      { flag: '--preset <name>', description: 'tailwind or unstyled. Skips the question.' },
+      { flag: '--starter <name>', description: 'todo, page or blank. Skips the question.' },
+      { flag: '--tokens <name>', description: 'tailwind or none. Skips the question.' },
+      {
+        flag: '--preset <name>',
+        description: 'The older spelling of --tokens: tailwind, unstyled or none.',
+      },
       {
         flag: '--link <folder>',
         description:
@@ -73,7 +78,7 @@ export const COMMANDS_DOC: CommandDoc[] = [
   },
   {
     name: 'dev',
-    usage: 'tessera dev [--port <n>] [--docs-port <n>]',
+    usage: 'tessera dev [--port <n>] [--docs-port <n>] [--mock]',
     summary: 'Run the app and its design system docs with hot updates',
     details:
       "Starts two servers, each on its own port, and prints both addresses: the app, and the docs of the design system (a page for every component and token, generated from your contracts and tokens). The docs update by themselves when a component in `system/` or `app/` or a token changes, including a file you add while it runs. Set `docs: false` in `tessera.config.ts` to start only the app. With the CLI's own setup there are no configuration files: it supplies the Vite config (with the Tessera plugin) and the HTML page. A project that has its own `vite.config.ts` or `index.html` uses them instead.",
@@ -86,6 +91,11 @@ export const COMMANDS_DOC: CommandDoc[] = [
         flag: '--docs-port <n>',
         description:
           'The port for the docs. Default: the one after the app’s, or the next free one.',
+      },
+      {
+        flag: '--mock',
+        description:
+          'Answer every API that has a description (app/apis/<name>.api.json) from that description, with made-up data, so a page can be built before the server exists. Add ?mock=error, ?mock=empty, ?mock=loading or ?mock=slow to a page’s address to see those states. Only in the dev server; a build never mocks.',
       },
     ],
   },

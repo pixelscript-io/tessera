@@ -98,6 +98,14 @@ export interface WriteOptions<T> {
   parse?: (response: Response) => Promise<T>
   /** More paths whose reads should ask again after this write, or `false` for none at all. */
   invalidates?: string[] | false
+  /**
+   * Show what the write will do before the server has answered. Each key is the path of a read (`:name` is filled from
+   * what is sent) and each value gets that read's data and what is sent, and returns the data the read should show.
+   * Return a new value and do not change the one you are given. Returning `undefined`, or throwing, leaves the read as
+   * it was. Every read of that path is changed, whatever its query, if it already has an answer. If the write fails,
+   * the change is taken back, and only that change: another write that is still running keeps its own.
+   */
+  optimistic?: Record<string, (current: any, input: any) => unknown>
 }
 
 /** A read: the data, and what is happening to it. All of them are signals. */
@@ -189,6 +197,13 @@ interface Entry {
   prefetchError?: ApiError
   /** Came with the page, not from the server: shown at once, and asked again after the page is up. */
   seeded: boolean
+  /** While optimistic writes are running: the last answer of the server, and the changes shown on top of it. */
+  optimistic?: { base: unknown; pending: Array<{ apply(value: unknown): unknown }> }
+}
+
+/** What an entry shows: the server's answer with every optimistic change that is still running put on top. */
+function shown(optimistic: NonNullable<Entry['optimistic']>): unknown {
+  return optimistic.pending.reduce((value, change) => change.apply(value), optimistic.base)
 }
 
 /** Answers that came with the page, by address, for the first read of each (`seedData`). */
@@ -337,6 +352,44 @@ function related(a: string, b: string): boolean {
 
 const retryable = (error: ApiError) =>
   error.status === 0 || error.status >= 500 || error.status === 408 || error.status === 429
+
+/** Where the dev server answers for mocked APIs (`tessera dev --mock`). Matches the compiler's. */
+const MOCK_BASE = '/__tessera/mock'
+
+/** What a page asked to be shown on purpose: `?mock=error`, `empty`, `loading` or `slow`. Kept for the visit. */
+function wantedMock(): string | undefined {
+  try {
+    const found = new URLSearchParams(globalThis.location?.search ?? '').get('mock')
+    const store = globalThis.sessionStorage
+    if (found === 'off') store?.removeItem('tessera-mock')
+    else if (found) store?.setItem('tessera-mock', found)
+    return found === 'off' ? undefined : (found ?? store?.getItem('tessera-mock') ?? undefined)
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The api that `tessera dev --mock` gives an `app/apis/<name>.ts` file in place of `createApi`: it asks the dev server,
+ * which answers from the API's description, and sends no headers or credentials (a mock needs neither, and a real key
+ * never goes to it). Not for your own code.
+ */
+export function createMockedApi(name: string, options: ApiOptions = {}): Api {
+  const real = options.fetch
+  const kept: ApiOptions = { ...options }
+  delete kept.headers
+  delete kept.credentials
+  return createApi({
+    ...kept,
+    base: `${MOCK_BASE}/${encodeURIComponent(name)}`,
+    fetch: (input, init) => {
+      const mock = wantedMock()
+      const headers = new Headers(init?.headers)
+      if (mock) headers.set('x-tessera-mock', mock)
+      return (real ?? globalThis.fetch)(input, { ...init, headers })
+    },
+  })
+}
 
 /** Create an api with its own options and its own memory of what it fetched. The ones every app uses are exported below. */
 export function createApi(initial: ApiOptions = {}): Api {
@@ -547,7 +600,11 @@ export function createApi(initial: ApiOptions = {}): Api {
         try {
           const result = await send('GET', entry.url, undefined, entry.request, controller.signal)
           if (controller.signal.aborted) return
-          entry.data.value = result
+          if (entry.optimistic) {
+            // The server's answer is the new base; what is still being tried goes on top of it.
+            entry.optimistic.base = result
+            entry.data.value = shown(entry.optimistic)
+          } else entry.data.value = result
           entry.error.value = undefined
           entry.fetched = true
           entry.updatedAt = Date.now()
@@ -712,6 +769,56 @@ export function createApi(initial: ApiOptions = {}): Api {
     })
   }
 
+  /** Show the changes of an optimistic write on every read that has an answer; remember them to settle later. */
+  function tryChanges(
+    rules: WriteOptions<unknown>['optimistic'],
+    input: unknown,
+    values: Params,
+  ): Array<{ entry: Entry; change: { apply(value: unknown): unknown } }> {
+    const tried: Array<{ entry: Entry; change: { apply(value: unknown): unknown } }> = []
+    if (!rules) return tried
+    for (const [rulePath, rule] of Object.entries(rules)) {
+      const { path: target, missing, invalid } = fill(rulePath, values)
+      if (missing || invalid) continue
+      for (const entry of entries.values()) {
+        if (entry.path !== target || !entry.fetched) continue
+        const change = {
+          apply(value: unknown): unknown {
+            try {
+              const next = rule(value, input)
+              return next === undefined ? value : next
+            } catch {
+              return value
+            }
+          },
+        }
+        // An answer that was on its way would show what is true without this change, and replace it.
+        entry.controller?.abort()
+        const optimistic = (entry.optimistic ??= { base: entry.data.peek(), pending: [] })
+        optimistic.pending.push(change)
+        entry.data.value = shown(optimistic)
+        tried.push({ entry, change })
+      }
+    }
+    return tried
+  }
+
+  /** The write is over: a change that worked becomes part of what the server said, one that failed is taken back. */
+  function settleChanges(
+    tried: Array<{ entry: Entry; change: { apply(value: unknown): unknown } }>,
+    worked: boolean,
+  ): void {
+    for (const { entry, change } of tried) {
+      const optimistic = entry.optimistic
+      const at = optimistic ? optimistic.pending.indexOf(change) : -1
+      if (!optimistic || at < 0) continue
+      optimistic.pending.splice(at, 1)
+      if (worked) optimistic.base = change.apply(optimistic.base)
+      entry.data.value = shown(optimistic)
+      if (optimistic.pending.length === 0) entry.optimistic = undefined
+    }
+  }
+
   function action<T, I>(method: string, path: string, options: WriteOptions<T> = {}): Action<T, I> {
     const running = state(0)
     const error = state<ApiError | Error | undefined>(undefined)
@@ -725,6 +832,7 @@ export function createApi(initial: ApiOptions = {}): Api {
     const call = async (input?: I): Promise<T> => {
       running.value++
       error.value = undefined
+      let tried: Array<{ entry: Entry; change: { apply(value: unknown): unknown } }> = []
       try {
         let values: Params = {}
         let body: Body | undefined
@@ -734,11 +842,15 @@ export function createApi(initial: ApiOptions = {}): Api {
         if (missing) throw new Error(`${path} needs a value for "${missing}".`)
         if (invalid) throw new ApiError({ method, url: path, status: 0, message: invalid })
         if (body === undefined && Object.keys(rest).length > 0) body = rest
+        tried = tryChanges(options.optimistic, isPlainObject(input) ? values : input, values)
         const result = (await send(method, join(filled), body, request)) as T
         data.value = result
+        settleChanges(tried, true)
+        tried = []
         if (options.invalidates !== false) invalidatePaths([filled, ...(options.invalidates ?? [])])
         return result
       } catch (failure) {
+        settleChanges(tried, false)
         error.value = failure as ApiError | Error
         throw failure
       } finally {
@@ -768,6 +880,7 @@ export function createApi(initial: ApiOptions = {}): Api {
   function clearAll(): void {
     for (const entry of [...entries.values()]) {
       entry.controller?.abort()
+      entry.optimistic = undefined
       entry.data.value = undefined
       entry.error.value = undefined
       entry.fetched = false

@@ -48,13 +48,18 @@ Every command:
 
 ### `tessera init`
 
-Starts a project. In an empty folder, or beside an existing `package.json`, it writes the app (`main.ts`, a layout, an index page, an API and a piece of shared state), `tessera.config.ts`, a Button and a Card in `system/components`, a design system in `system/<name>/tokens`, and the files an AI tool reads (`AGENTS.md`, `llms.txt`, `CLAUDE.md`, `.mcp.json`). It adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency to an existing `package.json`, never overwrites a file, and lists what it left alone.
+Starts a project. In an empty folder, or beside an existing `package.json`, it writes the starter app you choose, `main.ts`, `tessera.config.ts`, a Button and a Card in `system/components`, a design system in `system/<name>/tokens`, and the files an AI tool reads (`AGENTS.md`, `llms.txt`, `CLAUDE.md`, `.mcp.json`). It adds the scripts (`dev`, `build`, `preview`, `check`) and the dependency to an existing `package.json`, never overwrites a file, and lists what it left alone.
 
 ```bash
-npx tessera init --preset tailwind
+npx tessera init --starter todo --tokens tailwind
 ```
 
-`--preset` is `tailwind` (every color, the spacing scale, radii, type and shadows of Tailwind's default theme, with a light and a dark theme) or `unstyled` (the same token names with plain values, for making the design yourself). In a terminal it asks. `npm create @pixelscriptio/tessera@latest my-app` runs it in a new folder with no prior install.
+It asks two questions in a terminal, and the flags answer them:
+
+- **Starter app**, `--starter`: `todo` (a to-do list that adds, ticks off, filters and removes, kept in the browser; its list is shared state in `app/state/todos.ts`), `page` (a page that shows what Tessera does: a button that counts and a list from an API call) or `blank` (one empty page, no layout, no API).
+- **Tokens**, `--tokens`: `tailwind` (every color, the spacing scale, radii, type and shadows of Tailwind's default theme, with a light and a dark theme) or `none` (the same token names with plain values, for making the design yourself).
+
+With no terminal and no flags it uses `page` and `tailwind` and says so. `--preset tailwind|unstyled` still works as the older spelling of `--tokens`. `npm create @pixelscriptio/tessera@latest my-app` runs it in a new folder with no prior install.
 
 ### `tessera add`
 
@@ -76,7 +81,7 @@ Runs two servers, each on its own address, and prints both: the app, with hot up
 npm run dev
 ```
 
-`--port` sets the app's port and `--docs-port` the docs'. `docs: false` in `tessera.config.ts` starts only the app. When you change a token in the base that a theme sets for itself, it says so, because the theme keeps its own value. A project with its own `vite.config.ts` or `index.html` uses them.
+`--port` sets the app's port and `--docs-port` the docs'. `--mock` answers every API that has a description from that description, so a page can be built before the server exists ([how](/guide/data#developing-without-the-server-mocks)). `docs: false` in `tessera.config.ts` starts only the app. When you change a token in the base that a theme sets for itself, it says so, because the theme keeps its own value. A project with its own `vite.config.ts` or `index.html` uses them.
 
 ### `tessera build`
 

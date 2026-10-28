@@ -10,6 +10,7 @@ import { validateConfig, type TesseraConfig } from './config'
 import { generateApisDts } from './apis'
 import { readPageMeta, type PageMeta } from './compile'
 import { PUBLIC_PACKAGES } from './packages'
+import { MOCK_PREFIX, mockMiddleware } from './mock-server'
 import { generateStateDts } from './shared-state'
 import { generateComponentsDts } from './dts'
 import { generateRoutesDts, generateRoutesModule, routeDiagnostics } from './routes'
@@ -31,6 +32,11 @@ export interface TesseraOptions {
   baseline?: string
   /** Today's date as `YYYY-MM-DD`, for expiry checks. Defaults to the current date. */
   today?: string
+  /**
+   * In the dev server, answer every API that has a description from that description (`tessera dev --mock`), so a page
+   * can be built before the server exists. Defaults to true when the environment variable `TESSERA_MOCK` is `1`.
+   */
+  mock?: boolean
 }
 
 const TOKENS_ID = 'virtual:tessera/tokens.css'
@@ -97,6 +103,18 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       `import { __beginStateFile } from '${PUBLIC_PACKAGES.core}'\n` +
       `__beginStateFile(${JSON.stringify(file)}, import.meta.hot)\n` +
       code,
+    map: null,
+  })
+
+  const mocking = options.mock ?? process.env.TESSERA_MOCK === '1'
+  /** Is this the file of an api in `app/apis`? With mocks on, its `createApi` is told its name, so it can be answered. */
+  const apiNamed = (id: string): string | undefined =>
+    project.apis().apis.find((api) => api.file.replaceAll('\\', '/') === id.replaceAll('\\', '/'))
+      ?.name
+  const mockApiFile = (code: string, name: string) => ({
+    code:
+      `import { createMockedApi } from '${PUBLIC_PACKAGES.core}'\n` +
+      code.replace(/\bcreateApi\s*\(/g, () => `createMockedApi(${JSON.stringify(name)}, `),
     map: null,
   })
 
@@ -219,6 +237,11 @@ export function tessera(options: TesseraOptions = {}): Plugin {
     },
 
     configureServer(server) {
+      if (mocking)
+        server.middlewares.use(
+          MOCK_PREFIX,
+          mockMiddleware(() => project.apis().apis),
+        )
       const dir = tokensDir()
       if (dir) server.watcher.add(dir)
       const componentDirs = loadComponents().dirs
@@ -416,6 +439,10 @@ export function tessera(options: TesseraOptions = {}): Plugin {
             id,
             loc: { file: id, line: problems[0]!.line, column: problems[0]!.column },
           })
+        }
+        if (rawId === id && mocking && serving) {
+          const name = apiNamed(id)
+          if (name !== undefined) return mockApiFile(code, name)
         }
         return rawId === id && isStateFile(id) ? markStateFile(code, file) : null
       }

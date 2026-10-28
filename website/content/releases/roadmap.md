@@ -10,11 +10,11 @@ What exists is in [Releases](/releases/). This page lists what does not, in the 
 
 ## Shared state, in order
 
-The `app/state` folder is built ([Sharing state](/guide/shared-state)): a file of signals and functions that every component can name, read-only outside its file. The rest, in order: saving state in the browser, in the address, and across a hot update; state for a part of the page (one copy per list item or dialog); and who reads and who changes each piece of state, in `tessera report`.
+The `app/state` folder is built ([Sharing state](/guide/shared-state)): a file of signals and functions that every component can name, read-only outside its file, with state kept in the browser (`persisted`), in the address (`urlState`) and across a hot update. The rest, in order: state for a part of the page (one copy per list item or dialog); and who reads and who changes each piece of state, in `tessera report`.
 
 ## Data fetching, in order
 
-The runtime, the calls in `.tess` files, the `app/apis` folder and the description of an API (checked endpoints, parameters and fields, and `tessera api import` for OpenAPI) are built ([Fetching data](/guide/data)). The rest, in order: optimistic updates; data for a page, started when you navigate and prerendered; development mocks and loading and error states in the docs app and the accessibility tests; a recipe for a proxy that adds a key and handles CORS.
+The runtime, the calls in `.tess` files, the `app/apis` folder and the description of an API (checked endpoints, parameters and fields, and `tessera api import` for OpenAPI) are built, with optimistic updates, data for a page (started when you navigate and written into a prerendered page) and development mocks from the description (`tessera dev --mock`) ([Fetching data](/guide/data)). The rest, in order: loading, error and empty states in the docs app and the generated accessibility tests; mocks that remember what was written; a recipe for a proxy that adds a key and handles CORS.
 
 ## Later
 

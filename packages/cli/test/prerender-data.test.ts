@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { createServer, type Server } from 'node:http'
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
@@ -24,6 +24,8 @@ let apiServer: Server
 /** The requests the API has had, and what it answers (changed after the build, to see the page ask again). */
 const hits: string[] = []
 let title = 'First post'
+/** How long the API takes to answer, so a test can look at the page before the answer arrives. */
+let answerAfter = 0
 const closers: Array<() => Promise<void> | void> = []
 
 const write = (file: string, text: string) => {
@@ -63,6 +65,10 @@ const clicks = state(0)
 beforeAll(async () => {
   apiServer = createServer((req, res) => {
     hits.push(`${req.method} ${req.url}`)
+    if (answerAfter) return void setTimeout(() => answer(req, res), answerAfter)
+    answer(req, res)
+  })
+  const answer = (req: IncomingMessage, res: ServerResponse) => {
     res.setHeader('content-type', 'application/json')
     res.setHeader('access-control-allow-origin', '*')
     if (req.url === '/posts') {
@@ -79,7 +85,7 @@ beforeAll(async () => {
       res.statusCode = 404
       res.end('{"message":"nothing"}')
     }
-  })
+  }
   await new Promise<void>((done) => apiServer.listen(0, '127.0.0.1', done))
   api = `http://127.0.0.1:${(apiServer.address() as { port: number }).port}`
   closers.push(() => new Promise<void>((done) => apiServer.close(() => done())))
@@ -247,6 +253,8 @@ describe('the page in a browser', () => {
     const base = await serve()
     hits.length = 0
     title = 'Edited since the build'
+    // The answer takes a while, so the page can be looked at as it was built.
+    answerAfter = 800
     const { page } = await open(`${base}/posts`)
     // The baked data is what shows first.
     expect(await page.locator('li').first().textContent()).toBe('First post')
@@ -256,6 +264,7 @@ describe('the page in a browser', () => {
     )
     expect(hits).toEqual(['GET /posts'])
     expect(await page.locator('p', { hasText: 'Loading' }).count()).toBe(0)
+    answerAfter = 0
     title = 'First post'
     await page.context().close()
   }, 120_000)

@@ -60,6 +60,7 @@ export {
   clearApi,
   configureApi,
   createApi,
+  createMockedApi,
   del,
   get,
   invalidate,

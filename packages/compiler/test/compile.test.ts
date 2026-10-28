@@ -511,13 +511,14 @@ describe('generated module', () => {
 })
 
 describe('browser-safe core', () => {
-  it('uses no Node APIs outside the Node entries (vite.ts, node.ts, project.ts, config-file.ts)', () => {
+  it('uses no Node APIs outside the Node entries (vite.ts, mock-server.ts, node.ts, project.ts, config-file.ts)', () => {
     const roots = ['../src', '../../contract/src', '../../core/src']
     for (const root of roots) {
       const dir = fileURLToPath(new URL(root, import.meta.url))
       for (const name of readdirSync(dir).filter(
         (n) =>
-          n.endsWith('.ts') && !['vite.ts', 'node.ts', 'project.ts', 'config-file.ts'].includes(n),
+          n.endsWith('.ts') &&
+          !['vite.ts', 'mock-server.ts', 'node.ts', 'project.ts', 'config-file.ts'].includes(n),
       )) {
         const text = readFileSync(`${dir}/${name}`, 'utf8')
         expect(text, `${root}/${name}`).not.toMatch(/from ['"]node:|require\(|process\./)

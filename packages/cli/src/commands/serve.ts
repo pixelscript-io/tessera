@@ -84,10 +84,17 @@ export async function projectConfig(root: string, args: Args): Promise<InlineCon
   const own = VITE_CONFIGS.some((name) => existsSync(join(root, name)))
   const hasHtml = existsSync(join(root, 'index.html'))
   const port = flag(args, 'port')
+  // `tessera dev --mock`: the plugin answers every API that has a description. A project with its own Vite config reads
+  // the same switch from the environment.
+  const mock = has(args, 'mock')
+  if (mock) process.env.TESSERA_MOCK = '1'
   return {
     root,
     ...(own ? {} : { configFile: false as const }),
-    plugins: [...(own ? [] : [tessera()]), ...(hasHtml ? [] : [htmlShell(root)])],
+    plugins: [
+      ...(own ? [] : [tessera(mock ? { mock } : {})]),
+      ...(hasHtml ? [] : [htmlShell(root)]),
+    ],
     ...(typeof port === 'string'
       ? { server: { port: Number(port) }, preview: { port: Number(port) } }
       : {}),

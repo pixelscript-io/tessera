@@ -350,6 +350,52 @@ const add = post('/todos', { invalidates: ['/stats'] })
 
 `invalidates: false` turns it off. `invalidate('/todos')` does the same thing by hand, and `clearApi()` forgets everything.
 
+### Showing the result at once: `optimistic`
+
+A list that waits for the server before it changes feels slow. `optimistic` says what a write will do to a read, and the page shows it at once:
+
+```xml tess kind=page
+<script>
+const todos = get('/todos')
+const title = state('')
+const add = post('/todos', {
+  optimistic: {
+    '/todos': (list, input) => [...list, { id: 0, title: input.title }],
+  },
+})
+const remove = del('/todos/:id', {
+  optimistic: {
+    '/todos': (list, input) => list.filter((todo) => todo.id !== input.id),
+  },
+})
+</script>
+
+<template>
+  <main>
+    <ul>
+      <li each="todo in todos.data" key="todo.id">
+        {todo.title}
+        <button type="button" @click="remove({ id: todo.id })">Remove</button>
+      </li>
+    </ul>
+    <input aria-label="New todo" bind:value="title" />
+    <button type="button" @click="add({ title: title.value })">Add</button>
+    <p if="add.error">Could not add it: {add.error.message}</p>
+  </main>
+</template>
+```
+
+Each key is the path of a read (a `:name` in it is filled from what you pass, as in the path of the write), and each value is a function of two things: the data the read has now, and what you passed to the call. It returns the data the read should show. What it returns replaces the data, so **return a new value and do not change the one you are given** (`[...list, item]`, `list.filter(...)`, not `list.push(item)`).
+
+- **Every read of that exact path** changes, whatever its query: `/todos` and `/todos?done=false` both show the new item. `/todos/1` is another path, and is not touched unless you name it too.
+- **A read that has no answer yet** is left alone: there is nothing to change.
+- **A function that returns `undefined` or throws** leaves the read as it was. A mistake in a guess never breaks the page.
+- **If the write fails**, the change is taken back and `error` says why (the `Could not add it` line above). Only that change is taken back: another write that is still running keeps its own.
+- **If it works**, the guess stays on screen while the read asks again (see above), and the server's answer replaces it. The item shows `id: 0` until then, so use `key` carefully and do not rely on a guessed `id`. With `invalidates: false` nothing asks again, and the guess becomes the data.
+- A request for the read that was already on its way when the write began is dropped, so it cannot answer with the list from before the write and undo the change.
+
+Use it when a failure is rare and the answer is easy to predict (adding, removing, ticking, renaming). Leave it out when the server decides something you cannot (a price, an id you need at once).
+
 ## Setting it up
 
 Without any set-up, paths are used as they are. To set a base URL, headers or your own `fetch` for the shared API (the one plain `get` and `post` use when there is no `app/apis/default.ts`), once, at the start of the app:
@@ -389,6 +435,7 @@ Each read and write takes options for itself:
 | `staleAfter`     | reads  | This read's own idea of fresh.                                                    |
 | `refetchOnFocus` | reads  | Default true.                                                                     |
 | `invalidates`    | writes | More paths to refresh, or `false` for none.                                       |
+| `optimistic`     | writes | What to show before the server answers: a function for the path of each read.     |
 
 ```ts
 get('/report.csv', {}, { parse: async (res) => (await res.text()).split('\n') })
@@ -396,6 +443,31 @@ post('/jobs', { retry: 2 })
 ```
 
 Options go third for a read (second is its params) and second for a write (its params are what you pass when you call it).
+
+## Developing without the server: mocks
+
+An API that has a [description](#describing-an-api-checked-calls) can be answered by the dev server itself, with made-up data of the right shape, so you can build a page before the real server exists, or while it is down:
+
+```bash
+npx tessera dev --mock
+```
+
+Every call to an API in `app/apis` that has a `.api.json` file goes to the dev server instead (the address in the API file is not used, and its `headers` and `credentials` are not sent, so a real key never leaves for a mock). The answer is made from `returns`: a list has three different items, each field has a value that looks like its name (`email` an address, `avatarUrl` a link, `createdAt` a date), `:id` in the path is the `id` of what comes back, and an optional field is left out, so you build for it being missing. A write answers with what it sent put into the answer, so a page that adds an item sees its own item. The data is the same every time you reload. It does not remember writes: a list does not grow after a `post`.
+
+An API without a description, and a path it does not have, answer with a message that says so (`There is no GET /todo. Did you mean "/todos"?`).
+
+**Seeing the other states.** Add `?mock=` to the page's address, and every mocked call is answered that way until you leave the tab or use `?mock=off`:
+
+| Address         | What the page gets                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `?mock=error`   | An error, 500 (`?mock=error:404` for another status, with the message of the description's `errors` if it has one). |
+| `?mock=empty`   | An empty list, or no body for anything that is not a list.                                                          |
+| `?mock=loading` | The answer never comes, so the page stays in its `loading` state.                                                   |
+| `?mock=slow`    | The answer after 1.5 seconds (`?mock=slow:300` to choose).                                                          |
+
+So `http://localhost:5173/todos?mock=error` shows how the page copes when the server is down. The same addresses work in a test with a real browser, which is how you check that every page has its loading, error and empty state.
+
+Only the dev server mocks: `tessera build` and `tessera preview` never do, and nothing about a mock is in the files you ship. A project with its own `vite.config.ts` turns it on with `tessera({ mock: true })`, or by setting the environment variable `TESSERA_MOCK=1`. It works for an API file written as `export default createApi({ ... })`; an API made some other way is not mocked.
 
 ## In tests
 
@@ -417,10 +489,9 @@ const user = api.get('/users/1')
 
 ## What is not built yet
 
-- **Optimistic updates**: showing the result of a write before the server has answered.
-- **Data for a page**: starting the fetch when you navigate, and prerendering a page with its data in it. For now a read that runs while a page is prerendered has no base to use for a relative path.
-- **Checking the body of a write** against the description, and development mocks made from it.
-- **Loading and error states** in the docs app and the accessibility tests.
+- **Checking the body of a write** against the description.
+- **Mocks that remember**: a list that grows after a `post`, and states set per call rather than per page.
+- **Loading, error and empty states** in the docs app and in the generated accessibility tests.
 - **Pagination and infinite lists, GraphQL and WebSockets.** `parse` and your own `fetch` cover a lot of GraphQL today.
 
 The plan for all of these is in the [roadmap](/releases/roadmap).
