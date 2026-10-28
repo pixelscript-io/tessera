@@ -56,7 +56,9 @@ Version 0.8 delivered the library as the package `@pixelscriptio/tessera-ui`. It
 
 ## The Tessera UI site
 
-[tessera-ui.pixelscript.io](https://tessera-ui.pixelscript.io) lists every component with its contract, the tokens it uses and its docs, and is also the registry `tessera add` reads. It is made from the same files, so it cannot say something the registry does not. To build it (and publish it, if you run your own copy):
+[tessera-ui.pixelscript.io](https://tessera-ui.pixelscript.io) is laid out like the shadcn docs: a sidebar of every component, and a page for each with a live preview, the full code, how to add it, the guidance, the contract as tables, and the design tokens it uses. It is also the registry `tessera add` reads, and it is made from the same files, so it cannot say something the registry does not.
+
+The pages are static HTML that read without a script. One script and one style sheet from the site itself make the previews live: the components and the examples of their docs pages are built as a small Tessera project, with the same Vite plugin as an app, so a preview is the real component. To build the site (and publish it, if you run your own copy):
 
 ```bash
 pnpm build:ui-site
@@ -64,7 +66,9 @@ cd packages/ui
 npx wrangler deploy
 ```
 
-The build writes `packages/ui/dist`: the pages, `index.json` and `r/`. `packages/ui/wrangler.jsonc` serves that folder as static files, with no code. Its `_headers` lets any origin read the registry and caches it for five minutes. Add your domain to the Worker in the Cloudflare dashboard. The folder is also a registry you can try before deploying: `npx tessera add Button --from packages/ui/dist`.
+The build writes `packages/ui/dist`: the pages, `index.json`, `r/` and `assets/`. `packages/ui/wrangler.jsonc` serves that folder as static files, with no code. Its `_headers` lets any origin read the registry, caches it for five minutes, caches the bundle's hashed chunks for a year, and allows scripts and styles from the site only. Add your domain to the Worker in the Cloudflare dashboard. The folder is also a registry you can try before deploying: `npx tessera add Button --from packages/ui/dist`.
+
+A component's examples come from its `.docs.md` file: each `tess live` block is a preview with its code. A component with no example has no preview, so give each one.
 
 ## Tokens a component needs
 

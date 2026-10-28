@@ -4,7 +4,7 @@
     "Accordion": {
       "item": "Accordion",
       "registry": "../../packages/ui",
-      "sha256": "4e974f5b4c5561e1660b6bb0f3efa9fa4a0b97d41e7336164aa603ee9a41425b",
+      "sha256": "661d27d5168b06ffb43f57ca53cae55bb68f2fd673455593e760589a74e4b794",
       "files": ["Accordion.docs.md", "Accordion.tess"]
     },
     "AccordionItem": {
@@ -58,7 +58,7 @@
     "Dialog": {
       "item": "Dialog",
       "registry": "../../packages/ui",
-      "sha256": "ac2e56de8c202e309d0ade3f13b094bf13537525a1c2a7da48736274a553bd72",
+      "sha256": "a07fb388b78003b2ba2de4f0cce5de10c0cb2e27d889c1667a9e35c6091b50fd",
       "files": ["Dialog.docs.md", "Dialog.tess"]
     },
     "Form": {

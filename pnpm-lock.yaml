@@ -195,6 +195,9 @@ importers:
         specifier: ^6.0.0 || ^7.0.0
         version: 7.3.7(@types/node@26.6.5)
     devDependencies:
+      axe-core:
+        specifier: ^4.14.0
+        version: 4.14.0
       vite-node:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@26.6.5)

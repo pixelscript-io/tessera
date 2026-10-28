@@ -14,13 +14,13 @@ const open = state(false)
 
 <template>
   <div>
-    <Button @press="open.value = true">Delete project</Button>
-    <Dialog :open="open" @dismiss="open.value = false">
+    <Button @press="open = true">Delete project</Button>
+    <Dialog :open="open" @dismiss="open = false">
       <span slot="title">Delete this project?</span>
       This removes its files and cannot be undone.
       <div slot="actions">
-        <Button tone="neutral" emphasis="outline" @press="open.value = false">Cancel</Button>
-        <Button tone="danger" @press="open.value = false">Delete</Button>
+        <Button tone="neutral" emphasis="outline" @press="open = false">Cancel</Button>
+        <Button tone="danger" @press="open = false">Delete</Button>
       </div>
     </Dialog>
   </div>

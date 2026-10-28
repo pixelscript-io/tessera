@@ -20,3 +20,6 @@ website/content/public/llms-full.txt
 
 .vitest-attachments/
 registry-dist
+
+packages/ui/.site
+packages/ui/.site-test
