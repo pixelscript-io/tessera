@@ -23,7 +23,7 @@ const devices = get('/objects')
     </section>
 
     <section class="terminal" aria-label="Example">
-      <p class="line"><span class="prompt">$</span> npx tessera check</p>
+      <p class="line"><span class="prompt">$</span> npm run check</p>
       <p class="line out">0 errors, 0 warnings in 5 files.</p>
       <p class="line"><span class="prompt">$</span> npm run dev</p>
       <p class="line out">This app, and the docs for its design system, each on its own address.</p>

@@ -6,19 +6,31 @@ export const GENERATED_MARKER =
 
 const list = (items: string[]) => items.map((i) => `- ${i}`).join('\n')
 
+/**
+ * A component as a model needs it to use it: what it is for, then what it takes (props, slots, variants) and what it
+ * sends (each event, with what it carries). Written from the contract and the script, so it cannot drift from them.
+ */
 function componentLine(c: AgentManifest['components'][number]): string {
-  const variants = c.variants.map((v) => `${v.name}: ${v.values.join(' | ')}`).join('; ')
-  const events = Object.keys(c.events)
-    .map((e) => `@${e}`)
-    .join(', ')
-  const parts = [
-    c.description,
-    variants && `variants ${variants}`,
-    events && `events ${events}`,
-    c.deprecated !== undefined ? `deprecated${c.deprecated ? `: ${c.deprecated}` : ''}` : '',
+  const props = c.props.map((p) => (p.type === 'unknown' ? p.name : `${p.name} (${p.type})`))
+  const slots = Object.entries(c.slots).map(([name, text]) => (text ? `${name} (${text})` : name))
+  const variants = c.variants.map((v) => `${v.name}: ${v.values.join(' | ')}`)
+  const events = Object.entries(c.events).map(([name, text]) =>
+    text ? `@${name} (${text})` : `@${name}`,
+  )
+  const lines = [
+    props.length && `props: ${props.join(', ')}`,
+    slots.length && `slots: ${slots.join(', ')}`,
+    variants.length && `variants: ${variants.join('; ')}`,
+    events.length && `events: ${events.join(', ')}`,
+    c.deprecated !== undefined && `deprecated${c.deprecated ? `: ${c.deprecated}` : ''}`,
   ].filter(Boolean)
-  return `\`${c.name}\`${parts.length ? ` — ${parts.join('. ')}` : ''}`
+  const head = `\`${c.name}\`${c.description ? ` — ${c.description}` : ''}`
+  return [head, ...lines.map((l) => `  - ${l}`)].join('\n')
 }
+
+/** How to get a component the project does not have yet: copy it from the catalogue, never write one. */
+const MORE_COMPONENTS = `These are the components this project has. For anything else, copy it from the Tessera UI catalogue instead of writing it: \`npx @pixelscriptio/tessera add --list\` shows what there is, and \`npx @pixelscriptio/tessera add Form TextField Select Checkbox Dialog Alert --yes\` copies components, and the ones they use, into \`system/components\`, where they are yours to read and edit. \`tessera add\` then updates this file. If it prints \`npm install <package>\` (Icon needs \`lucide\`), install the package only if the page shows an icon, and tell the person, because it adds a dependency. A component that uses \`Icon\` only for an optional icon works without it.
+`
 
 /** The APIs of the project, if it has any: what a call may use, and the tool that gives the details. */
 function apisSection(manifest: AgentManifest, ticks: boolean): string {
@@ -68,10 +80,7 @@ ${options.guide ? `${options.guide.trim()}\n\n` : ''}## Rules
 
 ## Check your work
 
-Run \`npm run check\` after every change. It prints the same errors the build does, each with a fix. \`npx @pixelscriptio/tessera explain <code>\` explains one.
-\`npm run check -- --fix\` applies the fixes that cannot change how the page looks.
-
-Run Tessera through the npm scripts (\`npm run dev\`, \`check\`, \`build\`) or as \`npx @pixelscriptio/tessera <command>\`. A bare \`npx tessera\` can download an unrelated package of that name when Tessera is not installed.
+Run \`npm run check\` after every change (the loop, above). \`npm run check -- --fix\` applies the fixes that cannot change how the page looks.
 
 ## Where the facts are
 
@@ -81,6 +90,7 @@ Run Tessera through the npm scripts (\`npm run dev\`, \`check\`, \`build\`) or a
 
 ## Components
 
+${MORE_COMPONENTS}
 ${list(manifest.components.map(componentLine))}
 ${apisSection(manifest, true)}${stateSection(manifest, true)}`
 }

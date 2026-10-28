@@ -376,7 +376,7 @@ describe('tessera init: files for AI tools', () => {
       expect(agents).toContain('## How a Tessera app is written')
       expect(agents).toContain('node_modules/@pixelscriptio/tessera/dist/docs/llms-full.txt')
       expect(agents).toContain('npm run check')
-      expect(agents).toContain('A bare `npx tessera` can download an unrelated package')
+      expect(agents).toMatch(/a bare `npx tessera` can download an unrelated package/i)
       expect(read(root, 'CLAUDE.md')).toBe('@AGENTS.md\n')
       expect(JSON.parse(read(root, '.mcp.json'))).toEqual({
         mcpServers: { tessera: { command: 'npx', args: ['@pixelscriptio/tessera', 'mcp'] } },

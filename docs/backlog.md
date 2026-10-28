@@ -7,7 +7,7 @@ Written 2026-10-26.
 ## Taking up now, in this order
 
 1. **The comparison page** on the landing site: Tessera against React, Vue and Svelte on the features people compare most, including what Tessera does not have.
-2. **A real-model test of `AGENTS.md`.** Start a model in a fresh project from `npm create @pixelscriptio/tessera@latest`, give it a few build prompts, and see where it still guesses. Fix the language guide from what it gets wrong.
+2. **A real-model test of `AGENTS.md`.** (Done 2026-10-28: see the decisions log in SPEC.md.) Start a model in a fresh project from `npm create @pixelscriptio/tessera@latest`, give it a few build prompts, and see where it still guesses. Fix the language guide from what it gets wrong.
 3. **Forms and validation.** `bind:value` exists, but there is nothing for validation state, field errors, submit handling or accessible error messages. The idea: declare the rules once and let the compiler check the markup and the error wiring.
 4. **Milestone 35: keeping state.** `persist` (`localStorage`, with a version and migration), `url` (state kept in a query parameter), `resetState()` for tests, and state that survives a hot update.
 5. **Milestone 31 with hydration: data for a page.** The `<page>` block names what a page needs, so the fetch starts on navigation and a prerendered page has its data in the HTML; hydration reuses the static HTML instead of replacing it.

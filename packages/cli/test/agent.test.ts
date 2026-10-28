@@ -71,6 +71,56 @@ describe('tessera agent-files', () => {
     expect(second.out).toContain('Up to date: AGENTS.md')
   })
 
+  it('says what a component takes and sends: props, slots, variants, and what each event carries', async () => {
+    const root = project({
+      'app/pages/index.tess': page(),
+      'app/components/Field.tess': `<contract>
+{ "name": "Field", "role": "group", "parts": ["root"], "variants": { "size": ["md", "sm"] },
+  "slots": { "label": "the visible label, required", "hint": "help under the field" },
+  "events": { "input": "fired with the new text on every change", "change": "fired with { value, label } when chosen" } }
+</contract>
+<script>
+const { value, disabled, rows } = props({ value: '', disabled: false, rows: 3 })
+</script>
+<template><label class="root"><slot name="label" /></label></template>
+<style>.root { padding: $space.2; }</style>
+`,
+    })
+    await run(root, 'agent-files')
+    const agents = read(root, 'AGENTS.md')
+    const section = agents.slice(agents.indexOf('## Components'))
+    expect(section).toContain('props: value (string)')
+    expect(section).toContain('disabled (boolean)')
+    expect(section).toContain('rows (number)')
+    expect(section).toContain(
+      'slots: label (the visible label, required), hint (help under the field)',
+    )
+    expect(section).toContain('variants: size: md | sm')
+    expect(section).toContain('@input (fired with the new text on every change)')
+    expect(section).toContain('@change (fired with { value, label } when chosen)')
+  })
+
+  it('says how to get more components, which is not by writing them, and to refresh the list after', async () => {
+    const root = project(files())
+    await run(root, 'agent-files')
+    const agents = read(root, 'AGENTS.md')
+    const section = agents.slice(agents.indexOf('## Components'))
+    expect(section).toContain('npx @pixelscriptio/tessera add --list')
+    expect(section).toContain('npx @pixelscriptio/tessera add Form TextField')
+    expect(section).toContain('system/components')
+    // A package a component needs is the person's to agree to, and is only needed if the component is used.
+    expect(section).toMatch(/npm install/)
+    expect(section).toMatch(/ask|tell/i)
+  })
+
+  it('does not say the same thing twice: the bare npx warning, and the check loop, once each', async () => {
+    const root = project(files())
+    await run(root, 'agent-files')
+    const agents = read(root, 'AGENTS.md')
+    expect(agents.match(/bare `npx tessera`/g)).toHaveLength(1)
+    expect(agents.match(/npm run check -- --fix/g)).toHaveLength(1)
+  })
+
   it('lists the APIs, and how to call them, when the project has any', async () => {
     const plain = project(files())
     await run(plain, 'agent-files')

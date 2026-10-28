@@ -453,3 +453,28 @@ describe('what the registry may do', () => {
 
 import { readdirSync } from 'node:fs'
 const readdirOf = (root: string, dir: string) => readdirSync(join(root, dir))
+
+describe('the files for AI tools after an add', () => {
+  it('lists the new component in the AGENTS.md and llms.txt that tessera wrote, so the next session knows it', async () => {
+    const root = newProject()
+    await main(['agent-files'], { cwd: root, out: () => {}, err: () => {} })
+    // The list of components has one entry for each, written "`Name` — what it is".
+    expect(read(root, 'AGENTS.md')).not.toContain('`Button` —')
+    const { code, out } = await add(root, ['Button', '--yes', '--fit', 'skip', ...catalogue])
+    expect(code).toBe(0)
+    expect(read(root, 'AGENTS.md')).toContain('`Button` —')
+    expect(read(root, 'llms.txt')).toContain('Button:')
+    expect(out).toContain('Updated AGENTS.md and llms.txt')
+  })
+
+  it('leaves alone an AGENTS.md the person wrote, and does not make one a project does not have', async () => {
+    const written = newProject({ 'AGENTS.md': '# My own rules\n' })
+    const first = await add(written, ['Button', '--yes', '--fit', 'skip', ...catalogue])
+    expect(read(written, 'AGENTS.md')).toBe('# My own rules\n')
+    expect(first.out).not.toContain('Updated AGENTS.md')
+    const none = newProject()
+    await add(none, ['Button', '--yes', '--fit', 'skip', ...catalogue])
+    expect(existsSync(join(none, 'AGENTS.md'))).toBe(false)
+    expect(existsSync(join(none, 'llms.txt'))).toBe(false)
+  })
+})

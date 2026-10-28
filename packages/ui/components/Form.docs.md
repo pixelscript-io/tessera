@@ -6,6 +6,7 @@ You give it the form's `values` and its `rules`. When the person submits (a butt
 
 - A rule is a function from a field's value (and all the values) to a message. Return an empty string, or nothing, when the value is fine.
 - `Form` does not draw errors. You keep them in state and hand each to its field's `error` prop ([TextField](#/components/TextField), [Textarea](#/components/Textarea), [RadioGroup](#/components/RadioGroup), [FormField](#/components/FormField)). The `invalid` event gives you all of them at once.
+- A field has no `name`. The key you use in `values`, `rules` and the errors is the only link between a field and its rule, and you wire each field yourself: its input event stores the value, and its `error` shows the message. A field keeps what is typed. To clear it from outside (after a submit), keep the text in a `state()`, pass it as `value` and update it from the input event: then setting it back to an empty string empties the field. Setting a value the state already has does nothing.
 - Browser validation is off (`novalidate`), so the messages are yours and say what you want in the words you want.
 - Say what is wrong and how to fix it: "Enter an email such as ada@example.com", not "Invalid". Show an error only after the person has tried to submit or left the field, not while they are still typing.
 - `busy` marks the form as busy for assistive technology while it is being sent. Disable the submit button yourself.

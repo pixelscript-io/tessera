@@ -88,6 +88,23 @@ export async function agentFiles(args: Args, io: Io): Promise<number> {
   return 0
 }
 
+/**
+ * Bring AGENTS.md and llms.txt up to date after the project changed (a component added), but only the ones Tessera wrote:
+ * a file the person wrote is theirs, and a project with none has not asked for one. Returns the files it rewrote.
+ */
+export function refreshAgentFiles(project: Project): string[] {
+  const { files, manifest } = agentFileContents(project)
+  const updated: string[] = []
+  for (const [file, text] of files) {
+    const path = join(project.root, file)
+    if (!existsSync(path) || !isGenerated(readFileSync(path, 'utf8'))) continue
+    if (writeIfChanged(path, text)) updated.push(file)
+  }
+  const manifestPath = join(project.root, '.tessera', 'manifest.json')
+  if (updated.length && existsSync(manifestPath)) writeIfChanged(manifestPath, manifest)
+  return updated
+}
+
 const isGenerated = (text: string) =>
   text.startsWith(GENERATED_MARKER) ||
   text.includes('> A Tessera project: components with contracts')

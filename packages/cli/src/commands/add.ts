@@ -5,6 +5,7 @@ import { formatDiagnostic } from '@tessera/compiler'
 import type { Args } from '../args'
 import { flag, has } from '../args'
 import { checkProject } from '../check-project'
+import { refreshAgentFiles } from './agent'
 import type { Io } from '../io'
 import { CliError } from '../io'
 import { openProject } from '../project'
@@ -565,6 +566,14 @@ async function run(args: Args, io: Io, source: RegistrySource): Promise<number> 
   if (componentSteps.length) {
     io.out('')
     project.resetAll()
+    // The next AI session reads AGENTS.md, so it must list what was just added; a file the person wrote is left alone.
+    try {
+      const updated = refreshAgentFiles(project)
+      if (updated.length)
+        io.out(`Updated ${updated.join(' and ')}, so they list the new components.`)
+    } catch {
+      // A project that cannot build its manifest right now has the checks below to say why.
+    }
     if (project.tokensDir()) {
       const names = componentSteps.map((s) => s.as)
       const report = checkProject(project)
