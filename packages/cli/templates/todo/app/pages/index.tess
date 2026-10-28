@@ -1,0 +1,169 @@
+<page>
+{ "title": "Todos" }
+</page>
+
+<script>
+// The list lives in app/state/todos.ts, so any component can read it. This page only holds what is being typed.
+const title = state('')
+
+function add(event) {
+  event.preventDefault()
+  todos.add(title.value)
+  title.value = ''
+}
+</script>
+
+<template>
+  <main class="root">
+    <header class="head">
+      <h1 class="title">Todos</h1>
+      <p class="count">{todos.remaining} left</p>
+    </header>
+
+    <form class="add" @submit="add($event)">
+      <input
+        class="field"
+        type="text"
+        aria-label="New todo"
+        placeholder="What needs doing?"
+        :value="title"
+        @input="title = $event.target.value"
+        />
+      <Button type="submit" tone="primary">Add</Button>
+    </form>
+
+    <nav class="filters" aria-label="Show">
+      <Button size="sm" emphasis="ghost" tone="neutral" @press="todos.show('all')">All</Button>
+      <Button size="sm" emphasis="ghost" tone="neutral" @press="todos.show('active')">Active</Button>
+      <Button size="sm" emphasis="ghost" tone="neutral" @press="todos.show('done')">Done</Button>
+    </nav>
+
+    <p class="empty" if="todos.shown.length === 0">Nothing here. Add a todo above.</p>
+    <ul class="list" else>
+      <li class="item" each="todo in todos.shown" key="todo.id">
+        <label class="row">
+          <input
+            type="checkbox"
+            :checked="todo.done"
+            :aria-label="'Done: ' + todo.title"
+            @change="todos.toggle(todo.id)"
+            />
+          <span class="text" :data-done="todo.done">{todo.title}</span>
+        </label>
+        <Button size="sm" emphasis="ghost" tone="neutral" @press="todos.remove(todo.id)">
+          Remove
+        </Button>
+      </li>
+    </ul>
+
+    <footer class="foot">
+      <Button size="sm" emphasis="outline" tone="neutral" @press="todos.clearDone()">
+        Clear done
+      </Button>
+      <p class="note">Saved in this browser, and the filter is in the address.</p>
+    </footer>
+  </main>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.5;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: $space.12 $space.6;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: $font.size.3xl;
+  font-weight: $font.weight.bold;
+}
+
+.count {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.sm;
+}
+
+.add {
+  display: flex;
+  gap: $space.2;
+}
+
+.field {
+  flex: 1;
+  padding: $space.2 $space.3;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.md;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font: inherit;
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+}
+
+.filters {
+  display: flex;
+  gap: $space.1;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space.3;
+  padding: $space.2 $space.3;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: $space.3;
+  cursor: pointer;
+}
+
+.text[data-done='true'] {
+  color: $color.text.muted;
+  text-decoration: line-through;
+}
+
+.empty {
+  margin: 0;
+  color: $color.text.muted;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space.3;
+}
+
+.note {
+  margin: 0;
+  color: $color.text.muted;
+  font-size: $font.size.xs;
+}
+</style>

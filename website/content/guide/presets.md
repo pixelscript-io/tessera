@@ -2,7 +2,7 @@
 
 Introduced in v0.1 (Milestone 12b); the presets were changed in v0.9 (Milestone 45).
 
-`tessera init` starts a project from one of two presets. You choose when you run it: in a terminal it asks, and `--preset tailwind` or `--preset unstyled` answers it. The choice is made in `init`, not when you run `npm install`, because install scripts cannot prompt reliably (pnpm skips them by default, as do `--ignore-scripts` and most CI). With no terminal and no flag, `init` uses `tailwind` and says so.
+`tessera init` asks which starter app (`todo`, `page` or `blank`) and which tokens (`tailwind` or `none`, which is the `unstyled` preset below). You choose when you run it: in a terminal it asks, and `--starter` and `--tokens` answer. `--preset tailwind` or `--preset unstyled` is the older spelling of the tokens. This page describes the tokens and the `page` starter. The choice is made in `init`, not when you run `npm install`, because install scripts cannot prompt reliably (pnpm skips them by default, as do `--ignore-scripts` and most CI). With no terminal and no flag, `init` uses the `page` starter and `tailwind` and says so.
 
 Both presets write the same project, and differ only in the tokens:
 

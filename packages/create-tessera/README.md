@@ -7,4 +7,4 @@ npm install
 npm run dev
 ```
 
-This runs `tessera init my-app` from `@pixelscriptio/tessera`. Pass `-- --preset tailwind` or `-- --preset unstyled` to skip the question.
+This runs `tessera init my-app` from `@pixelscriptio/tessera`. It asks which starter app (a to-do app, a starter page or a blank slate) and which tokens (tailwind or none). Pass `-- --starter todo|page|blank` and `-- --tokens tailwind|none` to skip the questions.

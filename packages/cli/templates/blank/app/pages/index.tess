@@ -1,0 +1,31 @@
+<page>
+{ "title": "My Tessera app" }
+</page>
+
+<template>
+  <main class="root">
+    <h1 class="title">Hello</h1>
+    <p class="body">Edit app/pages/index.tess and save: it updates without a reload.</p>
+  </main>
+</template>
+
+<style>
+.root {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: $space.12 $space.6;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+}
+
+.title {
+  margin: 0 0 $space.3;
+  font-size: $font.size.3xl;
+  font-weight: $font.weight.bold;
+}
+
+.body {
+  margin: 0;
+  color: $color.text.muted;
+}
+</style>

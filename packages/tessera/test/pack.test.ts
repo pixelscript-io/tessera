@@ -471,7 +471,9 @@ describe.each(['tailwind', 'unstyled'] as const)(
     it('installs, serves the index page with no config files of its own, builds, and previews', async () => {
       const dir = install()
       const initOut = run(dir, 'init', '--preset', preset)
-      expect(initOut).toContain(`Started a Tessera project (${preset} preset)`)
+      expect(initOut).toContain(
+        `Started a Tessera project (page starter, ${preset === 'unstyled' ? 'none' : preset} tokens)`,
+      )
       // The user's project has no link to this repository, and no Vite config or HTML page.
       const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
       expect(JSON.stringify(manifest)).not.toContain('link:')
@@ -625,7 +627,7 @@ describe('@pixelscriptio/create-tessera, as `npm create @pixelscriptio/tessera` 
       cwd: dir,
       encoding: 'utf8',
     })
-    expect(out).toContain('Started a Tessera project (unstyled preset) in my-site.')
+    expect(out).toContain('Started a Tessera project (page starter, none tokens) in my-site.')
     expect(out).toContain('npm install')
     expect(existsSync(join(dir, 'my-site', 'app', 'pages', 'index.tess'))).toBe(true)
     const manifest = JSON.parse(readFileSync(join(dir, 'my-site', 'package.json'), 'utf8'))

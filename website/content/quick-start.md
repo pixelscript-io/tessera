@@ -48,14 +48,22 @@ If you would rather not install first, `npm create @pixelscriptio/tessera@latest
 
 ## Choose a starting point
 
-| Preset     | What you get                                                                                                                           |
+`init` asks two questions.
+
+| Starter app | What you get                                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------------------------------- |
+| `todo`      | A to-do app: add, tick off, filter and remove todos. The list is kept in the browser and the filter in the address. |
+| `page`      | A page that shows what Tessera does: a button that counts (shared state) and a list from an API call.               |
+| `blank`     | One empty page, with no layout, no API and no shared state.                                                         |
+
+| Tokens     | What you get                                                                                                                           |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `tailwind` | Tokens built from Tailwind's default theme (every color, the spacing scale, radii, type, shadows and more) with light and dark themes. |
-| `unstyled` | The same token names with plain values: black on white, square corners, no shadows. For making the design yourself.                    |
+| `none`     | The same token names with plain values: black on white, square corners, no shadows. For making the design yourself.                    |
 
-Both write the same app: a layout, an index page with a button that counts and a list from an API call, the `api` and `state` folders with an example each, and a Button and a Card in `system/components`.
+Every project also gets a Button and a Card in `system/components`.
 
-Skip the question with `npx tessera init --preset tailwind` or `--preset unstyled`. With no terminal and no flag, `init` uses `tailwind` and says so. See [Starter presets](/guide/presets).
+Skip the questions with `npx tessera init --starter todo --tokens tailwind`. With no terminal and no flags, `init` uses `page` and `tailwind` and says so. See [Starter presets](/guide/presets).
 
 ## What you have
 

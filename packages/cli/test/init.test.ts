@@ -76,7 +76,9 @@ for (const [preset, folder, name] of [
       const dir = scratch()
       const { code, out } = await run(dir, 'init', 'my-app', '--preset', preset)
       expect(code).toBe(0)
-      expect(out).toContain(`Started a Tessera project (${preset} preset) in my-app.`)
+      expect(out).toContain(
+        `Started a Tessera project (page starter, ${preset === 'unstyled' ? 'none' : preset} tokens) in my-app.`,
+      )
       expect(out).toContain('npm install')
       expect(out).toContain('npm run dev')
       const root = join(dir, 'my-app')
@@ -223,34 +225,39 @@ describe('earlier presets', () => {
     const tessera = await run(dir, 'init', '--preset', 'tessera')
     expect(tessera.code).toBe(1)
     expect(tessera.err).toContain('There is no preset "tessera".')
-    expect(tessera.err).toContain('--preset tailwind')
+    expect(tessera.err).toContain('--tokens tailwind')
     expect(tessera.err).toContain('tessera add tokens:tessera')
+    // `none` is the unstyled tokens now, so the old spelling works.
     const none = await run(dir, 'init', '--preset', 'none')
-    expect(none.code).toBe(1)
-    expect(none.err).toContain('--preset unstyled')
+    expect(none.code).toBe(0)
+    expect(existsSync(join(dir, 'system/unstyled/tokens/colors.tokens.json'))).toBe(true)
   })
 })
 
 describe('tessera init: where and how it runs', () => {
-  it('asks which preset in a terminal, and takes the answer', async () => {
+  it('asks which starter app and which tokens in a terminal, in that order, and takes the answers', async () => {
     const dir = scratch()
-    let asked = ''
+    const asked: string[] = []
     const io: Io = {
       cwd: dir,
       out: () => {},
       err: () => {},
       async choose(question, choices) {
-        asked = `${question}: ${choices.map((c) => c.value).join(', ')}`
-        return 'unstyled'
+        asked.push(`${question}: ${choices.map((c) => c.value).join(', ')}`)
+        return question.includes('starter') ? 'todo' : 'none'
       },
     }
     expect(await main(['init'], io)).toBe(0)
-    expect(asked).toBe('Which starting point?: tailwind, unstyled')
+    expect(asked).toEqual([
+      'Which starter app?: todo, page, blank',
+      'Which tokens?: tailwind, none',
+    ])
+    expect(existsSync(join(dir, 'app/state/todos.ts'))).toBe(true)
     expect(existsSync(join(dir, 'system/unstyled/tokens/colors.tokens.json'))).toBe(true)
     expect(existsSync(join(dir, 'system/tailwind'))).toBe(false)
   })
 
-  it('does not ask when --preset is given, and uses tailwind with no terminal and no flag, saying so', async () => {
+  it('does not ask what the flags answer, and uses the page starter and tailwind with no terminal and no flag, saying so', async () => {
     const dir = scratch()
     let asked = false
     let output = ''
@@ -263,13 +270,15 @@ describe('tessera init: where and how it runs', () => {
         return 'unstyled'
       },
     }
-    await main(['init', '--preset', 'tailwind'], io)
+    await main(['init', '--starter', 'blank', '--tokens', 'none'], io)
     expect(asked).toBe(false)
 
     const other = scratch()
     const quiet: Io = { cwd: other, out: (t) => void (output += t + '\n'), err: () => {} }
     await main(['init'], quiet)
-    expect(output).toContain('No --preset given and no terminal to ask in, so using "tailwind".')
+    expect(output).toContain(
+      'No --starter or --tokens given and no terminal to ask in, so using the "page" starter with "tailwind" tokens.',
+    )
     expect(existsSync(join(other, 'system/components/Card.tess'))).toBe(true)
   })
 
@@ -278,6 +287,16 @@ describe('tessera init: where and how it runs', () => {
     expect(code).toBe(1)
     expect(err).toContain('There is no preset "bootstrap".')
     expect(err).toContain('Presets: tailwind, unstyled.')
+  })
+
+  it('rejects a starter or tokens that do not exist, and says which there are', async () => {
+    const starter = await run(scratch(), 'init', '--starter', 'blog')
+    expect(starter.code).toBe(1)
+    expect(starter.err).toContain('There is no starter "blog".')
+    expect(starter.err).toContain('Starters: todo, page, blank.')
+    const tokens = await run(scratch(), 'init', '--tokens', 'bootstrap')
+    expect(tokens.code).toBe(1)
+    expect(tokens.err).toContain('Tokens: tailwind, none.')
   })
 
   it('works beside an existing package.json: adds scripts and the dependency, keeps everything else', async () => {

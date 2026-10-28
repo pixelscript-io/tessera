@@ -18,11 +18,28 @@ export const SYSTEMS: Record<Preset, { name: string; folder: string }> = {
   unstyled: { name: 'Unstyled', folder: 'unstyled' },
 }
 
+/** The apps `init` can start with: a to-do app, a page that shows what Tessera does, or one empty page. */
+export const STARTERS = ['todo', 'page', 'blank'] as const
+export type Starter = (typeof STARTERS)[number]
+
+/** The template folders each starter is made of, after `base` (which every project has). */
+const STARTER_FOLDERS: Record<Starter, string[]> = {
+  todo: ['layout', 'todo'],
+  page: ['layout', 'page'],
+  blank: ['blank'],
+}
+
+/** The tokens a person can choose, in the words the question uses: `none` is the unstyled preset (plain values). */
+export const TOKEN_CHOICES = ['tailwind', 'none'] as const
+const PRESET_OF_TOKENS: Record<(typeof TOKEN_CHOICES)[number], Preset> = {
+  tailwind: 'tailwind',
+  none: 'unstyled',
+}
+
 /** The presets of earlier versions, and what to use now. */
 const RENAMED: Record<string, string> = {
   tessera:
-    'The tessera preset is now a design system you add: start with --preset tailwind, then run tessera add tokens:tessera.',
-  none: 'The none preset is now called unstyled: --preset unstyled.',
+    'The tessera preset is now a design system you add: start with --tokens tailwind, then run tessera add tokens:tessera.',
 }
 
 // Every file of every preset, as text, keyed by its path in the template folder. Bundled at build time, so the
@@ -40,10 +57,13 @@ const STARTER_COMPONENTS = import.meta.glob('../../../ui/components/{Button,Card
   import: 'default',
 }) as Record<string, string>
 
-/** The files a preset writes, by path relative to the project: the starter app, its two components, and its tokens. */
-export function presetFiles(preset: Preset): Record<string, string> {
+/**
+ * The files a project starts with, by path relative to the project: the starter app (`page`, the one that shows what
+ * Tessera does, unless another is asked for), its two components, and its tokens.
+ */
+export function presetFiles(preset: Preset, starter: Starter = 'page'): Record<string, string> {
   const files: Record<string, string> = {}
-  for (const folder of ['base', preset]) {
+  for (const folder of ['base', ...STARTER_FOLDERS[starter], preset]) {
     const prefix = `../../templates/${folder}/`
     for (const [key, content] of Object.entries(TEMPLATES)) {
       if (key.startsWith(prefix)) files[key.slice(prefix.length)] = content
@@ -138,47 +158,93 @@ export interface InitResult {
   written: string[]
   skipped: string[]
   preset: Preset
+  starter: Starter
 }
 
 /**
- * `tessera init [folder] [--preset tailwind|unstyled]`: start a project, in an empty folder or beside an existing
- * `package.json`. It never overwrites a file; what already exists is left alone and reported.
+ * `tessera init [folder] [--starter todo|page|blank] [--tokens tailwind|none]`: start a project, in an empty folder or
+ * beside an existing `package.json`. It never overwrites a file; what already exists is left alone and reported.
  *
- * The preset is chosen here (not at install time, which cannot prompt): in a terminal it asks, `--preset`
- * answers it, and with neither it uses `tailwind`.
+ * Two choices are made here (not at install time, which cannot prompt): the starter app and the tokens. In a terminal it
+ * asks; `--starter` and `--tokens` answer; with neither and no terminal it uses the `page` starter and `tailwind`.
+ * `--preset tailwind|unstyled` is the older spelling of `--tokens`.
  */
 export async function init(args: Args, io: Io): Promise<number> {
   const target = resolve(io.cwd, args.positional[0] ?? '.')
   if (io.ui) io.out(io.ui.banner(`Tessera ${VERSION}`, 'A new project') + '\n')
-  const given = flag(args, 'preset')
-  let preset: Preset
-  if (typeof given === 'string') {
-    if (!(PRESETS as readonly string[]).includes(given)) {
+
+  const givenStarter = flag(args, 'starter')
+  let starter: Starter | undefined
+  if (typeof givenStarter === 'string') {
+    if (!(STARTERS as readonly string[]).includes(givenStarter)) {
       throw new CliError(
-        `There is no preset "${given}".`,
-        RENAMED[given] ?? `Presets: ${PRESETS.join(', ')}.`,
+        `There is no starter "${givenStarter}".`,
+        `Starters: ${STARTERS.join(', ')}.`,
       )
     }
-    preset = given as Preset
-  } else if (io.choose) {
-    preset = (await io.choose('Which starting point?', [
+    starter = givenStarter as Starter
+  }
+
+  const givenTokens = flag(args, 'tokens')
+  const givenPreset = flag(args, 'preset')
+  let preset: Preset | undefined
+  if (typeof givenTokens === 'string') {
+    if (!(TOKEN_CHOICES as readonly string[]).includes(givenTokens)) {
+      throw new CliError(
+        `There are no tokens called "${givenTokens}".`,
+        `Tokens: ${TOKEN_CHOICES.join(', ')}.`,
+      )
+    }
+    preset = PRESET_OF_TOKENS[givenTokens as (typeof TOKEN_CHOICES)[number]]
+  } else if (typeof givenPreset === 'string') {
+    // The older spelling: the names of the presets, and `none`, which is the unstyled one.
+    const name = givenPreset === 'none' ? 'unstyled' : givenPreset
+    if (!(PRESETS as readonly string[]).includes(name)) {
+      throw new CliError(
+        `There is no preset "${givenPreset}".`,
+        RENAMED[givenPreset] ?? `Presets: ${PRESETS.join(', ')}.`,
+      )
+    }
+    preset = name as Preset
+  }
+
+  if (io.choose) {
+    starter ??= (await io.choose('Which starter app?', [
+      { value: 'todo', label: 'todo app: add, tick off and remove todos; kept in the browser' },
       {
-        value: 'tailwind',
+        value: 'page',
         label:
-          "tailwind: tokens built from Tailwind's default theme (colors, spacing, type, shadows), with a Button and a Card",
+          'starter page: a button that counts and a list from an API, to show what Tessera does',
       },
-      {
-        value: 'unstyled',
-        label:
-          'unstyled: the same tokens with plain values (black on white, square corners, no shadows) to make your own, with a Button and a Card',
-      },
-    ])) as Preset
-  } else {
-    preset = 'tailwind'
+      { value: 'blank', label: 'blank slate: one empty page' },
+    ])) as Starter
+    preset ??=
+      PRESET_OF_TOKENS[
+        (await io.choose('Which tokens?', [
+          {
+            value: 'tailwind',
+            label:
+              "tailwind: tokens built from Tailwind's default theme (colors, spacing, type, shadows)",
+          },
+          {
+            value: 'none',
+            label:
+              'none: plain values (black on white, square corners, no shadows) to make your own',
+          },
+        ])) as (typeof TOKEN_CHOICES)[number]
+      ]
+  } else if (starter === undefined || preset === undefined) {
+    const missing = [starter === undefined && '--starter', preset === undefined && '--tokens']
+      .filter(Boolean)
+      .join(' or ')
+    starter ??= 'page'
+    preset ??= 'tailwind'
     io.out(
-      'No --preset given and no terminal to ask in, so using "tailwind". Pass --preset unstyled for the other.',
+      `No ${missing} given and no terminal to ask in, so using the "${starter}" starter with "${preset === 'unstyled' ? 'none' : preset}" tokens. Pass --starter todo|page|blank and --tokens tailwind|none to choose.`,
     )
   }
+  starter ??= 'page'
+  preset ??= 'tailwind'
 
   const linkFlag = flag(args, 'link')
   const link = typeof linkFlag === 'string' ? linkFlag : undefined
@@ -256,7 +322,7 @@ export async function init(args: Args, io: Io): Promise<number> {
     )
   }
 
-  for (const [file, content] of Object.entries(presetFiles(preset))) put(file, content)
+  for (const [file, content] of Object.entries(presetFiles(preset, starter))) put(file, content)
   put('app/tess.d.ts', TYPES)
   put('tessera.config.ts', configFor(preset))
   put('tsconfig.json', TSCONFIG)
@@ -297,10 +363,12 @@ export async function init(args: Args, io: Io): Promise<number> {
 
   const where = args.positional[0]
   if (io.ui) {
-    printSummary(io, io.ui, { preset, where, written, skipped, install: !hasDependency })
+    printSummary(io, io.ui, { preset, starter, where, written, skipped, install: !hasDependency })
     return 0
   }
-  io.out(`Started a Tessera project (${preset} preset) in ${where ?? 'the current folder'}.`)
+  io.out(
+    `Started a Tessera project (${starter} starter, ${tokensName(preset)} tokens) in ${where ?? 'the current folder'}.`,
+  )
   if (written.length) io.out(`Wrote: ${written.join(', ')}`)
   if (skipped.length) io.out(`Left alone (already there): ${skipped.join(', ')}`)
   io.out('')
@@ -313,15 +381,26 @@ export async function init(args: Args, io: Io): Promise<number> {
   return 0
 }
 
+/** The name of a preset's tokens in the words of the question. */
+const tokensName = (preset: Preset): string => (preset === 'unstyled' ? 'none' : preset)
+
 /** What init did, for a person: the folders it filled, then the three commands to run. */
 function printSummary(
   io: Io,
   ui: Ui,
-  info: { preset: string; where?: string; written: string[]; skipped: string[]; install: boolean },
+  info: {
+    preset: Preset
+    starter: Starter
+    where?: string
+    written: string[]
+    skipped: string[]
+    install: boolean
+  },
 ): void {
   const place = info.where ?? 'the current folder'
   io.out(
-    ui.ok(ui.bold(`Started a Tessera project in ${place}`)) + ui.dim(` (${info.preset} preset)`),
+    ui.ok(ui.bold(`Started a Tessera project in ${place}`)) +
+      ui.dim(` (${info.starter} starter, ${tokensName(info.preset)} tokens)`),
   )
   // Files by their first folder, so twenty-eight lines become a few.
   const folders = new Map<string, number>()

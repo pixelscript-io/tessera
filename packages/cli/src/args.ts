@@ -16,6 +16,7 @@ const WITH_VALUE = new Set([
   'map',
   'system',
   'preset',
+  'starter',
   'prefix',
   'tokens',
   'var-prefix',
