@@ -68,6 +68,8 @@ npx wrangler deploy
 
 The build writes `packages/ui/dist`: the pages, `index.json`, `r/` and `assets/`. `packages/ui/wrangler.jsonc` serves that folder as static files, with no code. Its `_headers` lets any origin read the registry, caches it for five minutes, caches the bundle's hashed chunks for a year, and allows scripts and styles from the site only. Add your domain to the Worker in the Cloudflare dashboard. The folder is also a registry you can try before deploying: `npx tessera add Button --from packages/ui/dist`.
 
+Each page also has a **Variants** section, made from the contract: one preview for each variant, showing every value it can have, built from the sample props and content of the contract's `preview`, with the code. A component whose preview opens itself (a dialog) has none. The header has a **search** (press `/` or Ctrl+K) that finds a component by its name or by a word of its contract (a variant, a slot, an event), and a **theme** button that cycles auto (the reader's system), light and dark; the choice is kept and applied before the page is drawn, and the previews follow it. Both need a script, and are hidden without one.
+
 A component's examples come from its `.docs.md` file: each `tess live` block is a preview with its code. A component with no example has no preview, so give each one.
 
 ## Tokens a component needs

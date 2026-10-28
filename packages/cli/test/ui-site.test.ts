@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { buildRegistry, writeRegistry } from '../src/registry/build'
 import { openSource } from '../src/registry/source'
-import { buildSite, writeSite } from '../src/site/build'
+import { extractContract } from '@tessera/compiler'
+import { buildSite, liveExamples, writeSite } from '../src/site/build'
+import { variantExamples } from '../src/site/variants'
 import { highlight } from '../src/site/highlight'
 
 const ui = fileURLToPath(new URL('../../ui', import.meta.url))
@@ -191,14 +193,20 @@ describe('the Tessera UI site: every page', () => {
     }
   })
 
-  it('with a bundle, loads that one script and style sheet from this site and nothing else', () => {
+  it('with a bundle, loads two scripts and a style sheet from this site and nothing else: the theme first, then the bundle', () => {
     for (const { path, content } of withAssets.filter((f) => f.path.endsWith('.html'))) {
       expect(content.match(/<script[^>]*>/g), path).toEqual([
+        '<script src="/theme.js">',
         '<script type="module" src="/assets/site.js">',
       ])
       expect(content, path).toContain('<link rel="stylesheet" href="/assets/site.css">')
+      // The theme is read before the page is painted, so a reader who chose dark does not see it flash light.
+      expect(content.indexOf('/theme.js'), path).toBeLessThan(content.indexOf('<style>'))
       expect(content, path).not.toMatch(/<script[^>]*>[^<]+<\/script>/)
-      expect(content.match(/\bsrc="[^"]*"/g), path).toEqual(['src="/assets/site.js"'])
+      expect(content.match(/\bsrc="[^"]*"/g), path).toEqual([
+        'src="/theme.js"',
+        'src="/assets/site.js"',
+      ])
     }
   })
 
@@ -363,6 +371,156 @@ describe('the Tessera UI site: a component page', () => {
     expect(first).not.toContain('rel="prev"')
     expect(first).toContain(`rel="next" href="../${names[1]}/"`)
     expect(second).toContain(`rel="prev" href="../${names[0]}/"`)
+  })
+})
+
+describe('the Tessera UI site: variants', () => {
+  const contractOf = (name: string) => {
+    const file = components
+      .find((c) => c.name === name)!
+      .files.find((f) => f.path === `${name}.tess`)!
+    return extractContract(file.content, file.path)!
+  }
+  const opensItself = (name: string) => contractOf(name).preview?.props?.open === true
+
+  it('shows each variant of a component, every value of it, as a preview with its code', () => {
+    const button = page('components/Button/index.html')
+    expect(button).toContain('id="variants"')
+    for (const axis of ['tone', 'size', 'emphasis'])
+      expect(button, axis).toContain(`data-live="Button-variant-${axis}"`)
+    const source = codeOf(button, 'Button-variant-tone.tess')
+    for (const value of ['primary', 'neutral', 'danger'])
+      expect(source).toContain(`tone="${value}"`)
+    // The sample content of the contract's preview is what is shown, so the example reads as the page's others do.
+    expect(source).toContain('Save changes')
+  })
+
+  it('writes sources that are Tessera templates: sample props, slots and nested components as the contract gives them', () => {
+    const source = variantExamples(components.find((c) => c.name === 'Button')!)
+    expect(source.map((v) => v.key)).toEqual([
+      'Button-variant-tone',
+      'Button-variant-size',
+      'Button-variant-emphasis',
+    ])
+    expect(source[0]!.source.startsWith('<template>')).toBe(true)
+    const tabs = variantExamples(components.find((c) => c.name === 'Accordion')!)
+    expect(tabs).toEqual([])
+  })
+
+  it('has a variants section on every component that has variants and does not open itself', () => {
+    for (const item of components) {
+      const text = page(`components/${item.name}/index.html`)
+      const has = Object.keys(contractOf(item.name).variants).length > 0 && !opensItself(item.name)
+      expect(text.includes('id="variants"'), item.name).toBe(has)
+    }
+  })
+
+  it('lists the variants in the page’s sections, and gives them to the live bundle', () => {
+    const toc = /<nav class="toc"[\s\S]*?<\/nav>/.exec(page('components/Button/index.html'))![0]
+    expect(toc).toContain('href="#variants"')
+    const keys = liveExamples(registry()).map((e) => e.key)
+    expect(keys).toContain('Button-variant-tone')
+    expect(keys).toContain('Button-0')
+  })
+
+  it('writes a value that is not a string as a binding, and escapes a quote in it', () => {
+    const tricky = variantExamples({
+      name: 'Chip',
+      type: 'component',
+      description: '',
+      sha256: '',
+      files: [
+        {
+          path: 'Chip.tess',
+          content: `<contract>\n{ "name": "Chip", "role": "generic", "parts": ["root"],\n  "variants": { "tone": ["a", "b"] },
+  "slots": { "default": "text", "icon": "an icon" },\n  "preview": { "props": { "count": 3, "note": "it's \\"quoted\\"", "on": true, "off": false, "list": [1, 2] }, "slots": { "default": "Hi", "icon": { "tag": "b", "text": "!" } } } }\n</contract>\n<template><div class="root"></div></template>\n`,
+        },
+      ],
+    })
+    const text = tricky[0]!.source
+    expect(text).toContain(":count='3'")
+    expect(text).toContain(":list='[1,2]'")
+    expect(text).toMatch(/\bon\b/)
+    expect(text).not.toContain('off')
+    expect(text).toContain('note="it\'s &quot;quoted&quot;"')
+    expect(text).toContain('<b slot="icon">!</b>')
+    expect(text).toContain('Hi')
+  })
+})
+
+describe('the Tessera UI site: search', () => {
+  const index = () =>
+    JSON.parse(page('search.json')) as Array<{
+      title: string
+      description: string
+      url: string
+      section: string
+      keywords?: string
+    }>
+
+  it('has an index of every page of the docs, with an address on this site', () => {
+    const entries = index()
+    for (const item of components) {
+      const found = entries.find((e) => e.url === `/components/${item.name}/`)
+      expect(found, item.name).toBeDefined()
+      expect(found!.title).toBe(item.name)
+      expect(found!.description).toBe(item.description)
+      expect(found!.section).toBe('Components')
+    }
+    for (const url of ['/', '/installation/', '/components/', '/tokens/'])
+      expect(
+        entries.some((e) => e.url === url),
+        url,
+      ).toBe(true)
+    for (const set of ['tailwind', 'unstyled'])
+      expect(
+        entries.some((e) => e.url === `/tokens/#${set}`),
+        set,
+      ).toBe(true)
+  })
+
+  it('holds what a person would search for: a component is found by its slots, events and variants, too', () => {
+    const button = index().find((e) => e.title === 'Button')!
+    for (const word of ['tone', 'danger', 'press', 'label'])
+      expect(button.keywords, word).toContain(word)
+  })
+
+  it('is small enough to load at once, and is plain data', () => {
+    expect(page('search.json').length).toBeLessThan(120_000)
+    expect(page('search.json')).not.toContain('<')
+  })
+
+  it('has a button in the header that opens it, shown only when a script can run it', () => {
+    for (const { path, content } of withAssets.filter((f) => f.path.endsWith('.html')))
+      expect(content, path).toMatch(
+        /<button type="button" class="search" hidden aria-label="Search the docs"[^>]*>/,
+      )
+    expect(page('index.html')).not.toContain('class="search"')
+  })
+})
+
+describe('the Tessera UI site: theme', () => {
+  it('has a script that applies the chosen theme before the page is drawn, and cannot fail without storage', () => {
+    const script = page('theme.js')
+    expect(script).toContain("localStorage.getItem('tessera-ui-theme')")
+    expect(script).toContain("setAttribute('data-theme'")
+    expect(script).toMatch(/try \{[\s\S]*\} catch/)
+    expect(script).toMatch(/'light'/)
+    expect(script).toMatch(/'dark'/)
+  })
+
+  it('styles the page for a chosen theme as well as for the reader’s scheme', () => {
+    const style = page('index.html')
+    expect(style).toContain(':root[data-theme="dark"]')
+    expect(style).toContain(':root:not([data-theme="light"])')
+    expect(style).toMatch(/:root\[data-theme="light"\][^{]*\{[^}]*color-scheme: light/)
+    expect(style).toMatch(/:root\[data-theme="dark"\][^{]*\{[^}]*color-scheme: dark/)
+  })
+
+  it('has a button in the header that changes it, shown only when a script can run it', () => {
+    for (const { path, content } of withAssets.filter((f) => f.path.endsWith('.html')))
+      expect(content, path).toMatch(/<button type="button" class="theme" hidden[^>]*>/)
+    expect(page('index.html')).not.toContain('class="theme"')
   })
 })
 

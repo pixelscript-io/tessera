@@ -8,6 +8,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/node_modules/**',
       '**/.tessera/**',
+      'packages/ui/.site*/**',
       'website/content/.vitepress/{cache,dist}/**',
     ],
   },

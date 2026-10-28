@@ -236,6 +236,81 @@ describe('the Tessera UI site in a browser', () => {
     expect(problems).toEqual([])
   }, 240_000)
 
+  it('shows every value of a variant as a running component', async () => {
+    const page = await browser.newPage()
+    await page.goto(`${base}/components/Button/`)
+    const tone = page.locator('[data-live="Button-variant-tone"]').first()
+    await tone.locator('button').first().waitFor()
+    expect(await tone.locator('button').count()).toBe(3)
+    const texts = await tone.locator('figcaption').allInnerTexts()
+    expect(texts).toEqual(['primary', 'neutral', 'danger'])
+    const sizes = await page
+      .locator('[data-live="Button-variant-size"] button')
+      .evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.size))
+    expect(sizes).toEqual(['sm', 'md', 'lg'])
+    await page.close()
+  })
+
+  it('searches: it opens from the header or a key, finds a component by name or word, and goes to it', async () => {
+    const page = await browser.newPage()
+    await page.goto(`${base}/`)
+    const open = page.getByRole('button', { name: 'Search the docs' })
+    await open.waitFor()
+    await open.click()
+    const box = page.getByRole('searchbox', { name: 'Search' })
+    await box.fill('dial')
+    const first = page.locator('dialog.search-dialog a').first()
+    await first.waitFor()
+    expect(await first.innerText()).toContain('Dialog')
+    // A word from the contract, not the name.
+    await box.fill('danger')
+    await page.locator('dialog.search-dialog a', { hasText: 'Button' }).first().waitFor()
+    // Nothing matches: it says so.
+    await box.fill('zzzzzz')
+    await page.getByText('No results').waitFor()
+    // Escape closes it, and a key opens it again.
+    await page.keyboard.press('Escape')
+    expect(
+      await page.locator('dialog.search-dialog').evaluate((d) => (d as HTMLDialogElement).open),
+    ).toBe(false)
+    await page.keyboard.press('Control+k')
+    await box.fill('toolt')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await page.waitForURL('**/components/Tooltip/')
+    await page.close()
+  })
+
+  it('changes theme from the header, remembers it, and the previews follow', async () => {
+    const context = await browser.newContext({ colorScheme: 'light' })
+    const page = await context.newPage()
+    await page.goto(`${base}/components/Button/`)
+    const toggle = page.getByRole('button', { name: /^Theme/ })
+    await toggle.waitFor()
+    const html = page.locator('html')
+    const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+    const stage = () =>
+      page
+        .locator('.stage')
+        .first()
+        .evaluate((el) => getComputedStyle(el).backgroundColor)
+    const lightness = (css: string) => Number(/\d+/.exec(css)![0])
+    expect(await html.getAttribute('data-theme')).toBe('auto')
+    await toggle.click() // light
+    expect(await html.getAttribute('data-theme')).toBe('light')
+    await toggle.click() // dark
+    expect(await html.getAttribute('data-theme')).toBe('dark')
+    expect(lightness(await background())).toBeLessThan(80)
+    expect(lightness(await stage())).toBeLessThan(80)
+    // It is kept: a new page starts dark, before the bundle has run.
+    await page.goto(`${base}/components/Select/`)
+    expect(await html.getAttribute('data-theme')).toBe('dark')
+    await page.getByRole('button', { name: /^Theme/ }).click() // auto again
+    expect(await html.getAttribute('data-theme')).toBe('auto')
+    expect(await page.evaluate(() => localStorage.getItem('tessera-ui-theme'))).toBeNull()
+    await context.close()
+  })
+
   it('has the docs layout on a computer: the sidebar and the page’s sections beside the content', async () => {
     const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
     const page = await context.newPage()

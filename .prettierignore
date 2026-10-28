@@ -24,3 +24,5 @@ experiments/agent-mcp/work
 .format-test
 packages/cli/templates/*/system/*/tokens
 registry-dist
+packages/ui/.site
+packages/ui/.site-test

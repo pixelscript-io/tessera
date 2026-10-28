@@ -5,6 +5,7 @@ import { renderMarkdown } from '@tessera/docs'
 import type { Registry } from '../registry/build'
 import { itemFile, type RegistryItem } from '../registry/schema'
 import { highlight } from './highlight'
+import { variantExamples } from './variants'
 
 /** A file of the site, by the path it is served from. */
 export interface SiteFile {
@@ -52,14 +53,16 @@ export function liveExamples(registry: Registry): LiveExample[] {
   const out: LiveExample[] = []
   for (const item of registry.items.filter((i) => i.type === 'component').sort(byName)) {
     const docs = docsOf(item)
-    if (!docs) continue
-    renderMarkdown(docs).live.forEach((block, i) =>
-      out.push({
-        key: `${item.name}-${i}`,
-        component: item.name,
-        source: block.source.endsWith('\n') ? block.source : block.source + '\n',
-      }),
-    )
+    if (docs)
+      renderMarkdown(docs).live.forEach((block, i) =>
+        out.push({
+          key: `${item.name}-${i}`,
+          component: item.name,
+          source: block.source.endsWith('\n') ? block.source : block.source + '\n',
+        }),
+      )
+    for (const v of variantExamples(item))
+      out.push({ key: v.key, component: v.component, source: v.source })
   }
   return out
 }
@@ -72,6 +75,12 @@ const tabRules = Array.from({ length: TAB_COUNT }, (_, i) => {
 .tabs > input:nth-of-type(${n}):checked ~ .panels > .panel:nth-of-type(${n}) { display: block; }`
 }).join('\n')
 
+// The colors of the page. A reader's choice (`data-theme` on the root, set by theme.js) wins over their system's
+// scheme; with no choice, `auto`, the page follows the system. The design system's own themes use the same attribute.
+const DARK = `--bg: #151412; --surface: #1d1c1a; --text: #f1efea; --muted: #a9a59c; --border: #35332f; --hover: #242320;
+    --accent: #5bc58a; --accent-text: #0e1a13; --code-bg: #1b1a18; --focus: #5bc58a;
+    --tk-c: #8d897f; --tk-s: #7ed3a2; --tk-t: #ee8bb9; --tk-a: #8fb0f0; --tk-v: #e6b45a; --tk-k: #c39bf0; --tk-n: #e6b45a;`
+
 const STYLE = `
 :root {
   color-scheme: light dark;
@@ -79,12 +88,15 @@ const STYLE = `
   --accent: #14663d; --accent-text: #ffffff; --code-bg: #f6f4ef; --focus: #14663d;
   --tk-c: #6b675f; --tk-s: #0b6b41; --tk-t: #a1336a; --tk-a: #3a5ea8; --tk-v: #8a5a00; --tk-k: #7d3cbf; --tk-n: #8a5a00;
 }
+:root[data-theme="light"] { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #151412; --surface: #1d1c1a; --text: #f1efea; --muted: #a9a59c; --border: #35332f; --hover: #242320;
-    --accent: #5bc58a; --accent-text: #0e1a13; --code-bg: #1b1a18; --focus: #5bc58a;
-    --tk-c: #8d897f; --tk-s: #7ed3a2; --tk-t: #ee8bb9; --tk-a: #8fb0f0; --tk-v: #e6b45a; --tk-k: #c39bf0; --tk-n: #e6b45a;
+  :root:not([data-theme="light"]) {
+    ${DARK}
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  ${DARK}
 }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 72px; }
@@ -100,7 +112,25 @@ header.top .brand { font-weight: 700; color: var(--text); text-decoration: none;
 header.top nav { display: flex; gap: 20px; font-size: 14px; }
 header.top nav a { color: var(--muted); text-decoration: none; }
 header.top nav a:hover { color: var(--text); }
-header.top .end { margin-left: auto; }
+header.top .end { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+header.top button { font: 13px system-ui, sans-serif; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+header.top button:hover { color: var(--text); background: var(--hover); }
+header.top button[hidden] { display: none; }
+header.top button.search { min-width: 150px; text-align: left; }
+header.top button.search kbd { float: right; font: 11px ui-monospace, Menlo, Consolas, monospace; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 12px; }
+
+dialog.search-dialog { width: min(560px, calc(100vw - 32px)); max-height: min(70vh, 560px); margin: 12vh auto 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); overflow: hidden; }
+dialog.search-dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
+dialog.search-dialog input { width: 100%; font: 16px system-ui, sans-serif; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); outline: none; }
+dialog.search-dialog input:focus-visible { box-shadow: inset 0 -2px 0 var(--focus); }
+dialog.search-dialog ul { list-style: none; margin: 0; padding: 6px; max-height: calc(min(70vh, 560px) - 100px); overflow-y: auto; }
+dialog.search-dialog a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--text); text-decoration: none; }
+dialog.search-dialog a:hover, dialog.search-dialog a:focus-visible { background: var(--hover); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+dialog.search-dialog a small { display: block; color: var(--muted); font-size: 13px; }
+dialog.search-dialog .status { margin: 0; padding: 10px 16px; color: var(--muted); font-size: 14px; }
+.matrix { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-end; }
+.matrix figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.matrix figcaption { font: 12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--t-color-text-muted, #5d5a54); }
 
 .shell { max-width: 1400px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 240px minmax(0, 1fr) 200px; gap: 40px; }
 .shell.single { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
@@ -179,8 +209,11 @@ ${tabRules}
 }
 @media (max-width: 860px) {
   .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 16px; }
-  header.top .bar { padding: 0 16px; gap: 16px; }
+  header.top .bar { padding: 0 16px; gap: 12px; }
   header.top nav { gap: 12px; }
+  header.top nav[aria-label="Site"], header.top .end > a { display: none; }
+  header.top button.search { min-width: 0; }
+  header.top button.search kbd { display: none; }
   details.menu { position: static; max-height: none; padding: 12px 0 0; border-bottom: 1px solid var(--border); }
   details.menu > summary { display: block; cursor: pointer; font-size: 14px; padding: 6px 0 12px; color: var(--muted); }
   main { padding-top: 24px; }
@@ -241,7 +274,7 @@ function layout(ctx: Context, page: Page, withSidebar = true): string {
 <title>${escape(page.title)}</title>
 <meta name="description" content="${escape(page.description)}">
 <link rel="icon" href="data:,">
-<style>${STYLE}</style>
+${assets ? `<script src="/theme.js"></script>\n` : ''}<style>${STYLE}</style>
 ${assets ? `<link rel="stylesheet" href="${assets.css}">\n` : ''}</head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
@@ -252,7 +285,7 @@ ${assets ? `<link rel="stylesheet" href="${assets.css}">\n` : ''}</head>
 <a href="${root}components/">Components</a>
 <a href="${root}tokens/">Tokens</a>
 </nav>
-<nav class="end" aria-label="Elsewhere"><a href="${FRAMEWORK}">Tessera</a></nav>
+<nav class="end" aria-label="Elsewhere">${assets ? '<button type="button" class="search" hidden aria-label="Search the docs">Search<kbd>/</kbd></button><button type="button" class="theme" hidden>Theme</button>' : ''}<a href="${FRAMEWORK}">Tessera</a></nav>
 </div></header>
 <div class="shell${withSidebar ? '' : ' single'}">
 ${withSidebar ? sidebar(ctx, page) : ''}
@@ -494,6 +527,15 @@ function componentPage(ctx: Context, item: RegistryItem, index: number, known: S
     )
     toc.push({ id: 'usage', label: 'Usage' })
   }
+  const variants = variantExamples(item)
+  if (variants.length) {
+    body.push(
+      '<h2 id="variants">Variants</h2>',
+      '<p>Each variant with every value it can have, shown with the sample content of the contract.</p>',
+      ...variants.flatMap((v) => [`<h3>${escape(v.axis)}</h3>`, example(tabs, v.key, v.source)]),
+    )
+    toc.push({ id: 'variants', label: 'Variants' })
+  }
   const api = apiHtml(item)
   if (api) {
     body.push('<h2 id="api">API reference</h2>', api)
@@ -635,6 +677,83 @@ function tokensPage(sets: RegistryItem[]): Page {
   }
 }
 
+/** Applies the reader's chosen theme before the page is drawn. Loaded from the head, so a reader who chose dark never sees light. */
+const THEME_SCRIPT = `// The theme a reader chose, set on the root before anything is painted. With no choice the page follows the system.
+try {
+  var chosen = localStorage.getItem('tessera-ui-theme')
+  if (chosen === 'light' || chosen === 'dark') document.documentElement.setAttribute('data-theme', chosen)
+} catch (error) {
+  // No storage (a private window, or it is blocked): the page follows the system.
+}
+`
+
+interface SearchEntry {
+  title: string
+  description: string
+  url: string
+  section: string
+  /** Words a person might search for that are not in the title: a component's variants, slots and events. */
+  keywords?: string
+}
+
+/** What the search looks through: every page of the docs, and for a component the words of its contract. */
+function searchIndex(components: RegistryItem[], sets: RegistryItem[]): SearchEntry[] {
+  const entries: SearchEntry[] = [
+    { title: 'Introduction', description: 'What Tessera UI is.', url: '/', section: 'Get started' },
+    {
+      title: 'Installation',
+      description: 'Start a project and add components.',
+      url: '/installation/',
+      section: 'Get started',
+    },
+    {
+      title: 'Components',
+      description: 'Every component, with a preview.',
+      url: '/components/',
+      section: 'Get started',
+    },
+    {
+      title: 'Design tokens',
+      description: 'Token sets to start a design system from.',
+      url: '/tokens/',
+      section: 'Get started',
+    },
+  ]
+  for (const item of components) {
+    const file = item.files.find((f) => f.path === `${item.name}.tess`)
+    const contract = file ? extractContract(file.content, file.path) : undefined
+    const words = contract
+      ? [
+          contract.role,
+          contract.behavior,
+          ...Object.entries(contract.variants).flatMap(([axis, values]) => [axis, ...values]),
+          ...Object.keys(contract.slots),
+          ...Object.keys(contract.events),
+          ...contract.states,
+          ...contract.parts,
+        ]
+      : []
+    const keywords = [...new Set(words.filter((w): w is string => !!w))].join(' ')
+    entries.push({
+      title: item.name,
+      description: item.description,
+      url: `/components/${item.name}/`,
+      section: 'Components',
+      ...(keywords ? { keywords } : {}),
+    })
+  }
+  for (const set of sets) {
+    const name = set.name.replace(/^tokens:/, '')
+    entries.push({
+      title: name,
+      description: set.description,
+      url: `/tokens/#${name}`,
+      section: 'Design tokens',
+    })
+  }
+  return entries
+}
+
 const HEADERS = `# Security: the pages load a script and a style sheet from this site only, nothing from elsewhere.
 /*
   X-Content-Type-Options: nosniff
@@ -695,6 +814,8 @@ export function buildSite(registry: Registry, options: SiteOptions = {}): SiteFi
   }))
   files.push(
     { path: '_headers', content: HEADERS },
+    { path: 'theme.js', content: THEME_SCRIPT },
+    { path: 'search.json', content: JSON.stringify(searchIndex(components, sets)) + '\n' },
     { path: 'index.json', content: JSON.stringify(registry.index, null, 2) + '\n' },
   )
   for (const item of registry.items)
