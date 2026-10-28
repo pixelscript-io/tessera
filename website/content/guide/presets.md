@@ -101,7 +101,7 @@ export default {
 }
 ```
 
-`path` is the folder under `system/` and defaults to the name in lower case. With no `defaultSystem`, the first system is active. A project can hold several systems to try them side by side: change `defaultSystem` and the same components and pages take another look. They can only be swapped if they define the same token names, which is the list in [Tessera UI](/guide/tessera-ui#tokens-a-library-component-may-use); a missing token is a compile error in the component that uses it, naming the token. Systems do not refer to each other's tokens, so each is a folder you can copy or delete.
+`path` is the folder under `system/` and defaults to the name in lower case. With no `defaultSystem`, the first system is active. A project can hold several systems to try them side by side: change `defaultSystem` and the same components and pages take another look. They can only be swapped if they define the same token names, which is the list in [Tessera UI](/guide/tessera-ui#the-token-interface); a missing token is a compile error in the component that uses it, naming the token. Systems do not refer to each other's tokens, so each is a folder you can copy or delete.
 
 A project from before v0.9 keeps `system/tokens` with no `systems` in its config, and works as it did.
 

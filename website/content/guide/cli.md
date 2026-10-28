@@ -32,7 +32,7 @@ npx tessera add tokens:tailwind
 npx tessera add --list
 ```
 
-Copies a component, or a set of design tokens, from [Tessera UI](/guide/tessera-ui) into the project. Flags: `--as <Name>`, `--replace`, `--diff`, `--install`, `--yes`, `--list` (with `--json`) and `--from <address or folder>`. What happens when the name is taken, what comes with a component and what `add` will and will not write are on the [Tessera UI](/guide/tessera-ui#add-a-component) page.
+Copies a component, or a set of design tokens, from [Tessera UI](/guide/tessera-ui) into the project. Flags: `--as <Name>`, `--replace`, `--diff`, `--fit add|set|skip`, `--map from=to`, `--install`, `--yes`, `--list` (with `--json`) and `--from <address or folder>`. What happens when the name is taken, what comes with a component and what `add` will and will not write are on the [Tessera UI](/guide/tessera-ui#add-a-component) page, and how it checks a component against your design systems is under [Tokens a component needs](/guide/tessera-ui#tokens-a-component-needs).
 
 ## `tessera dev`, `build` and `preview`
 

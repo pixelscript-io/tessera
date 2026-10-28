@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative } from 'node:path'
+import { formatDiagnostic } from '@tessera/compiler'
 import type { Args } from '../args'
 import { flag, has } from '../args'
+import { checkProject } from '../check-project'
 import type { Io } from '../io'
 import { CliError } from '../io'
 import { openProject } from '../project'
@@ -14,6 +16,17 @@ import {
   type RegistryItem,
 } from '../registry/schema'
 import { openSource, type RegistrySource } from '../registry/source'
+import {
+  addMissingTokens,
+  applyMap,
+  describeFit,
+  FIT_FILE,
+  fitOf,
+  hasProblems,
+  needsOf,
+  parseMap,
+  type SystemFit,
+} from '../token-fit'
 import { VERSION } from '../version'
 
 const LOCK_FILE = 'tessera.lock.json'
@@ -158,6 +171,21 @@ async function run(args: Args, io: Io, source: RegistrySource): Promise<number> 
   const as = flag(args, 'as')
   if (as !== undefined && (typeof as !== 'string' || names.length > 1))
     throw new CliError('"--as" needs a name, and works with one item at a time.')
+  const fitFlag = flag(args, 'fit')
+  if (fitFlag !== undefined && fitFlag !== 'add' && fitFlag !== 'set' && fitFlag !== 'skip')
+    throw new CliError(
+      '"--fit" is add, set or skip.',
+      'add puts the missing tokens in a file of their own, set installs the whole reference set as another design system, skip leaves the tokens alone.',
+    )
+  const mapFlag = flag(args, 'map')
+  let map = new Map<string, string>()
+  if (mapFlag !== undefined) {
+    try {
+      map = parseMap(typeof mapFlag === 'string' ? mapFlag : '')
+    } catch (error) {
+      throw new CliError(error instanceof Error ? error.message : String(error))
+    }
+  }
 
   const project = await openProject(io.cwd, args)
   const root = project.root
@@ -358,6 +386,72 @@ async function run(args: Args, io: Io, source: RegistrySource): Promise<number> 
     return 0
   }
 
+  // Token fit: do the design systems have the tokens the new components use?
+  const componentSteps = steps.filter((s) => s.item.type === 'component')
+  if (map.size) {
+    const used = new Set(needsOf(componentSteps.flatMap((s) => s.files)).map((n) => n.path))
+    for (const from of map.keys()) {
+      if (!used.has(from))
+        throw new CliError(
+          `"--map ${from}=${map.get(from)}": no component you are adding uses ${from}.`,
+          'Check the spelling of the token; the report lists the tokens the components use.',
+        )
+    }
+    for (const step of componentSteps) step.files = applyMap(step.files, map)
+  }
+  let fix: 'add' | 'set' | undefined = fitFlag === 'add' || fitFlag === 'set' ? fitFlag : undefined
+  let fits: SystemFit[] = []
+  if (fitFlag !== 'skip' && componentSteps.length) {
+    fits = fitOf(project, needsOf(componentSteps.flatMap((s) => s.files)))
+    if (hasProblems(fits)) {
+      io.out(
+        'The new components use tokens that some of your design systems lack or define differently:',
+      )
+      for (const line of describeFit(fits)) io.out(line)
+      io.out('')
+      const canAdd = fits.some((f) => f.missing.length)
+      if (!fix && !map.size && io.choose && !has(args, 'yes')) {
+        const choice = await io.choose('How should the tokens be made to fit?', [
+          ...(canAdd
+            ? [
+                {
+                  value: 'add',
+                  label: `add: Add the missing tokens to a file of their own (${FIT_FILE}) in each system`,
+                },
+              ]
+            : []),
+          {
+            value: 'set',
+            label:
+              'set: Install the whole reference set (tokens:tailwind) as another design system',
+          },
+          {
+            value: 'continue',
+            label: 'continue: Write the components as they are and fix the tokens yourself',
+          },
+          { value: 'cancel', label: 'cancel: Change nothing' },
+        ])
+        if (choice === 'cancel') {
+          io.out('Cancelled. Nothing was changed.')
+          return 1
+        }
+        if (choice === 'add' || choice === 'set') fix = choice
+      } else if (!fix) {
+        io.out(
+          `To make them fit: --fit add puts the missing tokens in ${FIT_FILE} in each system; --map from=to rewrites the component to use a token you have; --fit set installs the whole reference set (tokens:tailwind) as another design system.`,
+        )
+      }
+    }
+  }
+  if (fix === 'set' && !queued.has('tokens:tailwind')) {
+    const folder = join(root, 'system', 'tailwind', 'tokens')
+    if (existsSync(folder) && readdirSync(folder).length)
+      io.out(
+        'system/tailwind/tokens is already there, so the reference set was not installed again.',
+      )
+    else await plan('tokens:tailwind', false)
+  }
+
   // Shared files already there with other content would be overwritten without the person choosing it.
   const written: string[] = []
   const skipped: string[] = []
@@ -444,6 +538,21 @@ async function run(args: Args, io: Io, source: RegistrySource): Promise<number> 
     }
   }
 
+  if (fix === 'add') {
+    for (const fit of fits) {
+      if (!fit.missing.length) continue
+      const result = addMissingTokens(root, fit)
+      if (result.added.length)
+        io.out(
+          `Added ${result.added.length} ${result.added.length === 1 ? 'token' : 'tokens'} to ${fit.name}: ${result.files.join(', ')}`,
+        )
+      if (result.unknown.length)
+        io.out(
+          `Not added, because the reference set does not define them: ${result.unknown.join(', ')}`,
+        )
+    }
+  }
+
   const tokenSets = steps.filter((s) => s.item.type === 'tokens')
   for (const set of tokenSets) {
     const name = set.as
@@ -453,11 +562,38 @@ async function run(args: Args, io: Io, source: RegistrySource): Promise<number> 
       `  systems: [..., { name: '${name[0]!.toUpperCase()}${name.slice(1)}', path: '/${name}' }]`,
     )
   }
-  if (steps.some((s) => s.item.type === 'component')) {
+  if (componentSteps.length) {
     io.out('')
-    io.out(
-      'Next: npx tessera check    (it reports any token the new component needs that your design system lacks)',
-    )
+    project.resetAll()
+    if (project.tokensDir()) {
+      const names = componentSteps.map((s) => s.as)
+      const report = checkProject(project)
+      const mine = new Set(
+        written.filter((w) => w.endsWith('.tess')).map((w) => w.replace(/^.*\//, '')),
+      )
+      const diagnostics = report.files
+        .filter((f) => mine.has(f.file.replace(/^.*\//, '')))
+        .flatMap((f) => f.diagnostics)
+      const errors = diagnostics.filter((d) => d.severity === 'error').length
+      const warnings = diagnostics.filter((d) => d.severity === 'warning').length
+      for (const message of report.messages) io.out(message)
+      if (!diagnostics.length) io.out(`Checked ${names.join(', ')}: no problems.`)
+      else {
+        io.out(
+          `Checked ${names.join(', ')}: ${errors} ${errors === 1 ? 'error' : 'errors'}, ${warnings} ${warnings === 1 ? 'warning' : 'warnings'}.`,
+        )
+        for (const d of diagnostics) io.out(formatDiagnostic(d))
+      }
+      io.out(
+        existsSync(join(root, 'system', 'components', 'a11y.browser.test.ts'))
+          ? 'Accessibility: npm run test:a11y runs the generated tests on them, in each design system the tests were set up for.'
+          : 'Accessibility: npx tessera a11y --system all sets up the generated tests, which then cover these components in every design system.',
+      )
+    } else {
+      io.out(
+        'Next: npx tessera check    (it reports any token the new component needs that your design system lacks)',
+      )
+    }
   }
   return 0
 }

@@ -54,9 +54,30 @@ These copy a set of tokens into `system/<name>/tokens` (`--as <folder>` picks an
 
 Version 0.8 delivered the library as the package `@pixelscriptio/tessera-ui`. It is not published any more, and a project that still lists it stops with a message that says so, with the `tessera add` line for the components its templates use. Remove the package and run that line.
 
-## Tokens a library component may use
+## Tokens a component needs
 
-A catalogue component uses only the tokens listed here, which is the interface between the catalogue and a design system. The `tailwind` and `unstyled` presets define all of them, and a design system of your own has to as well, or the compiler reports the missing one in the component that uses it. In the docs that `tessera dev` serves, the design system switch shows which tokens a system lacks for each component.
+A catalogue component uses only the tokens listed in the next section, which is the interface between the catalogue and a design system. The `tailwind` and `unstyled` presets define all of them. A design system of your own may not, so `add` compares before it writes anything. For each design system in `tessera.config.ts` it reports the tokens the new components use that the system **lacks**, and the ones it defines with **another type** than the component expects (a `radius.sm` that is a color, say):
+
+```text
+The new components use tokens that some of your design systems lack or define differently:
+  Brand:
+    missing     color.action.primary.bg (a color) (Badge)
+    wrong type  radius.sm is a color here, and the components expect a dimension (Badge)
+```
+
+There are three ways to make a component fit, and in a terminal `add` asks which:
+
+- **`--fit add`** writes the missing tokens, with the values of the reference set (the `tailwind` tokens), into `tessera-ui.tokens.json` in each system's tokens folder. That file holds only what `add` put there, so you can edit it or delete it. A token the reference set gives another value in the dark theme gets its dark value in the system's own `themes/dark.tokens.json`, beside your overrides (a theme file is named for its theme, so it cannot be split). A wrong type is never overwritten; that is for `--map`.
+- **`--map from=to`** rewrites the component, as it is written to your project, to use a token you have: `--map color.action.primary.bg=color.brand.bg,radius.sm=radius.md`. It can be repeated. The fit is checked again against the tokens you mapped to.
+- **`--fit set`** installs the whole reference set (`tokens:tailwind`) as another design system and leaves yours as it is.
+
+`--fit skip` leaves the comparison out. With no flag and no terminal, `add` still writes the component, reports the gaps and names these flags, so a script is never held up.
+
+When the files are written, `add` runs the check on the new components and prints what it finds (for example a contrast that is too low in your dark theme). The generated accessibility tests cover them as well: `npx tessera a11y --system all` runs them in every design system, and `add` says so.
+
+In the docs that `tessera dev` serves, the design system switch shows the same gaps for each component.
+
+## The token interface
 
 ```text token-interface
 color.action.danger.bg

@@ -12,6 +12,8 @@ const WITH_VALUE = new Set([
   'docs-port',
   'as',
   'from',
+  'fit',
+  'map',
   'system',
   'preset',
   'prefix',
@@ -32,9 +34,20 @@ export function parseArgs(argv: string[]): Args {
     const arg = argv[i]!
     if (arg.startsWith('--')) {
       const [name, inline] = arg.slice(2).split('=', 2) as [string, string | undefined]
-      if (inline !== undefined) flags.set(name, inline)
-      else if (WITH_VALUE.has(name) && i + 1 < argv.length) flags.set(name, argv[++i]!)
-      else flags.set(name, true)
+      const value =
+        inline !== undefined
+          ? inline
+          : WITH_VALUE.has(name) && i + 1 < argv.length
+            ? argv[++i]!
+            : true
+      // `--map a=b --map c=d` is the same as `--map a=b,c=d`.
+      const before = flags.get(name)
+      flags.set(
+        name,
+        name === 'map' && typeof before === 'string' && typeof value === 'string'
+          ? `${before},${value}`
+          : value,
+      )
     } else positional.push(arg)
   }
   return { positional, flags }

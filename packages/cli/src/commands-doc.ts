@@ -27,10 +27,11 @@ export const COMMANDS_DOC: CommandDoc[] = [
   },
   {
     name: 'add',
-    usage: 'tessera add <Name...> [--as <Name>] [--replace] [--diff] [--install] [--from <source>]',
+    usage:
+      'tessera add <Name...> [--as <Name>] [--replace] [--diff] [--fit add|set|skip] [--map a=b] [--install] [--from <source>]',
     summary: 'Copy a component or a set of tokens from Tessera UI into the project',
     details:
-      'Copies what you name into your project, where it is yours to edit: a component goes to `system/components` (with its docs file), a token set (`tokens:tailwind`, `tokens:unstyled`, `tokens:tessera`) to `system/<name>/tokens`. Components it needs (an Accordion needs AccordionItem) come with it, unless your project already has one with that name, which is kept. If the name is taken, in a terminal it asks whether to replace yours, keep yours and add the new one under another name, or cancel, naming which is yours and which is new; without a terminal it stops and says to use `--replace` or `--as`. A component that imports an npm package (Icon needs `lucide`) is told what to install, or installed with `--install`. It refuses a component that needs a newer `@pixelscriptio/tessera` than the project has. What it installed is recorded in `tessera.lock.json`. Only `.tess`, `.docs.md` and `.ts` files in `system/components`, and token files in `system/<name>/tokens`, are ever written; nothing from a registry can write anywhere else. `tessera add --list` shows what the registry has (`--json` for tools). Nothing is run from what it downloads.',
+      'Copies what you name into your project, where it is yours to edit: a component goes to `system/components` (with its docs file), a token set (`tokens:tailwind`, `tokens:unstyled`, `tokens:tessera`) to `system/<name>/tokens`. Components it needs (an Accordion needs AccordionItem) come with it, unless your project already has one with that name, which is kept. If the name is taken, in a terminal it asks whether to replace yours, keep yours and add the new one under another name, or cancel, naming which is yours and which is new; without a terminal it stops and says to use `--replace` or `--as`. A component that imports an npm package (Icon needs `lucide`) is told what to install, or installed with `--install`. It refuses a component that needs a newer `@pixelscriptio/tessera` than the project has. What it installed is recorded in `tessera.lock.json`. Only `.tess`, `.docs.md` and `.ts` files in `system/components`, and token files in `system/<name>/tokens`, are ever written; nothing from a registry can write anywhere else. `tessera add --list` shows what the registry has (`--json` for tools). Nothing is run from what it downloads. Before a component is written, it compares the tokens the new components use with each design system in the project, and reports which are missing and which have the wrong type (a radius that is a color); in a terminal it asks how to fix it, otherwise it names the flags. Afterwards it runs the check on the new components.',
     options: [
       {
         flag: '--as <Name>',
@@ -44,6 +45,16 @@ export const COMMANDS_DOC: CommandDoc[] = [
       {
         flag: '--diff',
         description: 'Write nothing: show how your copy differs from the registry’s.',
+      },
+      {
+        flag: '--fit <add|set|skip>',
+        description:
+          'Token fit. add: put the missing tokens, with the reference set’s values, in tessera-ui.tokens.json in each design system (the dark values go in its dark theme). set: install the whole reference set (tokens:tailwind) as another design system. skip: do not compare.',
+      },
+      {
+        flag: '--map <from=to>',
+        description:
+          'Use your token in place of one the component uses, for example color.action.primary.bg=color.brand.bg. Repeat it, or separate pairs with commas.',
       },
       { flag: '--install', description: 'Run npm install for the packages the component needs.' },
       {
