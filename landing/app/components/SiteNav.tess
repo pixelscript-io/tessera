@@ -2,42 +2,31 @@
 {
   "name": "SiteNav",
   "role": "banner",
-  "description": "The header that stays at the top: the name, the sections of the page and the two links out.",
-  "parts": ["root", "bar", "brand", "mark", "cell", "links", "link", "actions", "github", "start"],
-  "contrast": [
-    { "foreground": "link", "background": "root" },
-    { "foreground": "start", "background": "start" }
-  ]
+  "description": "The header that stays at the top: the name, and links to the docs, the comparison and Tessera UI.",
+  "parts": ["root", "bar", "brand", "mark", "cell", "links", "link"],
+  "contrast": [{ "foreground": "link", "background": "root" }]
 }
 </contract>
 
 <script>
 import { links } from '../links'
 
-// On the home page the sections are on the page, so a link is an anchor. On another page it goes to the home page first.
+// The brand goes to the top of the home page, or to the home page from another one.
 const route = useRoute()
-const prefix = derived(() => (route.path === '/' ? '' : '/'))
+const top = derived(() => (route.path === '/' ? '#top' : '/'))
 </script>
 
 <template>
   <header class="root" role="banner">
     <nav class="bar" aria-label="Main">
-      <a class="brand" :href="prefix === '' ? '#top' : '/'">
+      <a class="brand" :href="top">
         <span class="mark" aria-hidden="true"><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i></span>
         Tessera
       </a>
       <div class="links">
         <a class="link" :href="links.docs">Docs</a>
-        <a class="link" :href="prefix + '#data'">Data</a>
-        <a class="link" :href="prefix + '#packages'">Packages</a>
-        <a class="link" :href="prefix + '#anywhere'">Any framework</a>
-        <a class="link" :href="prefix + '#interchange'">Tokens</a>
-        <a class="link" :href="prefix + '#agents'">AI tools</a>
         <a class="link" href="/compare">Compare</a>
-      </div>
-      <div class="actions">
-        <a class="github" :href="links.github">GitHub</a>
-        <a class="start" :href="links.quickStart">Quick start</a>
+        <a class="link" :href="links.ui">Tessera UI</a>
       </div>
     </nav>
   </header>
@@ -96,7 +85,8 @@ const prefix = derived(() => (route.path === '/' ? '' : '/'))
   display: flex;
   flex: 1;
   flex-wrap: wrap;
-  gap: $space.20;
+  justify-content: flex-end;
+  gap: $space.24;
   font-size: $font.size.14;
 }
 
@@ -105,39 +95,6 @@ const prefix = derived(() => (route.path === '/' ? '' : '/'))
 
   &:hover {
     color: $color.accent.default;
-  }
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: $space.8;
-}
-
-.github,
-.start {
-  padding: $space.6 $space.12;
-  border-radius: $radius.sm;
-  font-size: $font.size.14;
-}
-
-.github {
-  border: 1px solid $color.border.default;
-  background: $color.surface.raised;
-  color: $color.text.default;
-
-  &:hover {
-    color: $color.accent.default;
-  }
-}
-
-.start {
-  background: $color.action.primary.bg;
-  color: $color.action.primary.fg;
-
-  &:hover {
-    background: $color.action.primary.bg-hover;
-    color: $color.action.primary.fg;
   }
 }
 
@@ -153,30 +110,15 @@ const prefix = derived(() => (route.path === '/' ? '' : '/'))
     margin-right: auto;
   }
 
-  .actions {
-    order: 2;
-    gap: $space.6;
-  }
-
   .links {
-    order: 3;
-    flex: 0 0 100%;
+    order: 2;
+    flex: none;
     flex-wrap: nowrap;
-    gap: $space.20;
-    padding-bottom: $space.4;
-    overflow-x: auto;
-    scrollbar-width: none;
+    gap: $space.16;
   }
 
   .link {
-    flex: none;
     padding: $space.8 0;
-    white-space: nowrap;
-  }
-
-  .github,
-  .start {
-    padding: $space.6 $space.10;
     white-space: nowrap;
   }
 }

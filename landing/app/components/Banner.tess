@@ -2,24 +2,34 @@
 {
   "name": "Banner",
   "role": "complementary",
-  "description": "The line above the page that says which release this is and what is new in it.",
-  "parts": ["root", "version", "text", "link"],
-  "contrast": [{ "foreground": "text", "background": "root" }]
+  "description": "The strip above the page that introduces Tessera UI, the catalogue of components, and links to it.",
+  "parts": ["root", "badge", "name", "text", "command", "link", "arrow"],
+  "contrast": [
+    { "foreground": "name", "background": "root" },
+    { "foreground": "text", "background": "root" },
+    { "foreground": "command", "background": "root" },
+    { "foreground": "link", "background": "root" },
+    { "foreground": "badge", "background": "badge" }
+  ]
 }
 </contract>
 
 <script>
-import { SHORT_VERSION } from '../version'
 import { links } from '../links'
 </script>
 
 <template>
-  <aside class="root" role="complementary" aria-label="Release announcement">
-    <span class="version">{SHORT_VERSION}</span>
-    <span class="text">
-      tessera lint for any project, the design system as custom elements, and accessibility tests in your own repo.
-    </span>
-    <a class="link" :href="links.releases">Releases</a>
+  <aside class="root" role="complementary" aria-label="Tessera UI">
+    <span class="badge">New</span>
+    <p class="text">
+      <strong class="name">Tessera UI</strong>
+      {' is a catalogue of accessible components. Copy one into your project: '}
+      <code class="command">tessera add Button</code>
+    </p>
+    <a class="link" :href="links.ui">
+      Browse the components
+      <span class="arrow" aria-hidden="true">→</span>
+    </a>
   </aside>
 </template>
 
@@ -29,40 +39,75 @@ import { links } from '../links'
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: $space.8;
-  padding: $space.8 $space.20;
-  border-bottom: 1px solid $color.border.default;
-  background: $color.surface.default;
+  gap: $space.8 $space.16;
+  padding: $space.12 $space.24;
+  background: $color.surface.inverse;
+  color: $color.text.inverse;
   font-size: $font.size.14;
   text-align: center;
 }
 
-.text {
-  color: $color.text.muted;
-}
-
-.version {
-  padding: $space.2 $space.6;
-  border: 1px solid $color.border.default;
+.badge {
+  padding: $space.2 $space.8;
   border-radius: $radius.full;
-  color: $color.text.default;
+  background: $color.accent.bright;
+  color: $color.accent.on-bright;
   font-family: var(--t-font-family-mono);
   font-size: $font.size.12;
+  font-weight: $font.weight.bold;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.text {
+  margin: 0;
+  max-width: 62ch;
+  line-height: 1.5;
+}
+
+.name {
+  font-weight: $font.weight.bold;
+}
+
+.command {
+  padding: $space.2 $space.6;
+  border: 1px solid $color.border.inverse;
+  border-radius: $radius.sm;
+  font-family: var(--t-font-family-mono);
+  font-size: $font.size.12;
+  white-space: nowrap;
 }
 
 .link {
-  color: $color.text.default;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: $color.accent.bright;
+  font-weight: $font.weight.medium;
+  white-space: nowrap;
 
   &:hover {
-    color: $color.accent.default;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
+
+  &:focus-visible {
+    outline: 2px solid $color.accent.bright;
+    outline-offset: 3px;
+  }
+}
+
+.arrow {
+  display: inline-block;
+  margin-left: $space.4;
+  transition-duration: $motion.duration.fast;
+  transition-property: transform;
+}
+
+.link:hover .arrow {
+  transform: translateX(3px);
 }
 
 @media (max-width: 720px) {
   .root {
-    padding: $space.8 $space.16;
+    padding: $space.10 $space.16;
   }
 }
 </style>

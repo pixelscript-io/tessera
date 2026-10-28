@@ -102,12 +102,14 @@ describe('the comparison page, on a wide screen', () => {
     expect(hrefs).toContain('https://tessera-docs.pixelscript.io/quick-start')
   })
 
-  it('has the nav of the home page, linking to its sections and to this page', async () => {
+  it('has the nav of the home page, linking to the docs, to this page and to Tessera UI', async () => {
     await open()
     const hrefs = [...root.querySelectorAll('header nav a')].map((a) => a.getAttribute('href'))
     expect(hrefs).toContain('/compare')
-    // With no router running the page is the home page, so the sections are anchors; the prerender test below covers /compare.
-    expect(hrefs.filter((h) => h!.endsWith('#data'))).toHaveLength(1)
+    expect(hrefs).toContain('https://tessera-ui.pixelscript.io')
+    expect(hrefs).toContain('https://tessera-docs.pixelscript.io/')
+    // The sections of the page are no longer in the nav.
+    expect(hrefs.filter((h) => h!.includes('#data'))).toHaveLength(0)
   })
 
   it('has no axe violations', async () => {

@@ -35,7 +35,7 @@ const button = (scope: ParentNode, label: string) =>
 const section = (id: string) => root.querySelector<HTMLElement>(`#${id}`)!
 
 describe('the version on the page', () => {
-  it('is the version of the published package, in the banner and the footer', () => {
+  it('is the version of the published package, in the footer', () => {
     expect(VERSION).toBe(pkg.version)
     expect(SHORT_VERSION).toBe(`v${pkg.version.split('.').slice(0, 2).join('.')}`)
     expect(root.textContent).toContain(SHORT_VERSION)
@@ -44,14 +44,33 @@ describe('the version on the page', () => {
 })
 
 describe('the page', () => {
-  it('has one h1, a main landmark, and every section the nav links to', () => {
+  it('has one h1 and a main landmark, and a nav of the name and three links', () => {
     expect(root.querySelectorAll('h1')).toHaveLength(1)
     expect(root.querySelector('h1')!.textContent).toBe('The design system is the framework.')
     expect(root.querySelectorAll('main')).toHaveLength(1)
-    const sections = root.querySelectorAll<HTMLAnchorElement>('nav a[href^="#"]')
-    expect(sections.length).toBeGreaterThan(4)
-    for (const a of sections)
-      expect(root.querySelector(a.getAttribute('href')!), a.getAttribute('href')!).not.toBeNull()
+    const nav = root.querySelector('header nav')!
+    expect(
+      [...nav.querySelectorAll('[class*="__links"] a')].map((a) => a.textContent!.trim()),
+    ).toEqual(['Docs', 'Compare', 'Tessera UI'])
+    // The way to Tessera UI is its own site.
+    expect([...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toContain(
+      'https://tessera-ui.pixelscript.io',
+    )
+  })
+
+  it('opens with a banner that introduces Tessera UI and links to it', () => {
+    const banner = root.querySelector('aside[aria-label="Tessera UI"]')!
+    expect(banner).not.toBeNull()
+    expect(banner.textContent).toContain('Tessera UI')
+    expect(banner.textContent).toContain('tessera add Button')
+    expect(banner.querySelector('a')!.getAttribute('href')).toBe(
+      'https://tessera-ui.pixelscript.io',
+    )
+    // It is the first thing on the page, above the nav.
+    expect(
+      banner.compareDocumentPosition(root.querySelector('header')!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('shows an API call, the file that names the server, and the compiler check, in tabs', async () => {

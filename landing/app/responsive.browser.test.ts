@@ -44,19 +44,30 @@ describe('on a phone', () => {
     })
   }
 
-  it('has a header that takes two short rows, not a quarter of the screen, with the sections in a row that scrolls', async () => {
+  it('has a header that is one short row: the name, and the three links', async () => {
     await open(390)
     const header = root.querySelector('header')!
-    expect(header.getBoundingClientRect().height).toBeLessThan(100)
+    expect(header.getBoundingClientRect().height).toBeLessThan(70)
     const brand = header.querySelector('a')!.getBoundingClientRect()
-    const start = [...header.querySelectorAll('a')]
-      .find((a) => a.textContent === 'Quick start')!
-      .getBoundingClientRect()
-    // The name and the buttons share the first row; the sections are under them.
-    expect(Math.abs(brand.top - start.top)).toBeLessThan(20)
-    const links = header.querySelector<HTMLElement>('[class*="__links"]')!
-    expect(getComputedStyle(links).overflowX).toBe('auto')
-    expect(links.getBoundingClientRect().top).toBeGreaterThan(start.bottom - 4)
+    const links = [...header.querySelectorAll('[class*="__links"] a')].map((a) =>
+      a.getBoundingClientRect(),
+    )
+    expect(links).toHaveLength(3)
+    // The name and the links share the one row, and every link is on the screen.
+    for (const link of links) {
+      expect(Math.abs(brand.top - link.top)).toBeLessThan(20)
+      expect(link.right).toBeLessThanOrEqual(390)
+    }
+  })
+
+  it('has a banner for Tessera UI that fits the screen and wraps', async () => {
+    await open(390)
+    const banner = root.querySelector('aside')!
+    const box = banner.getBoundingClientRect()
+    expect(box.left).toBeGreaterThanOrEqual(0)
+    expect(box.right).toBeLessThanOrEqual(390)
+    expect(banner.scrollWidth).toBeLessThanOrEqual(390)
+    expect(box.height).toBeLessThan(260)
   })
 
   it('keeps the copy button inside the screen, with its command wrapped and left aligned', async () => {

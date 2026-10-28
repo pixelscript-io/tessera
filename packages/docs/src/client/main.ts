@@ -115,7 +115,7 @@ function nav(current: string): HTMLElement {
   ]
   return h(
     'nav',
-    { class: 'docs-nav', 'aria-label': 'Documentation' },
+    { class: 'docs-nav', id: 'docs-nav', 'aria-label': 'Documentation' },
     h('ul', null, link('/', 'Overview')),
     ...origins.flatMap(([origin, title]) => {
       const items = data.components.filter((c) => c.origin === origin)
@@ -513,6 +513,49 @@ function sampleFor(slot: string): string | undefined {
   return slot === 'default' ? 'Label' : slot[0]!.toUpperCase() + slot.slice(1)
 }
 
+/** The tag that makes what the controls show: only what differs from the defaults, so the code is as short as it can be. */
+function usageFor(
+  c: ManifestComponent,
+  signals: Record<string, { value: unknown }>,
+  slotContent: Record<string, PreviewContent>,
+): string {
+  const attrs: string[] = []
+  for (const [name, signal] of Object.entries(signals)) {
+    const value = signal.value
+    const variant = c.variants.find((v) => v.name === name)
+    const given = variant ? variant.default : c.props.find((p) => p.name === name)?.default
+    if (value === undefined || value === null || value === given) continue
+    if (typeof value === 'boolean') {
+      if (value) attrs.push(name)
+      else if (given === true) attrs.push(`:${name}="false"`)
+    } else if (typeof value === 'number') attrs.push(`:${name}="${value}"`)
+    else if (typeof value === 'string') {
+      if (value !== '') attrs.push(`${name}="${value.replaceAll('"', '&quot;')}"`)
+    } else {
+      let json: string | undefined
+      try {
+        json = JSON.stringify(value)
+      } catch {
+        json = undefined
+      }
+      if (json && json.length <= 120 && !json.includes("'")) attrs.push(`:${name}='${json}'`)
+    }
+  }
+  const open = [c.name, ...attrs].join(' ')
+  const tag = open.length > 72 ? [c.name, ...attrs].join('\n  ') + '\n' : open
+  const text = Object.entries(slotContent).filter(([, v]) => typeof v === 'string' && v !== '')
+  if (text.length === 0) return `<${tag.endsWith('\n') ? tag : tag + ' '}/>`
+  const own = text.find(([n]) => n === 'default')
+  const named = text.filter(([n]) => n !== 'default')
+  if (named.length === 0 && own) return `<${tag}>${own[1]}</${c.name}>`.replace(/\n>/, '\n>')
+  return [
+    `<${tag}>`,
+    ...named.map(([n, v]) => `  <span slot="${n}">${v}</span>`),
+    ...(own ? [`  ${own[1]}`] : []),
+    `</${c.name}>`,
+  ].join('\n')
+}
+
 /**
  * The part of the page that shows a component and lets a person try it. What it shows comes from the contract's
  * `preview` (sample props and slot content) and what it lets you change comes from the component itself: a control for
@@ -612,7 +655,7 @@ function preview(c: ManifestComponent): HTMLElement {
   }
   void remount()
 
-  const controls = h('div', { class: 'docs-controls' }, h('h3', null, 'Controls'))
+  const controls = h('div', { class: 'docs-controls', role: 'group', 'aria-label': 'Controls' })
   for (const v of c.variants) {
     const id = `ctl-${c.name}-${v.name}`
     const select = h(
@@ -706,7 +749,8 @@ function preview(c: ManifestComponent): HTMLElement {
       ),
     )
   }
-  if (Object.keys(c.events).length) controls.append(h('h3', null, 'Events'), log)
+  if (Object.keys(c.events).length)
+    controls.append(h('details', { class: 'docs-events-box' }, h('summary', null, 'Events'), log))
 
   // A component that needs data or children, and does not say what to show them with, shows less than it can.
   const needsSample =
@@ -733,10 +777,87 @@ function preview(c: ManifestComponent): HTMLElement {
       ),
     )
   }
+  // The code that makes what the controls show, kept in step with them.
+  const usage = h('code', null)
+  const update = () => {
+    usage.textContent = usageFor(c, signals, slotContent)
+  }
+  controls.addEventListener('input', update)
+  controls.addEventListener('change', update)
+  controls.addEventListener('click', () => queueMicrotask(update))
+  update()
+
+  const copy = h(
+    'button',
+    {
+      type: 'button',
+      class: 'docs-button',
+      onclick: () => {
+        void navigator.clipboard?.writeText(usage.textContent ?? '').then(
+          () => {
+            copy.textContent = 'Copied'
+            setTimeout(() => (copy.textContent = 'Copy'), 1500)
+          },
+          () => {},
+        )
+      },
+    },
+    'Copy',
+  )
+  const previewPane = h('div', { id: `demo-${c.name}-preview`, role: 'tabpanel' }, stage, controls)
+  const codePane = h(
+    'div',
+    { id: `demo-${c.name}-code`, role: 'tabpanel', class: 'docs-code' },
+    copy,
+    h('pre', { tabindex: 0 }, usage),
+  )
+  codePane.hidden = true
+  const tabs = ['Preview', 'Code'].map((label) =>
+    h(
+      'button',
+      {
+        type: 'button',
+        role: 'tab',
+        id: `demo-${c.name}-tab-${label.toLowerCase()}`,
+        'aria-controls': `demo-${c.name}-${label.toLowerCase()}`,
+      },
+      label,
+    ),
+  )
+  const choose = (index: number) => {
+    tabs.forEach((tab, i) => {
+      tab.setAttribute('aria-selected', String(i === index))
+      tab.tabIndex = i === index ? 0 : -1
+    })
+    previewPane.hidden = index !== 0
+    codePane.hidden = index !== 1
+    if (index === 1) update()
+  }
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => choose(i))
+    tab.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+      const next = (i + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length
+      choose(next)
+      tabs[next]!.focus()
+    })
+  })
+  choose(0)
+  const demo = h(
+    'div',
+    { class: 'docs-demo' },
+    h(
+      'div',
+      { class: 'docs-demo-bar', role: 'tablist', 'aria-label': `${c.name} example` },
+      ...tabs,
+    ),
+    previewPane,
+    codePane,
+  )
   return h(
     'div',
     null,
-    h('div', { class: 'docs-preview' }, stage, controls),
+    demo,
     needsSample
       ? h(
           'p',
@@ -790,7 +911,6 @@ function componentPage(name: string): HTMLElement {
           )
         : null,
     ),
-    h('h2', null, 'Preview'),
     preview(m),
   )
 
@@ -1039,6 +1159,82 @@ function contrastPage(): HTMLElement {
 
 // --- routing ---------------------------------------------------------------------------------------------
 
+/** The way a heading becomes the end of a link to it. */
+const slug = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+    .trim()
+    .replace(/\s+/g, '-')
+
+let stopSpy: (() => void) | undefined
+
+/**
+ * The contents of the page, on its right: a link to each second-level heading, with the one being read marked. The
+ * page's address is its route (`#/components/Button`), so a link scrolls and leaves the address alone.
+ */
+function contents(main: HTMLElement, route: string): HTMLElement | null {
+  stopSpy?.()
+  stopSpy = undefined
+  const used = new Set<string>()
+  const headings = [...main.querySelectorAll('h2')].map((el) => {
+    let id = slug(el.textContent ?? '') || 'section'
+    while (used.has(id)) id += '-2'
+    used.add(id)
+    el.id = id
+    return el
+  })
+  if (headings.length < 2) return null
+  const links = headings.map((el) =>
+    h(
+      'a',
+      {
+        href: `#${route}`,
+        onclick: (event: Event) => {
+          event.preventDefault()
+          // The link that was pressed stays marked while the page scrolls to it, even when the end of the page stops
+          // its heading short of the top.
+          held = Date.now() + 900
+          links.forEach((other) =>
+            other === event.currentTarget
+              ? other.setAttribute('aria-current', 'location')
+              : other.removeAttribute('aria-current'),
+          )
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        },
+      },
+      el.textContent ?? '',
+    ),
+  )
+  let held = 0
+  const mark = () => {
+    if (Date.now() < held) return
+    let current = 0
+    headings.forEach((el, i) => {
+      if (el.getBoundingClientRect().top <= 96) current = i
+    })
+    links.forEach((a, i) =>
+      i === current
+        ? a.setAttribute('aria-current', 'location')
+        : a.removeAttribute('aria-current'),
+    )
+  }
+  let frame = 0
+  const onScroll = () => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(mark)
+  }
+  window.addEventListener('scroll', onScroll, { passive: true })
+  stopSpy = () => window.removeEventListener('scroll', onScroll)
+  mark()
+  return h(
+    'nav',
+    { class: 'docs-toc', 'aria-label': 'On this page' },
+    h('h2', null, 'On this page'),
+    h('ul', null, ...links.map((a) => h('li', null, a))),
+  )
+}
+
 function render() {
   const route = decodeURIComponent(location.hash.replace(/^#/, '') || '/')
   let page: HTMLElement
@@ -1067,26 +1263,46 @@ function render() {
     )
   }
   const main = h('main', { class: 'docs-main', id: 'main' }, page)
+  const toc = contents(main, route)
   root.replaceChildren(
     h(
       'header',
       { class: 'docs-top' },
       h(
-        'h1',
-        null,
+        'div',
+        { class: 'docs-head' },
         h(
-          'span',
-          { class: 'docs-mark', 'aria-hidden': 'true' },
-          h('span', null),
-          h('span', null),
-          h('span', null),
-          h('span', null),
+          'h1',
+          null,
+          h(
+            'span',
+            { class: 'docs-mark', 'aria-hidden': 'true' },
+            h('span', null),
+            h('span', null),
+            h('span', null),
+            h('span', null),
+          ),
+          `${data.project.name} docs`,
         ),
-        `${data.project.name} docs`,
+        switchers(),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'docs-button docs-menu-toggle',
+            'aria-controls': 'docs-nav',
+            'aria-expanded': 'false',
+            onclick: (event: Event) => {
+              const button = event.currentTarget as HTMLElement
+              const open = document.getElementById('docs-nav')!.classList.toggle('open')
+              button.setAttribute('aria-expanded', String(open))
+            },
+          },
+          'Menu',
+        ),
       ),
-      switchers(),
     ),
-    h('div', { class: 'docs-shell' }, nav(route), main),
+    h('div', { class: toc ? 'docs-shell' : 'docs-shell no-toc' }, nav(route), main, toc),
   )
   if (editing) {
     editBar(() => setTimeout(() => location.reload(), 300)).then(

@@ -1,9 +1,11 @@
 /** Where the page sends people. The docs are their own site. */
 export const DOCS = 'https://tessera-docs.pixelscript.io'
+export const UI = 'https://tessera-ui.pixelscript.io'
 export const GITHUB = 'https://github.com/pixelscript-io/tessera'
 
 export const links = {
   docs: `${DOCS}/`,
+  ui: UI,
   quickStart: `${DOCS}/quick-start`,
   introduction: `${DOCS}/introduction/`,
   releases: `${DOCS}/releases/`,
