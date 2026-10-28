@@ -1,10 +1,14 @@
 # Releases
 
-This page records what each release and milestone delivered, newest first. The current release is 0.12.0; see [Versioning](#versioning) for what a version number means here. `tessera diff --changelog` generates a section from any two versions.
+This page records what each release and milestone delivered, newest first. The current release is 0.13.0; see [Versioning](#versioning) for what a version number means here. `tessera diff --changelog` generates a section from any two versions.
 
 ## v0.1 (in progress)
 
 - **Published:** `@pixelscriptio/tessera` and `@pixelscriptio/create-tessera` 0.1.0 are on npm; 0.2.0 adds Milestones 13 to 15, and 0.2.1 adds Milestone 16, 0.2.2 ships the Prettier plugin and `tessera format`, 0.3.0 adds the system manager, 0.4.0 adds the tessera preset, 0.4.1 restyles the docs and the preset page after the site design, and 0.5.0 adds the items below.
+- **0.13.0: the generated docs look like Tessera UI.** The docs app that `tessera dev` and `tessera docs` serve now has the layout of the Tessera UI site: a centered page, the sidebar on the left, **On this page** on the right with the heading you are reading marked, and a Menu button on a narrow screen. A component's example is one card with a **Preview** tab, whose controls sit under the stage, and a **Code** tab with the tag that makes what the controls show, which follows them, and a Copy button. The colors and the font still come from your own tokens. The Tessera landing page has a banner that introduces Tessera UI, and its nav is the name with Docs, Compare and Tessera UI.
+
+  **Breaking:** none. Only the look of the docs app changed; its addresses and the ids that tests use are the same.
+
 - **0.12.0: optimistic writes, development mocks, and a choice of starter app.** A write can show its result before the server answers (`optimistic`: what it will do to a read, shown at once and taken back if the write fails; only that change is taken back when two writes run at once). `tessera dev --mock` answers every API that has a description with made-up data, so a page can be built before the server exists, and `?mock=error`, `?mock=empty`, `?mock=loading` or `?mock=slow` on a page shows those states; only the dev server mocks, and the real API's headers are never sent to it. `tessera init`, and so `npm create @pixelscriptio/tessera@latest`, now asks which starter app (a to-do app, a starter page or a blank slate) and which tokens (tailwind or none, the plain-values set); `--starter` and `--tokens` answer, and `--preset` still works.
 
   **Breaking:** none. With no terminal and no flags, `init` still writes the starter page with the tailwind tokens.
