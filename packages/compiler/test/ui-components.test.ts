@@ -1,8 +1,10 @@
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { formatDiagnostic } from '@tessera/contract'
-import { loadComponentRegistry, loadDesignTokens, uiComponentsDir } from '../src/node'
+import { legacyLibraryNotice, loadComponentRegistry, loadDesignTokens } from '../src/node'
 import { Project } from '../src/project'
 import { compile } from '../src/compile'
 
@@ -83,9 +85,7 @@ describe('using the system Button from an app', () => {
     expect(source).not.toContain('import')
     const result = compile(source, options())
     expect(result.diagnostics).toEqual([])
-    expect(result.code).toContain(
-      'import Button from "../../../../packages/ui/components/Button.tess"',
-    )
+    expect(result.code).toContain('import Button from "../../system/components/Button.tess"')
   })
 
   it('compiles when the variants are valid', () => {
@@ -162,43 +162,86 @@ describe('the token interface of the library', () => {
   }
 })
 
-describe('the library in a project', () => {
+describe('components added to a project', () => {
   const app = `${root}examples/kitchen-sink`
   const project = new Project(app)
 
-  it('is flagged in the registry, so a project component may replace it', () => {
+  it('are the project’s own: in the registry, and among the files it owns', () => {
     const { registry } = project.components()
-    expect(registry.get('Button')!.library).toBe(true)
-    expect(registry.get('Counter')!.library).toBeUndefined()
+    expect(
+      registry.get('Button')!.file.endsWith('/examples/kitchen-sink/system/components/Button.tess'),
+    ).toBe(true)
+    const owned = project.files().map((f) => f.replaceAll('\\', '/'))
+    expect(owned.some((f) => f.endsWith('/system/components/Button.tess'))).toBe(true)
+    expect(owned.some((f) => f.endsWith('/app/components/Counter.tess'))).toBe(true)
+    expect(owned.some((f) => f.includes('/packages/ui/'))).toBe(false)
   })
 
-  it('is not among the files the project owns, but is among those check reads', () => {
-    const owned = project.files().map((f) => f.replaceAll('\\', '/'))
-    expect(owned.some((f) => f.includes('/packages/ui/'))).toBe(false)
-    expect(owned.some((f) => f.endsWith('/app/components/Counter.tess'))).toBe(true)
-    const checked = project.files({ library: true }).map((f) => f.replaceAll('\\', '/'))
-    expect(checked.some((f) => f.endsWith('/packages/ui/components/Button.tess'))).toBe(true)
+  it('a project component of the same name is an error, not a replacement', () => {
+    const { registry } = project.components()
+    expect(registry.diagnostics).toEqual([])
+  })
+
+  it('are the catalogue’s, as recorded in the lock file: the example has not drifted from packages/ui', () => {
+    const lock = JSON.parse(readFileSync(`${app}/tessera.lock.json`, 'utf8')) as {
+      items: Record<string, { files: string[] }>
+    }
+    for (const [name, { files: installed }] of Object.entries(lock.items)) {
+      for (const file of installed) {
+        expect(readFileSync(`${app}/system/components/${file}`, 'utf8'), `${name}: ${file}`).toBe(
+          readFileSync(`${dir}/${file}`, 'utf8'),
+        )
+      }
+    }
+    expect(Object.keys(lock.items).sort()).toEqual(files.map((f) => f.replace('.tess', '')).sort())
   })
 })
 
-describe('which projects use the library', () => {
-  const scratch = `${root}examples/kitchen-sink/.library-test`
-  const make = (manifest: object | null) => {
+describe('a project from before 0.9 that lists @pixelscriptio/tessera-ui', () => {
+  const scratch = join(tmpdir(), `tessera-legacy-${process.pid}`)
+  const make = (manifest: object | null, pages: Record<string, string> = {}) => {
     rmSync(scratch, { recursive: true, force: true })
-    mkdirSync(scratch, { recursive: true })
+    mkdirSync(`${scratch}/app/pages`, { recursive: true })
     if (manifest) writeFileSync(`${scratch}/package.json`, JSON.stringify(manifest))
+    for (const [file, text] of Object.entries(pages))
+      writeFileSync(`${scratch}/app/pages/${file}`, text)
     return scratch
   }
   afterAll(() => rmSync(scratch, { recursive: true, force: true }))
 
-  it('only one whose package.json lists it, even when the package can be found', () => {
-    const found = uiComponentsDir(
-      make({ name: 'a', dependencies: { '@pixelscriptio/tessera-ui': '^1' } }),
+  it('is told the package is gone, and the exact tessera add line for the components it uses', () => {
+    const notice = legacyLibraryNotice(
+      make(
+        { name: 'a', dependencies: { '@pixelscriptio/tessera-ui': '^0.8.0' } },
+        { 'index.tess': '<template><Card><Button>Go</Button><Zebra /></Card></template>' },
+      ),
     )
-    expect(found?.replaceAll('\\', '/').endsWith('/packages/ui/components')).toBe(true)
-    expect(
-      uiComponentsDir(make({ name: 'a', devDependencies: { '@pixelscriptio/tessera-ui': '^1' } })),
-    ).not.toBeNull()
-    expect(uiComponentsDir(make({ name: 'a', dependencies: {} }))).toBeNull()
+    expect(notice).toContain('is not a package any more')
+    expect(notice).toContain('npm uninstall @pixelscriptio/tessera-ui')
+    expect(notice).toContain('npx tessera add Button Card Zebra')
+  })
+
+  it('does not name a component the project defines itself', () => {
+    const dir = make(
+      { name: 'a', devDependencies: { '@pixelscriptio/tessera-ui': '^0.8.0' } },
+      { 'index.tess': '<template><Button /></template>' },
+    )
+    mkdirSync(`${dir}/app/components`, { recursive: true })
+    writeFileSync(
+      `${dir}/app/components/Button.tess`,
+      [
+        '<contract>',
+        '{ "name": "Button", "role": "button", "description": "x", "parts": ["root"] }',
+        '</contract>',
+        '<template><button class="root"><slot /></button></template>',
+        '',
+      ].join('\n'),
+    )
+    expect(legacyLibraryNotice(dir)).toContain('npx tessera add <Name>')
+  })
+
+  it('is silent for a project that does not list it', () => {
+    expect(legacyLibraryNotice(make({ name: 'a', dependencies: {} }))).toBeUndefined()
+    expect(legacyLibraryNotice(make(null))).toBeUndefined()
   })
 })

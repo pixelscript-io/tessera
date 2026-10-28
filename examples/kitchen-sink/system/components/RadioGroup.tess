@@ -1,0 +1,207 @@
+<contract>
+{
+  "name": "RadioGroup",
+  "role": "radiogroup",
+  "description": "A set of options where exactly one can be chosen. Arrow keys move through them and choose; Tab leaves the group.",
+  "since": "0.8.0",
+  "parts": ["root", "label", "options", "radio", "control", "text", "hint", "error"],
+  "variants": {
+    "orientation": ["vertical", "horizontal"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "checked", "disabled"],
+  "behavior": "radio-group",
+  "slots": {
+    "label": "the question the group answers, required: it names the group",
+    "hint": "help under the options"
+  },
+  "events": {
+    "choose": "fired with { value, source } when the person chooses an option, where source is keyboard or pointer"
+  },
+  "preview": {
+    "props": {
+      "options": [
+        {
+          "value": "monthly",
+          "label": "Monthly"
+        },
+        {
+          "value": "yearly",
+          "label": "Yearly, two months free"
+        },
+        { "value": "team", "label": "Team" }
+      ],
+      "value": "monthly"
+    },
+    "slots": {
+      "label": "Billing period",
+      "hint": "You can change this later."
+    }
+  }
+}
+</contract>
+
+<script>
+// `options` is a list of { value, label, disabled }.
+const { options, value, disabled, error } = props({
+  options: [],
+  value: '',
+  disabled: false,
+  error: '',
+})
+
+// The group owns the choice, starts from the prop and follows it when it changes.
+const current = state(value.value)
+effect(() => {
+  current.value = value.value
+})
+
+const uid = `t-radiogroup-${Math.random().toString(36).slice(2, 9)}`
+
+// What each radio binds: checked, whether Tab stops on it (the checked one, or the first that can be chosen), disabled.
+const items = derived(() => {
+  const list = options.value ?? []
+  const chosen = list.findIndex((o) => o.value === current.value && !o.disabled)
+  const first = list.findIndex((o) => !o.disabled)
+  const stop = chosen >= 0 ? chosen : first
+  return list.map((o, i) => ({
+    value: o.value,
+    label: o.label,
+    disabled: !!(o.disabled || disabled.value),
+    checked: i === chosen,
+    tab: i === stop ? 0 : -1,
+  }))
+})
+
+function choose(detail) {
+  current.value = detail.value
+  emit('choose', { value: detail.value, source: detail.source })
+}
+</script>
+
+<template>
+  <div
+    class="root"
+    role="radiogroup"
+    :aria-labelledby="uid + '-label'"
+    :aria-describedby="uid + '-hint ' + uid + '-error'"
+    :aria-invalid="error ? 'true' : null"
+    :aria-disabled="disabled ? 'true' : null"
+    @choose="choose($event)"
+    >
+    <span class="label" :id="uid + '-label'"><slot name="label" /></span>
+    <div class="options">
+      <button
+        each="o in items"
+        key="o.value"
+        class="radio"
+        type="button"
+        role="radio"
+        :aria-checked="o.checked ? 'true' : 'false'"
+        :tabindex="o.tab"
+        :disabled="o.disabled"
+        :data-value="o.value"
+        >
+        <span class="control"><span class="dot"></span></span>
+        <span class="text">{o.label}</span>
+      </button>
+    </div>
+    <span class="hint" :id="uid + '-hint'"><slot name="hint" /></span>
+    <span class="error" :id="uid + '-error'" aria-live="polite">{error}</span>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.2;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+}
+
+.label {
+  font-weight: $font.weight.bold;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+}
+
+.root[data-orientation='horizontal'] .options {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: $space.4;
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: $space.2;
+  padding: $space.1 0;
+  border: 0;
+  background: transparent;
+  color: $color.text.default;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+}
+
+.control {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: $space.4;
+  height: $space.4;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.full;
+  background: $color.surface.default;
+  transition-duration: $motion.duration.fast;
+}
+
+.radio:hover:not(:disabled) .control {
+  border-color: $color.text.default;
+}
+
+.dot {
+  width: $space.2;
+  height: $space.2;
+  border-radius: $radius.full;
+  background: transparent;
+}
+
+.radio[aria-checked='true'] .control {
+  border-color: $color.action.primary.bg;
+  background: $color.action.primary.bg;
+}
+
+.radio[aria-checked='true'] .dot {
+  background: $color.action.primary.fg;
+}
+
+.hint {
+  color: $color.text.muted;
+}
+
+.error {
+  color: $color.action.danger.text;
+}
+
+.hint:empty,
+.error:empty {
+  display: none;
+}
+</style>

@@ -44,7 +44,6 @@ describe('the command documentation', () => {
       'report',
       'tokens',
       'new',
-      'eject',
       'explain',
       'manifest',
       'mcp',

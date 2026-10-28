@@ -62,7 +62,7 @@ describe('the agent manifest: components', () => {
     ])
     expect(button.slots).toHaveProperty('default')
     expect(button.events.press).toContain('click')
-    expect(button.file).toBe('../../packages/ui/components/Button.tess')
+    expect(button.file).toBe('system/components/Button.tess')
   })
 
   it('writes usage examples that are valid for the contract', () => {

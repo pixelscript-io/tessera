@@ -1,0 +1,75 @@
+<contract>
+{
+  "name": "Spinner",
+  "role": "status",
+  "description": "Shows that something is loading. It is announced to a screen reader with the label.",
+  "since": "0.8.0",
+  "parts": ["root", "ring", "label"],
+  "variants": {
+    "size": ["md", "sm", "lg"] // first value is the default
+  },
+  "slots": {
+    "default": "the label, announced and not shown; Loading when empty"
+  },
+  "preview": {
+    "slots": {
+      "default": "Loading"
+    }
+  }
+}
+</contract>
+
+<template>
+  <span class="root" role="status">
+    <span class="ring" aria-hidden="true"></span>
+    <span class="label"><slot>Loading</slot></span>
+  </span>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+  color: $color.text.default;
+}
+
+.ring {
+  width: $space.5;
+  height: $space.5;
+  border: 2px solid $color.border.default;
+  border-top-color: currentColor;
+  border-radius: $radius.full;
+  animation: spin 0.8s linear infinite;
+}
+
+.root[data-size='sm'] .ring {
+  width: $space.4;
+  height: $space.4;
+}
+
+.root[data-size='lg'] .ring {
+  width: $space.8;
+  height: $space.8;
+  border-width: 3px;
+}
+
+.label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation: none;
+  }
+}
+</style>

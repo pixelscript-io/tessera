@@ -1,0 +1,104 @@
+<contract>
+{
+  "name": "FormField",
+  "role": "generic",
+  "description": "A label, a hint and an error around a control that has none of its own: a native input, or a control you built. It connects them for assistive technology, so the control is named, described and marked invalid.",
+  "since": "0.8.0",
+  "parts": ["root", "label", "control", "hint", "error"],
+  "slots": {
+    "label": "the visible label, required",
+    "default": "the control: an input, a textarea, a select or an element with a role such as radiogroup",
+    "hint": "help under the control"
+  },
+  "preview": {
+    "slots": {
+      "label": "Start date",
+      "default": {
+        "tag": "input",
+        "attrs": {
+          "type": "date"
+        }
+      },
+      "hint": "The first day of the trial."
+    }
+  }
+}
+</contract>
+
+<script>
+const { error, required } = props({ error: '', required: false })
+
+// Ids of its own, so a page can have any number of fields.
+const uid = `t-field-${Math.random().toString(36).slice(2, 9)}`
+const box = state(null)
+const labelEl = state(null)
+
+// The control is whatever the slot holds. Name it with the label, describe it with the hint and the error, and mark it
+// invalid and required, as the component's own state says.
+effect(() => {
+  const root = box.value
+  const label = labelEl.value
+  const message = error.value
+  const must = required.value
+  if (!root) return
+  const control = root.querySelector('input, textarea, select, [role]')
+  if (!control) return
+  if (!control.id) control.id = `${uid}-control`
+  if (label) label.setAttribute('for', control.id)
+  control.setAttribute('aria-describedby', `${uid}-hint ${uid}-error`)
+  if (message) control.setAttribute('aria-invalid', 'true')
+  else control.removeAttribute('aria-invalid')
+  if (must) control.setAttribute('aria-required', 'true')
+  else control.removeAttribute('aria-required')
+})
+</script>
+
+<template>
+  <div class="root">
+    <label class="label" ref="labelEl">
+      <slot name="label" />
+      <span class="required" if="required" aria-hidden="true">*</span>
+    </label>
+    <div class="control" ref="box"><slot /></div>
+    <span class="hint" :id="uid + '-hint'"><slot name="hint" /></span>
+    <span class="error" :id="uid + '-error'" aria-live="polite">{error}</span>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+}
+
+.label {
+  font-weight: $font.weight.bold;
+}
+
+.required {
+  margin-left: $space.1;
+  color: $color.action.danger.text;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+}
+
+.hint {
+  color: $color.text.muted;
+}
+
+.error {
+  color: $color.action.danger.text;
+}
+
+.hint:empty,
+.error:empty {
+  display: none;
+}
+</style>

@@ -18,9 +18,9 @@ const count = state(0)
 
 ## Components
 
-Every `.tess` file in `system/components/**` and `app/components/**`, and in the [Tessera UI](/guide/tessera-ui) library when it is installed, is registered under its contract `name`, which must match the file name. Subfolders are only organization. A component of your own replaces a library component with the same name.
+Every `.tess` file in `system/components/**` and `app/components/**` is registered under its contract `name`, which must match the file name. Subfolders are only organization.
 
-- Names are global across both folders. A repeated name is an error on each file that repeats it, naming the others (T5001). There is no shadowing: to change a system component, wrap it, or `tessera eject` it under a new name.
+- Names are global across both folders. A repeated name is an error on each file that repeats it, naming the others (T5001). There is no shadowing: to change a system component, wrap it, or add the copy under a new name with `tessera add --as`.
 - Resolution happens at compile time. The compiler finds the component tags a file uses and emits a real `import` for each of those, and only those. There is no runtime registry, so an unused component is not in your bundle and each page splits normally.
 - An unknown tag is an error with a suggestion: `Unknown component <Buton>. Did you mean <Button>?`
 - Tags are checked against the registered contract: variant values, events and slots (`Button.tone has no value "dangr". Did you mean "danger"?`).

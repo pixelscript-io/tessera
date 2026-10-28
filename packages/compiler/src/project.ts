@@ -16,7 +16,6 @@ import {
   loadProjectState,
   resolveImportedComponents,
   scanComponentFiles,
-  projectLibraryDir,
   type DesignTokens,
   type ProjectApis,
   type ProjectComponents,
@@ -199,15 +198,13 @@ export class Project {
 
   /**
    * Every `.tess` file the project owns: its system components (when they are in or above the root), then
-   * `app/components`, `app/layouts` and `app/pages`. The router's components are left out, and so are the Tessera UI
-   * library's, which are not the project's to format, migrate or report on: `check` asks for them with `library`,
-   * to check them against the project's own tokens.
+   * `app/components`, `app/layouts` and `app/pages`. The router's components are left out: they are not the project's
+   * to format, migrate or report on.
    */
-  files({ library = false }: { library?: boolean } = {}): string[] {
+  files(): string[] {
     const out: string[] = []
     const systemDir = findUp(this.root, join('system', 'components'))
     for (const dir of [
-      library ? projectLibraryDir(this.root) : undefined,
       systemDir,
       join(this.root, 'app', 'components'),
       join(this.root, 'app', 'layouts'),

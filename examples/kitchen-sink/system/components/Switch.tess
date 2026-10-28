@@ -1,0 +1,136 @@
+<contract>
+{
+  "name": "Switch",
+  "role": "switch",
+  "description": "A setting that is on or off, and takes effect at once. Press it, or use Space or Enter.",
+  "since": "0.5.0",
+  "parts": ["root", "track", "thumb", "label"],
+  "variants": {
+    "size": ["md", "sm"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "checked", "disabled"],
+  "behavior": "toggle",
+  "slots": {
+    "default": "the label"
+  },
+  "events": {
+    "toggle": "fired with { checked, source } when the person changes it; the checked prop sets it from outside"
+  },
+  "preview": {
+    "slots": {
+      "default": "Notifications"
+    }
+  }
+}
+</contract>
+
+<script>
+const { checked, disabled } = props({ checked: false, disabled: false })
+
+// The component owns the state, starts from the prop and follows it when it changes.
+const on = state(checked.value)
+effect(() => {
+  on.value = checked.value
+})
+
+function change(detail) {
+  on.value = detail.checked
+  emit('toggle', detail)
+}
+</script>
+
+<template>
+  <button
+    class="root"
+    type="button"
+    role="switch"
+    :aria-checked="on ? 'true' : 'false'"
+    :disabled="disabled"
+    @toggle="change($event)"
+    >
+    <span class="track"><span class="thumb"></span></span>
+    <span class="label"><slot /></span>
+  </button>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: $space.3;
+  padding: $space.1 0;
+  border: 0;
+  background: transparent;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+
+  &[data-size='sm'] {
+    font-size: $font.size.sm;
+  }
+}
+
+.track {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: content-box;
+  width: $space.8;
+  height: $space.5;
+  padding: 0 $space.0-5;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.full;
+  background: $color.surface.hover;
+  transition-duration: $motion.duration.fast;
+}
+
+.thumb {
+  width: $space.4;
+  height: $space.4;
+  border-radius: $radius.full;
+  background: $color.text.muted;
+  transition-duration: $motion.duration.fast;
+}
+
+.root[data-size='sm'] .track {
+  width: $space.6;
+  height: $space.4;
+}
+
+.root[data-size='sm'] .thumb {
+  width: $space.3;
+  height: $space.3;
+}
+
+.root:hover:not(:disabled) .track {
+  border-color: $color.text.default;
+}
+
+.root[aria-checked='true'] .track {
+  border-color: $color.action.primary.bg;
+  background: $color.action.primary.bg;
+}
+
+.root[aria-checked='true'] .thumb {
+  background: $color.action.primary.fg;
+  transform: translateX($space.3);
+}
+
+.root[data-size='sm'][aria-checked='true'] .thumb {
+  transform: translateX($space.3);
+}
+
+.label:empty {
+  display: none;
+}
+</style>

@@ -630,8 +630,8 @@ export const EXPLANATIONS: Record<string, Explanation> = {
   // --- auto-imports -----------------------------------------------------------------------------------
   T5001: {
     cause:
-      'Two components have the same name. Names are global across `system/components` and `app/components`, and there is no shadowing. The one exception is the Tessera UI library: a component in your project with the name of a library component replaces it, and that is not an error.',
-    fix: 'Rename one, or wrap or eject the system component under a new name (`tessera eject`).',
+      'Two components have the same name. Names are global across `system/components` and `app/components`, and there is no shadowing. `tessera add` never writes a component under a name your project already uses: it asks whether to replace yours or add the new one under another name.',
+    fix: 'Rename one. To keep both a component you added and one of your own, add it under another name: `tessera add Button --as ActionButton`.',
     example: {
       kind: 'registry',
       files: [

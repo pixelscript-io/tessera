@@ -1,0 +1,119 @@
+<contract>
+{
+  "name": "AccordionItem",
+  "role": "generic",
+  "description": "A heading that shows and hides a region of content. Use several inside an Accordion.",
+  "since": "0.5.0",
+  "parts": ["root", "heading", "trigger", "title", "icon", "content"],
+  "states": ["hover", "focus-visible", "expanded", "disabled"],
+  "behavior": "disclosure",
+  "slots": {
+    "title": "the text of the heading, which is also the button that shows the content",
+    "default": "the content that is shown and hidden"
+  },
+  "events": {
+    "expand": "fired with { expanded, source } when the person opens or closes it; the open prop sets it from outside"
+  },
+  "preview": {
+    "props": {
+      "open": true
+    },
+    "slots": {
+      "title": "Section title",
+      "default": "The content that is shown and hidden."
+    }
+  }
+}
+</contract>
+
+<script>
+const { open, disabled } = props({ open: false, disabled: false })
+
+// The component owns the state, starts from the prop and follows it when it changes.
+const isOpen = state(open.value)
+effect(() => {
+  isOpen.value = open.value
+})
+
+function change(detail) {
+  isOpen.value = detail.expanded
+  emit('expand', detail)
+}
+</script>
+
+<template>
+  <div class="root">
+    <h3 class="heading">
+      <button
+        class="trigger"
+        type="button"
+        :aria-expanded="isOpen ? 'true' : 'false'"
+        :disabled="disabled"
+        @expand="change($event)"
+        >
+        <span class="title"><slot name="title" /></span>
+        <span class="icon" aria-hidden="true">{isOpen ? '−' : '+'}</span>
+      </button>
+    </h3>
+    <div class="content" :hidden="!isOpen"><slot /></div>
+  </div>
+</template>
+
+<style>
+.root {
+  border-bottom: 1px solid $color.border.default;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+}
+
+.heading {
+  margin: 0;
+  font-size: $font.size.base;
+  font-weight: $font.weight.bold;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space.4;
+  width: 100%;
+  padding: $space.4 0;
+  border: 0;
+  background: transparent;
+  color: $color.text.default;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: $color.action.primary.text;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+}
+
+.icon {
+  flex: none;
+  color: $color.text.muted;
+}
+
+.content {
+  padding: 0 0 $space.4;
+  color: $color.text.muted;
+  font-size: $font.size.base;
+  line-height: 1.6;
+}
+
+.content[hidden] {
+  display: none;
+}
+</style>

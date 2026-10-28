@@ -76,7 +76,6 @@ function tar(file: string, flags: string, into?: string): string {
 }
 
 let tarball: string
-let uiTarball: string
 const env = () => pnpmEnv(tarball.replace(/[^\\/]*$/, ''))
 
 beforeAll(() => {
@@ -85,17 +84,6 @@ beforeAll(() => {
   tarball = join(
     dir,
     readdirSync(dir).find((f) => f.endsWith('.tgz'))!,
-  )
-  // The component library is a package of its own, which the presets depend on.
-  const uiDir = scratch()
-  execSync(`pnpm pack --pack-destination "${uiDir}"`, {
-    cwd: join(repo, 'packages', 'ui'),
-    env: pnpmEnv(uiDir),
-    stdio: 'pipe',
-  })
-  uiTarball = join(
-    uiDir,
-    readdirSync(uiDir).find((f) => f.endsWith('.tgz'))!,
   )
 }, 120_000)
 
@@ -202,24 +190,6 @@ describe('the packed package', () => {
     for (const tool of ['vitest', '@vitest/browser-playwright', 'axe-core']) {
       expect(manifest.peerDependenciesMeta[tool], tool).toEqual({ optional: true })
     }
-    expect(JSON.stringify(manifest)).not.toContain('workspace:')
-  })
-
-  it('ships the component library as source: the components and their docs, no tests', () => {
-    const list = tar(uiTarball, '-tzf').split(/\r?\n/)
-    for (const entry of [
-      'package/package.json',
-      'package/components/Button.tess',
-      'package/components/Button.docs.md',
-      'package/components/Combobox.tess',
-    ]) {
-      expect(list, entry).toContain(entry)
-    }
-    expect(list.some((f) => f.includes('.test.') || f.includes('__screenshots__'))).toBe(false)
-    const dir = scratch()
-    tar(uiTarball, '-xzf', dir)
-    const manifest = JSON.parse(readFileSync(join(dir, 'package', 'package.json'), 'utf8'))
-    expect(manifest.name).toBe('@pixelscriptio/tessera-ui')
     expect(JSON.stringify(manifest)).not.toContain('workspace:')
   })
 

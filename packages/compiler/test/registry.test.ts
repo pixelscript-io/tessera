@@ -247,31 +247,19 @@ ${script ? `<script>\n${script}\n</script>` : ''}
   })
 })
 
-describe('ComponentRegistry: library components', () => {
-  const library = {
-    file: '/proj/node_modules/ui/Button.tess',
-    source: component('Button'),
-    library: true,
-  }
-
-  it('lets a project component replace a library component of the same name, without an error', () => {
+describe('ComponentRegistry: no shadowing', () => {
+  it('reports a system and an app component with one name, in both files, whatever the order', () => {
+    const system = { file: '/proj/system/components/Button.tess', source: component('Button') }
     const own = { file: '/proj/app/components/Button.tess', source: component('Button') }
     for (const order of [
-      [library, own],
-      [own, library],
+      [system, own],
+      [own, system],
     ]) {
       const registry = ComponentRegistry.build(order, display)
-      expect(registry.get('Button')!.file).toBe(own.file)
-      expect(registry.diagnostics).toEqual([])
-      expect(registry.duplicates).toEqual([])
+      expect(registry.diagnostics).toHaveLength(2)
+      expect(
+        registry.diagnostics.every((d) => d.message.includes('Duplicate component name "Button"')),
+      ).toBe(true)
     }
-  })
-
-  it('still reports two library components, or two project components, with one name', () => {
-    const other = { ...library, file: '/proj/node_modules/other/Button.tess' }
-    expect(ComponentRegistry.build([library, other], display).diagnostics).toHaveLength(2)
-    const a = { file: '/proj/app/components/Button.tess', source: component('Button') }
-    const b = { file: '/proj/system/components/Button.tess', source: component('Button') }
-    expect(ComponentRegistry.build([library, a, b], display).diagnostics).toHaveLength(2)
   })
 })

@@ -22,6 +22,8 @@ export interface Io {
    * to ask in; a command that needs an answer takes a flag for it and falls back to its default without one.
    */
   choose?(question: string, choices: Array<{ value: string; label: string }>): Promise<string>
+  /** Ask for a line of text. Only present when there is a terminal to ask in. */
+  ask?(question: string): Promise<string>
 }
 
 /** A stdin that can be read key by key. */
@@ -136,6 +138,15 @@ export const processIo = (): Io => {
             ui && typeof process.stdin.setRawMode === 'function'
               ? chooseByKeys(question, choices, ui, process.stdin, process.stdout)
               : chooseByNumber(question, choices, process.stdin, process.stdout),
+          ask: async (question) => {
+            const rl = createPromptInterface({ input: process.stdin, output: process.stdout })
+            try {
+              return await rl.question(`${question}
+> `)
+            } finally {
+              rl.close()
+            }
+          },
         }
       : {}),
   }

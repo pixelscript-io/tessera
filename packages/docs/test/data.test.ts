@@ -86,7 +86,7 @@ describe('the docs data', () => {
 
   it('renders the prose of a Name.docs.md beside the component, with its live examples', () => {
     const prose = component('Button').prose!
-    expect(prose.file).toBe('../../packages/ui/components/Button.docs.md')
+    expect(prose.file).toBe('system/components/Button.docs.md')
     expect(prose.html).toContain('<h1>Using Button</h1>')
     expect(prose.html).toContain('data-live="0"')
     expect(prose.live).toEqual([

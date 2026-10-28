@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "items": {
+    "Accordion": {
+      "item": "Accordion",
+      "registry": "../../packages/ui",
+      "sha256": "4e974f5b4c5561e1660b6bb0f3efa9fa4a0b97d41e7336164aa603ee9a41425b",
+      "files": ["Accordion.docs.md", "Accordion.tess"]
+    },
+    "AccordionItem": {
+      "item": "AccordionItem",
+      "registry": "C:\\Users\\joebe\\Desktop\\Projects\\tessera\\packages\\ui",
+      "sha256": "271514db3c76efde0611ce29153c66b077722b4c2852daee78411fac1c355fac",
+      "files": ["AccordionItem.docs.md", "AccordionItem.tess"]
+    },
+    "Alert": {
+      "item": "Alert",
+      "registry": "../../packages/ui",
+      "sha256": "6539e35e90e4d90207c3c7bff322df3571fb4e1777f3f303997088eb4de0f7ff",
+      "files": ["Alert.docs.md", "Alert.tess"]
+    },
+    "Avatar": {
+      "item": "Avatar",
+      "registry": "../../packages/ui",
+      "sha256": "75fa071cce6df7483b4751469a9f4602317976f66b30a18c8c7f0864a6298f6a",
+      "files": ["Avatar.docs.md", "Avatar.tess"]
+    },
+    "Badge": {
+      "item": "Badge",
+      "registry": "../../packages/ui",
+      "sha256": "7dd5f44017eef02d2174f54e5f06941f27897f01eab7898957834794147852f5",
+      "files": ["Badge.docs.md", "Badge.tess"]
+    },
+    "Button": {
+      "item": "Button",
+      "registry": "../../packages/ui",
+      "sha256": "9205bc828f63b9642398a6cd3ddc4250f0bbd00ca6a96a89f8ac2db0532f333f",
+      "files": ["Button.docs.md", "Button.tess"]
+    },
+    "Card": {
+      "item": "Card",
+      "registry": "../../packages/ui",
+      "sha256": "b664e33160dc80b8739f0c106707ac291bd32c4508b78c60f42e3963ae4456cd",
+      "files": ["Card.docs.md", "Card.tess"]
+    },
+    "Checkbox": {
+      "item": "Checkbox",
+      "registry": "../../packages/ui",
+      "sha256": "c96b2b256a3631f80eb3c6ec384903ee663b85319dfe6c2dc8210dc3936189ef",
+      "files": ["Checkbox.docs.md", "Checkbox.tess"]
+    },
+    "Combobox": {
+      "item": "Combobox",
+      "registry": "../../packages/ui",
+      "sha256": "ef531fa82057f18f7261e315474408b186734c0fef069eab9fedf466a4ce6944",
+      "files": ["Combobox.docs.md", "Combobox.tess"]
+    },
+    "Dialog": {
+      "item": "Dialog",
+      "registry": "../../packages/ui",
+      "sha256": "ac2e56de8c202e309d0ade3f13b094bf13537525a1c2a7da48736274a553bd72",
+      "files": ["Dialog.docs.md", "Dialog.tess"]
+    },
+    "Form": {
+      "item": "Form",
+      "registry": "../../packages/ui",
+      "sha256": "4dc86bb89d48253bd912cebd7cde9199f5982b6019bf12d62a5422db9f30cc46",
+      "files": ["Form.docs.md", "Form.tess"]
+    },
+    "FormField": {
+      "item": "FormField",
+      "registry": "../../packages/ui",
+      "sha256": "f8e7a1909d405237448d406e1bae662d4775e1b02e6f448d036fd5d86abcf195",
+      "files": ["FormField.docs.md", "FormField.tess"]
+    },
+    "Icon": {
+      "item": "Icon",
+      "registry": "C:\\Users\\joebe\\Desktop\\Projects\\tessera\\packages\\ui",
+      "sha256": "8208c784222be71b19e6c6299f4e3de39aab207dd6d353c38e09de309bf316f5",
+      "files": ["Icon.docs.md", "Icon.tess", "icons.ts"]
+    },
+    "Kbd": {
+      "item": "Kbd",
+      "registry": "../../packages/ui",
+      "sha256": "e1280ad24d5519edb828fa509a58503c8edb6a354d7fac3cc0cae633dccce298",
+      "files": ["Kbd.docs.md", "Kbd.tess"]
+    },
+    "Popover": {
+      "item": "Popover",
+      "registry": "../../packages/ui",
+      "sha256": "bf94b2ff6edf5b97adfae11004f39229e14d329053fd5ea770696f5d5deec543",
+      "files": ["Popover.docs.md", "Popover.tess"]
+    },
+    "Progress": {
+      "item": "Progress",
+      "registry": "../../packages/ui",
+      "sha256": "6f6fe2f23130a727357aac86bedb1e6334ef1a045474051dd604fed57bd6455f",
+      "files": ["Progress.docs.md", "Progress.tess"]
+    },
+    "RadioGroup": {
+      "item": "RadioGroup",
+      "registry": "../../packages/ui",
+      "sha256": "04c15ae344c8e1301eee5cea626d63e1dedffd307edccd615915595b7f8ab935",
+      "files": ["RadioGroup.docs.md", "RadioGroup.tess"]
+    },
+    "Select": {
+      "item": "Select",
+      "registry": "../../packages/ui",
+      "sha256": "a2a7e52d99e169896261531b4d6c865c587bcc876a3bce901bd353b56b669210",
+      "files": ["Select.docs.md", "Select.tess"]
+    },
+    "Separator": {
+      "item": "Separator",
+      "registry": "../../packages/ui",
+      "sha256": "bf39ed95c03c03ee858b13a00a569b3700954692d26e7e5017754736c941e16b",
+      "files": ["Separator.docs.md", "Separator.tess"]
+    },
+    "Skeleton": {
+      "item": "Skeleton",
+      "registry": "../../packages/ui",
+      "sha256": "3a1560352526c7eb7e9969fd1cf06e02320d034efa4a130b55c63c0c7ea8692d",
+      "files": ["Skeleton.docs.md", "Skeleton.tess"]
+    },
+    "Spinner": {
+      "item": "Spinner",
+      "registry": "../../packages/ui",
+      "sha256": "5a3ba65ebd28880ba0d1edded2df849045404a1eb51cb335058e706f891d2271",
+      "files": ["Spinner.docs.md", "Spinner.tess"]
+    },
+    "Switch": {
+      "item": "Switch",
+      "registry": "../../packages/ui",
+      "sha256": "835aadba60256765642688a06ba48c0a56109325fabc9fea12a98366b0cd5aeb",
+      "files": ["Switch.docs.md", "Switch.tess"]
+    },
+    "Textarea": {
+      "item": "Textarea",
+      "registry": "../../packages/ui",
+      "sha256": "b9cf09701d21e05dd2ffc3b79112d8d317e2a6efaefd40e12554bfb7cfd5931e",
+      "files": ["Textarea.docs.md", "Textarea.tess"]
+    },
+    "TextField": {
+      "item": "TextField",
+      "registry": "C:\\Users\\joebe\\Desktop\\Projects\\tessera\\packages\\ui",
+      "sha256": "cc179afa8c4c5ae16fe908c6937edf5dad05fc5f2c9704f183a7af62417e41e4",
+      "files": ["TextField.docs.md", "TextField.tess"]
+    },
+    "Tooltip": {
+      "item": "Tooltip",
+      "registry": "../../packages/ui",
+      "sha256": "705cecd323a7850cf5913a8b975065e867143993e402dda6abbcfd131e8f1399",
+      "files": ["Tooltip.docs.md", "Tooltip.tess"]
+    }
+  }
+}

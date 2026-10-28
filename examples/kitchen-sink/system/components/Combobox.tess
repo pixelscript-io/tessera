@@ -1,0 +1,297 @@
+<contract>
+{
+  "name": "Combobox",
+  "role": "generic",
+  "description": "A text field with a list of options that narrows as you type, for choosing from many. Use a Select for a short fixed list.",
+  "since": "0.5.0",
+  "parts": ["root", "label", "field", "input", "listbox", "option", "status"],
+  "variants": {
+    "size": ["md", "sm"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "expanded", "disabled"],
+  "behavior": "combobox",
+  "slots": {
+    "label": "the visible label, required"
+  },
+  "events": {
+    "select": "fired with { value, label } when an option is chosen",
+    "input": "fired with the text on every change"
+  },
+  "preview": {
+    "props": {
+      "options": [
+        {
+          "value": "apple",
+          "label": "Apple"
+        },
+        {
+          "value": "apricot",
+          "label": "Apricot"
+        },
+        {
+          "value": "banana",
+          "label": "Banana"
+        },
+        {
+          "value": "blueberry",
+          "label": "Blueberry"
+        }
+      ],
+      "placeholder": "Search fruit"
+    },
+    "slots": {
+      "label": "Fruit"
+    }
+  }
+}
+</contract>
+
+<script>
+const { options, value, placeholder, disabled } = props({
+  options: [],
+  value: '',
+  placeholder: '',
+  disabled: false,
+})
+
+// Ids of its own, so the label, the list and the options can name each other however many comboboxes there are.
+const uid = `t-combobox-${Math.random().toString(36).slice(2, 9)}`
+
+const selected = state(value.value)
+const text = state('')
+const query = state('')
+const isOpen = state(false)
+const active = state(-1)
+
+// The text shows the label of the chosen value, and follows the value prop when it changes.
+function labelOf(v) {
+  const found = options.value.find((o) => o.value === v)
+  return found ? found.label : ''
+}
+effect(() => {
+  selected.value = value.value
+  text.value = labelOf(value.value)
+})
+
+// What is typed narrows the list; right after a choice the whole list is there again.
+const shown = derived(() => {
+  const q = query.value.trim().toLowerCase()
+  return options.value
+    .filter((o) => !q || o.label.toLowerCase().includes(q))
+    .map((o, i) => ({
+      value: o.value,
+      label: o.label,
+      id: `${uid}-option-${i}`,
+      selected: o.value === selected.value,
+      active: i === active.value,
+    }))
+})
+
+const activeId = derived(() =>
+  isOpen.value && active.value >= 0 ? `${uid}-option-${active.value}` : null,
+)
+const status = derived(() => (isOpen.value && shown.value.length === 0 ? 'No results' : ''))
+
+function open(at) {
+  if (disabled.value) return
+  isOpen.value = true
+  active.value = shown.value.length ? (at === 'last' ? shown.value.length - 1 : 0) : -1
+}
+
+function close() {
+  isOpen.value = false
+  active.value = -1
+}
+
+function choose(o) {
+  selected.value = o.value
+  text.value = o.label
+  query.value = ''
+  close()
+  emit('select', { value: o.value, label: o.label })
+}
+
+function typed(event) {
+  text.value = event.target.value
+  query.value = event.target.value
+  isOpen.value = true
+  active.value = -1
+  emit('input', event.target.value)
+}
+
+function command(detail) {
+  const count = shown.value.length
+  switch (detail.command) {
+    case 'open':
+      open('first')
+      break
+    case 'open-last':
+      open('last')
+      break
+    case 'next':
+      if (count) active.value = Math.min(active.value + 1, count - 1)
+      break
+    case 'prev':
+      if (count) active.value = Math.max(active.value - 1, 0)
+      break
+    case 'select':
+      if (active.value >= 0 && shown.value[active.value]) choose(shown.value[active.value])
+      break
+    case 'close':
+      close()
+      break
+  }
+}
+
+// Keep the active option in view when moving through a long list.
+effect(() => {
+  const id = activeId.value
+  if (id && typeof document !== 'undefined') {
+    const el = document.getElementById(id)
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' })
+  }
+})
+</script>
+
+<template>
+  <div class="root">
+    <label class="label" :for="uid + '-input'"><slot name="label" /></label>
+    <div class="field">
+      <input
+        class="input"
+        :id="uid + '-input'"
+        type="text"
+        role="combobox"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        :aria-expanded="isOpen ? 'true' : 'false'"
+        :aria-controls="uid + '-list'"
+        :aria-activedescendant="activeId"
+        aria-autocomplete="list"
+        autocomplete="off"
+        bind:value="text"
+        @input="typed($event)"
+        @click="open('first')"
+        @blur="close()"
+        @command="command($event)"
+        />
+      <ul
+        class="listbox"
+        role="listbox"
+        :id="uid + '-list'"
+        :hidden="!isOpen || shown.length === 0"
+        @mousedown="$event.preventDefault()"
+        >
+        <li
+          each="o in shown"
+          key="o.value"
+          class="option"
+          role="option"
+          :id="o.id"
+          :aria-selected="o.selected ? 'true' : 'false'"
+          :data-active="o.active ? 'true' : null"
+          @click="choose(o)"
+          >
+          {o.label}
+        </li>
+      </ul>
+    </div>
+    <div class="status" role="status">{status}</div>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+}
+
+.label {
+  font-size: $font.size.sm;
+  font-weight: $font.weight.bold;
+}
+
+.field {
+  position: relative;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: $space.2 $space.3;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.md;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font: inherit;
+
+  &:hover:not(:disabled) {
+    border-color: $color.text.default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+}
+
+.root[data-size='sm'] .input {
+  padding: $space.1 $space.2;
+  font-size: $font.size.sm;
+}
+
+.listbox {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  max-height: 16rem;
+  margin: $space.1 0 0;
+  padding: $space.1;
+  overflow: auto;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.default;
+  box-shadow: $shadow.md;
+  list-style: none;
+}
+
+.listbox[hidden] {
+  display: none;
+}
+
+.option {
+  padding: $space.2 $space.3;
+  border-radius: $radius.sm;
+  color: $color.text.default;
+  cursor: pointer;
+}
+
+.option[data-active='true'] {
+  background: $color.surface.hover;
+}
+
+.option[aria-selected='true'] {
+  font-weight: $font.weight.bold;
+}
+
+.status {
+  color: $color.text.muted;
+  font-size: $font.size.sm;
+}
+
+.status:empty {
+  display: none;
+}
+</style>

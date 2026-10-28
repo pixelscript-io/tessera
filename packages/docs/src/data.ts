@@ -111,12 +111,11 @@ export function buildDocsData(project: Project, options: BuildOptions): DocsData
       known.has(p),
     )
     const normalized = entry.file.replaceAll('\\', '/')
-    const origin =
-      entry.library || /\/system\/components\//.test(normalized)
-        ? 'system'
-        : /\/app\/components\//.test(normalized)
-          ? 'app'
-          : 'router'
+    const origin = /\/system\/components\//.test(normalized)
+      ? 'system'
+      : /\/app\/components\//.test(normalized)
+        ? 'app'
+        : 'router'
     const docsFile = join(dirname(entry.file), `${basename(entry.file, '.tess')}.docs.md`)
     let prose: DocsComponent['prose']
     if (existsSync(docsFile)) {

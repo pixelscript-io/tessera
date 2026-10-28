@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import { createRequire } from 'node:module'
@@ -31,14 +39,24 @@ const closers: Array<() => Promise<void> | void> = []
 beforeAll(async () => {
   mkdirSync(scratch, { recursive: true })
   root = mkdtempSync(join(scratch, 'p-')).replaceAll('\\', '/')
-  writeFileSync(
-    join(root, 'package.json'),
-    '{ "name": "acme-system", "dependencies": { "@pixelscriptio/tessera-ui": "*" } }\n',
-  )
+  writeFileSync(join(root, 'package.json'), '{ "name": "acme-system" }\n')
   for (const [file, content] of Object.entries(presetFiles('tailwind'))) {
     mkdirSync(dirname(join(root, file)), { recursive: true })
     writeFileSync(join(root, file), content)
   }
+  // The rest of the catalogue, added the way a person would.
+  const catalogue = join(repo, 'packages/ui')
+  const wanted = readdirSync(join(catalogue, 'components'))
+    .filter((f) => f.endsWith('.tess'))
+    .map((f) => f.slice(0, -5))
+    .filter((name) => !existsSync(join(root, 'system/components', `${name}.tess`)))
+  const failures: string[] = []
+  const added = await main(['add', ...wanted, '--from', catalogue], {
+    cwd: root,
+    out: () => {},
+    err: (t) => void failures.push(t),
+  })
+  expect(added, failures.join('\n')).toBe(0)
   out = join(root, 'dist-elements').replaceAll('\\', '/')
   const io: Io = { cwd: root, out: (t) => void (output += t + '\n'), err: () => {} }
   const code = await main(['elements', '--prefix', 'acme'], io)

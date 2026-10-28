@@ -10,6 +10,8 @@ const WITH_VALUE = new Set([
   'link',
   'port',
   'docs-port',
+  'as',
+  'from',
   'system',
   'preset',
   'prefix',

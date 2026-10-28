@@ -114,7 +114,7 @@ export const contractSchema = {
         component: { type: 'string', pattern: '^[A-Z][A-Za-z0-9]*$' },
         version: { type: 'string', pattern: '^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$' },
       },
-      description: 'Set by `tessera eject`: the system component this was copied from.',
+      description: 'The component this was copied from, and its version.',
     },
     preview: {
       type: 'object',

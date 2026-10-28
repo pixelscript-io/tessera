@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { VERSION } from '../../cli/src/version'
 
-// The versioning rules (SPEC.md, "Versioning"): the three published packages share one number, the library asks for the
-// minor of the framework it was built with, and the number is 0.MINOR.PATCH with a minor that may pass 9.
+// The versioning rules (SPEC.md, "Versioning"): the framework and the project starter share one number, the component
+// catalogue is not a package and has none, and the number is 0.MINOR.PATCH with a minor that may pass 9.
 const read = (path: string) =>
   JSON.parse(readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')) as {
     version: string
@@ -15,12 +15,11 @@ const read = (path: string) =>
   }
 
 const tessera = read('../package.json')
-const ui = read('../../ui/package.json')
+const ui = read('../../ui/package.json') as { version: string; private?: boolean }
 const create = read('../../create-tessera/package.json')
 
 describe('versions', () => {
-  it('are one number for the framework, the component library and the project starter', () => {
-    expect(ui.version).toBe(tessera.version)
+  it('are one number for the framework and the project starter', () => {
     expect(create.version).toBe(tessera.version)
   })
 
@@ -32,9 +31,8 @@ describe('versions', () => {
     expect(tessera.version).toMatch(/^0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/)
   })
 
-  it('ask of the framework, in the library, the minor it was released with (a caret on 0.x means that)', () => {
-    const [, minor] = tessera.version.split('.')
-    expect(ui.peerDependencies?.['@pixelscriptio/tessera']).toBe(`^0.${minor}.0`)
+  it('leave the component catalogue out: it is private, so it cannot be published or take part', () => {
+    expect(ui.private).toBe(true)
   })
 
   it('cannot reach 1.0 by publishing: every published package checks its version first, and 1.0.0 fails the check', () => {

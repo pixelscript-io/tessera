@@ -1,0 +1,44 @@
+<contract>
+{
+  "name": "Badge",
+  "role": "generic",
+  "description": "A small label for a status or category.",
+  "parts": ["root"],
+  "variants": {
+    "tone": ["neutral", "primary", "danger"] // first value is the default
+  },
+  "slots": { "default": "the label" },
+  "preview": {
+    "slots": {
+      "default": "New"
+    }
+  }
+}
+</contract>
+
+<template>
+  <span class="root"><slot /></span>
+</template>
+
+<style>
+.root {
+  display: inline-flex;
+  align-items: center;
+  padding: $space.1 $space.3;
+  border-radius: $radius.sm;
+  background: $color.surface.hover;
+  color: $color.text.default;
+  font-size: $font.size.xs;
+  font-weight: 500;
+
+  &[data-tone='primary'] {
+    background: $color.action.primary.bg;
+    color: $color.action.primary.fg;
+  }
+
+  &[data-tone='danger'] {
+    background: $color.action.danger.bg;
+    color: $color.action.danger.fg;
+  }
+}
+</style>

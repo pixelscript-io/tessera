@@ -1,0 +1,53 @@
+<contract>
+{
+  "name": "Skeleton",
+  "role": "generic",
+  "description": "A placeholder in the shape of content that has not loaded yet. It is hidden from assistive technology: announce the loading with a Spinner or a live region.",
+  "since": "0.8.0",
+  "parts": ["root"],
+  "variants": {
+    "shape": ["text", "block", "circle"] // first value is the default
+  }
+}
+</contract>
+
+<template>
+  <div class="root" role="presentation"></div>
+</template>
+
+<style>
+.root {
+  background: $color.surface.hover;
+  animation: pulse 1.4s ease-in-out infinite;
+
+  &[data-shape='text'] {
+    height: $space.4;
+    width: 100%;
+    border-radius: $radius.sm;
+  }
+
+  &[data-shape='block'] {
+    height: $space.16;
+    width: 100%;
+    border-radius: $radius.md;
+  }
+
+  &[data-shape='circle'] {
+    width: $space.10;
+    height: $space.10;
+    border-radius: $radius.full;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: $opacity.disabled;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    animation: none;
+  }
+}
+</style>

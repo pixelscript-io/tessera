@@ -26,6 +26,41 @@ export const COMMANDS_DOC: CommandDoc[] = [
     ],
   },
   {
+    name: 'add',
+    usage: 'tessera add <Name...> [--as <Name>] [--replace] [--diff] [--install] [--from <source>]',
+    summary: 'Copy a component or a set of tokens from Tessera UI into the project',
+    details:
+      'Copies what you name into your project, where it is yours to edit: a component goes to `system/components` (with its docs file), a token set (`tokens:tailwind`, `tokens:unstyled`, `tokens:tessera`) to `system/<name>/tokens`. Components it needs (an Accordion needs AccordionItem) come with it, unless your project already has one with that name, which is kept. If the name is taken, in a terminal it asks whether to replace yours, keep yours and add the new one under another name, or cancel, naming which is yours and which is new; without a terminal it stops and says to use `--replace` or `--as`. A component that imports an npm package (Icon needs `lucide`) is told what to install, or installed with `--install`. It refuses a component that needs a newer `@pixelscriptio/tessera` than the project has. What it installed is recorded in `tessera.lock.json`. Only `.tess`, `.docs.md` and `.ts` files in `system/components`, and token files in `system/<name>/tokens`, are ever written; nothing from a registry can write anywhere else. `tessera add --list` shows what the registry has (`--json` for tools). Nothing is run from what it downloads.',
+    options: [
+      {
+        flag: '--as <Name>',
+        description:
+          'Install under this name (a folder name for a token set). Works with one item.',
+      },
+      {
+        flag: '--replace',
+        description: 'Overwrite your component or token files of the same name.',
+      },
+      {
+        flag: '--diff',
+        description: 'Write nothing: show how your copy differs from the registry’s.',
+      },
+      { flag: '--install', description: 'Run npm install for the packages the component needs.' },
+      {
+        flag: '--yes',
+        description:
+          'Never ask: a name that is taken stops the command unless --replace or --as says what to do.',
+      },
+      { flag: '--list', description: 'List what the registry has, and which of it is installed.' },
+      { flag: '--json', description: 'With --list, print JSON.' },
+      {
+        flag: '--from <source>',
+        description:
+          'Where to read from: an address, a folder of a published registry (has index.json), or a folder of components such as packages/ui. Default https://tessera-ui.pixelscript.io.',
+      },
+    ],
+  },
+  {
     name: 'dev',
     usage: 'tessera dev [--port <n>] [--docs-port <n>]',
     summary: 'Run the app and its design system docs with hot updates',
@@ -281,13 +316,6 @@ export const COMMANDS_DOC: CommandDoc[] = [
     summary: 'Scaffold a page, such as blog/[slug]',
     details:
       'Writes `app/pages/<path>.tess`. It refuses a path that would conflict with an existing route (naming both files) or that cannot be a route.',
-  },
-  {
-    name: 'eject',
-    usage: 'tessera eject <Name> [<NewName>]',
-    summary: 'Copy a system or library component into app/components as your own',
-    details:
-      'Copies a component under a new name and records `forkedFrom` (the component and the version) in its contract, so owning a copy never means silent drift. A component of the Tessera UI library (`@pixelscriptio/tessera-ui`) can be copied without a new name: `tessera eject Button` writes `app/components/Button.tess`, and from then on your Button replaces the one in the library everywhere in the project.',
   },
   {
     name: 'explain',

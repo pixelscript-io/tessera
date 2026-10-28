@@ -1,0 +1,38 @@
+<contract>
+{
+  "name": "Separator",
+  "role": "separator",
+  "description": "A thin line that divides content, horizontally or vertically.",
+  "since": "0.8.0",
+  "parts": ["root"],
+  "variants": {
+    "orientation": ["horizontal", "vertical"] // first value is the default
+  }
+}
+</contract>
+
+<script>
+const { orientation } = props({})
+</script>
+
+<template>
+  <div class="root" role="separator" :aria-orientation="orientation"></div>
+</template>
+
+<style>
+.root {
+  flex: none;
+  align-self: stretch;
+  background: $color.border.default;
+
+  &[data-orientation='horizontal'] {
+    height: 1px;
+    width: 100%;
+  }
+
+  &[data-orientation='vertical'] {
+    width: 1px;
+    min-height: $space.4;
+  }
+}
+</style>

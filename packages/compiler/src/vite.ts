@@ -11,7 +11,12 @@ import { generateApisDts } from './apis'
 import { generateStateDts } from './shared-state'
 import { generateComponentsDts } from './dts'
 import { generateRoutesDts, generateRoutesModule, routeDiagnostics } from './routes'
-import { type DesignTokens, type ProjectComponents, type ProjectRoutes } from './node'
+import {
+  legacyLibraryNotice,
+  type DesignTokens,
+  type ProjectComponents,
+  type ProjectRoutes,
+} from './node'
 
 export interface TesseraOptions {
   /** Set to `optional` to let `app/components` skip contracts. */
@@ -168,6 +173,8 @@ export function tessera(options: TesseraOptions = {}): Plugin {
       // Options passed to the plugin win over tessera.config.ts.
       const fromFile = options.config ? undefined : await loadConfigFile(root)
       project = new Project(root, { ...fromFile?.options, ...options })
+      const legacy = legacyLibraryNotice(root)
+      if (legacy) throw new Error(legacy)
       const issues = validateConfig(project.config)
       if (issues.length) {
         throw new Error(

@@ -1,5 +1,6 @@
 import { parseArgs, type Args } from './args'
 import { a11y } from './commands/a11y'
+import { add } from './commands/add'
 import { agentFiles, manifest, mcp } from './commands/agent'
 import { baseline } from './commands/baseline'
 import { check } from './commands/check'
@@ -7,7 +8,6 @@ import { codemod } from './commands/codemod'
 import { diff } from './commands/diff'
 import { docs } from './commands/docs'
 import { elements } from './commands/elements'
-import { eject } from './commands/eject'
 import { format } from './commands/format'
 import { explain } from './commands/explain'
 import { init } from './commands/init'
@@ -26,6 +26,7 @@ type Command = (args: Args, io: Io) => Promise<number>
 
 const COMMANDS: Record<string, Command> = {
   init,
+  add,
   dev,
   build,
   preview,
@@ -37,7 +38,6 @@ const COMMANDS: Record<string, Command> = {
   tokens,
   api,
   new: newCommand,
-  eject,
   explain,
   docs,
   elements,

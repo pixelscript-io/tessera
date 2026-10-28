@@ -38,4 +38,4 @@ Use `behavior` when the interaction is standard (`press`). The behavior needs th
 
 ## Next steps
 
-[Extending and ejecting](/guide/design-systems/extending).
+[Extending](/guide/design-systems/extending).

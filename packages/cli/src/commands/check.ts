@@ -1,9 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { applyFixes, formatDiagnostic } from '@tessera/compiler'
+import { legacyLibraryNotice } from '@tessera/compiler/project'
 import type { Args } from '../args'
 import { has } from '../args'
 import { checkProject, countBy, type ProjectReport } from '../check-project'
-import type { Io } from '../io'
+import { CliError, type Io } from '../io'
 import { openProject } from '../project'
 import type { Ui } from '../ui'
 
@@ -12,6 +13,8 @@ const MAX_FIX_PASSES = 5
 /** `tessera check`: run every validation. Exit 1 on errors, so CI fails. `--fix` applies unambiguous fixes first. */
 export async function check(args: Args, io: Io): Promise<number> {
   const project = await openProject(io.cwd, args)
+  const legacy = legacyLibraryNotice(project.root)
+  if (legacy) throw new CliError(legacy)
   let fixed = 0
   if (has(args, 'fix')) {
     // A fix can reveal the next problem, so run again until nothing more applies.

@@ -7,7 +7,7 @@ The essentials guides show how to write components and pages. These pages are fo
 - [Enforcement](/guide/design-systems/enforcement): errors, the baseline, exceptions and severity.
 - [Accessibility](/guide/design-systems/accessibility): what generated tests cover and what they do not.
 - [Designing contracts](/guide/design-systems/contracts): what belongs in a contract.
-- [Extending and ejecting](/guide/design-systems/extending): wrapping, `tessera eject` and `forkedFrom`.
+- [Extending](/guide/design-systems/extending): wrapping, and adding a component under another name.
 - [Versioning and deprecation](/guide/design-systems/versioning): `since`, `deprecated` and `renamedFrom`.
 
 Not everything is built yet. What is missing (a deprecation window, a playground, and the menu, tabs, listbox and tooltip behaviors) is listed on [the roadmap](/releases/roadmap) so you can see what to expect and what not to rely on.

@@ -23,6 +23,17 @@ It works in an empty folder or beside an existing `package.json`: it adds the sc
 
 `npm create @pixelscriptio/tessera@latest my-app` does the same thing in a new folder, through the `@pixelscriptio/create-tessera` package, with no prior install.
 
+## `tessera add`
+
+```bash
+npx tessera add Button
+npx tessera add Accordion --as MyAccordion
+npx tessera add tokens:tailwind
+npx tessera add --list
+```
+
+Copies a component, or a set of design tokens, from [Tessera UI](/guide/tessera-ui) into the project. Flags: `--as <Name>`, `--replace`, `--diff`, `--install`, `--yes`, `--list` (with `--json`) and `--from <address or folder>`. What happens when the name is taken, what comes with a component and what `add` will and will not write are on the [Tessera UI](/guide/tessera-ui#add-a-component) page.
+
 ## `tessera dev`, `build` and `preview`
 
 `tessera build --prerender` also renders the pages that have no parameters to HTML after the build. See [Prerendering](/guide/pages-and-routing#prerendering).
@@ -129,19 +140,12 @@ It prints the cause, an example that produces the code and the fix. The examples
 ```text
 tessera new component UserCard
 tessera new page blog/[slug]
-tessera eject Button FancyButton
 ```
 
 - `new component` writes `app/components/UserCard.tess` with a valid starter contract. Component names are global, so a name another component has is refused.
 - `new page` writes `app/pages/blog/[slug].tess`. It refuses a path that would conflict with an existing route (naming both files) or that cannot be a route.
-- `eject` copies a system component into `app/components/` under a new name and records where it came from in the contract:
 
-```text
-"name": "FancyButton",
-"forkedFrom": { "component": "Button", "version": "0.1.0" },
-```
-
-You own the copy, and the record keeps the drift visible. The copy is scoped under its own name, so it and the original do not share styles. Ejecting one of your own components is refused: copy the file by hand.
+To copy a component from [Tessera UI](/guide/tessera-ui) into the project, use `tessera add`.
 
 ## How it looks
 

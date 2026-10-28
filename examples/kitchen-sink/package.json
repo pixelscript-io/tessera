@@ -5,7 +5,7 @@
   "type": "module",
   "dependencies": {
     "@pixelscriptio/tessera": "workspace:*",
-    "@pixelscriptio/tessera-ui": "workspace:*"
+    "lucide": "1.62.0"
   },
   "devDependencies": {
     "@tessera/compiler": "workspace:*",

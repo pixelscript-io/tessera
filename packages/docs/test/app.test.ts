@@ -121,30 +121,30 @@ describe('the docs app', () => {
     await page.waitForSelector('.docs-nav a')
     const names = () => page.$$eval('.docs-nav a', (as) => as.map((a) => a.textContent))
     expect(await names()).toContain('Tag')
-    expect(await names()).not.toContain('Badge')
+    expect(await names()).not.toContain('Chip')
 
     // Add a component: no restart, no other file.
-    write('app/components/Badge.tess', badge('Badge', 'A small status label.'))
+    write('app/components/Chip.tess', badge('Chip', 'A small status label.'))
     await page.waitForFunction(() =>
-      [...document.querySelectorAll('.docs-nav a')].some((a) => a.textContent === 'Badge'),
+      [...document.querySelectorAll('.docs-nav a')].some((a) => a.textContent === 'Chip'),
     )
-    await page.goto(`${url}#/components/Badge`)
+    await page.goto(`${url}#/components/Chip`)
     await page.waitForSelector('.docs-stage > *')
-    expect(await page.textContent('main h1')).toBe('Badge')
+    expect(await page.textContent('main h1')).toBe('Chip')
     expect(await page.textContent('.docs-lead')).toBe('A small status label.')
     // A control for the variant, and the preview follows it.
-    const select = page.locator('#ctl-Badge-tone')
+    const select = page.locator('#ctl-Chip-tone')
     expect(await select.locator('option').allTextContents()).toEqual(['info', 'warn'])
     expect(await page.getAttribute('.docs-stage > *', 'data-tone')).toBe('info')
     await select.selectOption('warn')
     expect(await page.getAttribute('.docs-stage > *', 'data-tone')).toBe('warn')
-    await page.fill('#ctl-Badge-slot', 'Hello')
+    await page.fill('#ctl-Chip-slot', 'Hello')
     await page.waitForFunction(() => document.querySelector('.docs-stage')?.textContent === 'Hello')
 
     // A .docs.md beside the component renders next to the generated sections, and its live example runs.
     write(
-      'app/components/Badge.docs.md',
-      '# When to use a badge\n\nUse it for **status**.\n\n```tess live\n<template><Badge tone="warn">Beta</Badge></template>\n```\n',
+      'app/components/Chip.docs.md',
+      '# When to use a badge\n\nUse it for **status**.\n\n```tess live\n<template><Chip tone="warn">Beta</Chip></template>\n```\n',
     )
     await page.waitForSelector('.docs-prose h1')
     expect(await page.textContent('.docs-prose h1')).toBe('When to use a badge')
@@ -202,10 +202,8 @@ describe('the docs app', () => {
     page.on('response', (r) => r.status() >= 400 && failed.push(`${r.status()} ${r.url()}`))
     await page.goto(host.url)
     await page.waitForSelector('.docs-nav a')
-    expect(await page.$$eval('.docs-nav a', (as) => as.map((a) => a.textContent))).toContain(
-      'Badge',
-    )
-    await page.goto(`${host.url}#/components/Badge`)
+    expect(await page.$$eval('.docs-nav a', (as) => as.map((a) => a.textContent))).toContain('Chip')
+    await page.goto(`${host.url}#/components/Chip`)
     await page.waitForSelector('.docs-stage > *')
     expect(await page.getAttribute('.docs-stage > *', 'data-tone')).toBe('info')
     await page.waitForFunction(() => document.querySelector('.docs-live')?.textContent === 'Beta')

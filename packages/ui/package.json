@@ -1,22 +1,9 @@
 {
   "name": "@pixelscriptio/tessera-ui",
-  "version": "0.8.0",
-  "description": "Tessera UI: accessible, themeable components for Tessera apps, shipped as .tess source.",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Tessera UI catalogue: the source of the components `tessera add` copies into a project. Not a package; the registry is built from this folder.",
   "type": "module",
-  "files": [
-    "components",
-    "!components/__screenshots__",
-    "!components/**/*.test.ts"
-  ],
-  "exports": {
-    "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "peerDependencies": {
-    "@pixelscriptio/tessera": "^0.8.0"
-  },
   "devDependencies": {
     "@pixelscriptio/tessera": "workspace:*",
     "@tessera/a11y": "workspace:*"

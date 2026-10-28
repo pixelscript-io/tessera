@@ -17,7 +17,6 @@ const GROUPS: Array<{ title: string; commands: string[] }> = [
       'tokens export',
       'new component',
       'new page',
-      'eject',
       'format',
     ],
   },

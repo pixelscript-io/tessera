@@ -1,0 +1,85 @@
+<contract>
+{
+  "name": "Alert",
+  "role": "alert",
+  "description": "A message the person should notice, announced when it appears. Use it for what happened or what to fix, not for decoration.",
+  "since": "0.8.0",
+  "parts": ["root", "icon", "content", "title", "body"],
+  "variants": {
+    "tone": ["neutral", "primary", "danger"] // first value is the default
+  },
+  "slots": {
+    "icon": "optional leading icon",
+    "title": "a short heading",
+    "default": "the message"
+  },
+  "preview": {
+    "slots": {
+      "icon": {
+        "component": "Icon",
+        "props": {
+          "name": "info"
+        }
+      },
+      "title": "Heads up",
+      "default": "Your trial ends in three days."
+    }
+  }
+}
+</contract>
+
+<template>
+  <div class="root" role="alert">
+    <span class="icon"><slot name="icon" /></span>
+    <div class="content">
+      <div class="title"><slot name="title" /></div>
+      <div class="body"><slot /></div>
+    </div>
+  </div>
+</template>
+
+<style>
+.root {
+  display: flex;
+  gap: $space.3;
+  padding: $space.3 $space.4;
+  border: 1px solid $color.border.default;
+  border-radius: $radius.md;
+  background: $color.surface.raised;
+  color: $color.text.default;
+  font-size: $font.size.sm;
+
+  &[data-tone='primary'] {
+    border-color: $color.action.primary.text;
+  }
+
+  &[data-tone='danger'] {
+    border-color: $color.action.danger.text;
+  }
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.icon:empty {
+  display: none;
+}
+
+.title {
+  font-weight: $font.weight.bold;
+}
+
+.title:empty {
+  display: none;
+}
+
+.body {
+  color: $color.text.muted;
+}
+
+.root[data-tone='danger'] .title {
+  color: $color.action.danger.text;
+}
+</style>

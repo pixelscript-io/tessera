@@ -14,6 +14,7 @@ const repo = fileURLToPath(new URL('../../..', import.meta.url)).replaceAll('\\'
 const root = `${repo}examples/kitchen-sink/.docs-test-previews`
 rmSync(root, { recursive: true, force: true })
 mkdirSync(root, { recursive: true })
+cpSync(`${repo}examples/kitchen-sink/system`, `${root}/system`, { recursive: true })
 cpSync(`${repo}examples/kitchen-sink/app`, `${root}/app`, {
   recursive: true,
   filter: (src) => !/(\.browser\.test\.ts|__screenshots__|seeded)/.test(src),
@@ -24,7 +25,7 @@ writeFileSync(
     name: 'previews',
     private: true,
     type: 'module',
-    dependencies: { '@pixelscriptio/tessera': '*', '@pixelscriptio/tessera-ui': '*' },
+    dependencies: { '@pixelscriptio/tessera': '*' },
   }),
 )
 

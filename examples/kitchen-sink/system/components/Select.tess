@@ -1,0 +1,120 @@
+<contract>
+{
+  "name": "Select",
+  "role": "generic",
+  "description": "A list of options that opens from a field and takes one, on the browser's own select. Use a Combobox to search a long list.",
+  "since": "0.5.0",
+  "parts": ["root", "label", "select"],
+  "variants": {
+    "size": ["md", "sm"] // first value is the default
+  },
+  "states": ["hover", "focus-visible", "disabled"],
+  "slots": {
+    "label": "the visible label, required"
+  },
+  "events": {
+    "change": "fired with { value, label } when the person chooses an option"
+  },
+  "preview": {
+    "props": {
+      "options": [
+        {
+          "value": "apple",
+          "label": "Apple"
+        },
+        {
+          "value": "apricot",
+          "label": "Apricot"
+        },
+        {
+          "value": "banana",
+          "label": "Banana"
+        },
+        {
+          "value": "blueberry",
+          "label": "Blueberry"
+        }
+      ]
+    },
+    "slots": {
+      "label": "Fruit"
+    }
+  }
+}
+</contract>
+
+<script>
+const { options, value, disabled } = props({ options: [], value: '', disabled: false })
+
+// The select owns what is chosen, starts from the prop and follows it when it changes.
+const current = state(value.value)
+effect(() => {
+  current.value = value.value
+})
+
+function changed(event) {
+  const chosen = options.value.find((o) => o.value === event.target.value)
+  emit('change', { value: event.target.value, label: chosen ? chosen.label : '' })
+}
+</script>
+
+<template>
+  <label class="root">
+    <span class="label"><slot name="label" /></span>
+    <select class="select" :disabled="disabled" bind:value="current" @change="changed($event)">
+      <option
+        each="o in options"
+        key="o.value"
+        :value="o.value"
+        :selected="o.value === current"
+        >
+        {o.label}
+      </option>
+    </select>
+  </label>
+</template>
+
+<style>
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space.1;
+  color: $color.text.default;
+  font-family: var(--t-font-family-sans);
+  font-size: $font.size.sm;
+}
+
+.label {
+  font-size: $font.size.sm;
+  font-weight: $font.weight.bold;
+}
+
+.select {
+  padding: $space.2 $space.3;
+  border: 1px solid $color.border.strong;
+  border-radius: $radius.md;
+  background: $color.surface.default;
+  color: $color.text.default;
+  font: inherit;
+  transition-duration: $motion.duration.fast;
+
+  &:hover:not(:disabled) {
+    border-color: $color.text.default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color.focus.ring;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: $opacity.disabled;
+    cursor: not-allowed;
+  }
+}
+
+.root[data-size='sm'] .select {
+  padding: $space.1 $space.2;
+  font-size: $font.size.sm;
+}
+</style>

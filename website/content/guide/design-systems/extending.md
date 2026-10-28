@@ -1,4 +1,4 @@
-# Extending and ejecting
+# Extending
 
 Introduced in v0.1 (Milestone 11).
 
@@ -31,22 +31,15 @@ function save() {
 </template>
 ```
 
-## Eject it
+## Copy it under another name
 
-When wrapping is not enough, own a copy:
+When wrapping is not enough, own a copy. A component from [Tessera UI](/guide/tessera-ui) is already a copy that is yours to edit; to keep both the original and a changed version, add it again under another name:
 
 ```bash
-tessera eject Button FancyButton
+tessera add Button --as FancyButton
 ```
 
-This copies the component into `app/components/` under the new name and records where it came from in the contract:
-
-```text
-"name": "FancyButton",
-"forkedFrom": { "component": "Button", "version": "0.1.0" },
-```
-
-The copy is yours: change anything. The `forkedFrom` record is what keeps the drift visible, so a later report can say when the original has changed. Ejecting one of your own components is refused.
+The file, the contract's `name` and the examples in its docs are renamed together, and the two do not share styles.
 
 ## Do not shadow
 
