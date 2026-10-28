@@ -4,7 +4,7 @@
 
 <script>
 // Data from an API: one line. app/apis/default.ts says which server.
-const devices = get('/objects')
+const users = get('/users')
 </script>
 
 <template>
@@ -51,14 +51,14 @@ const devices = get('/objects')
     <section class="data" aria-labelledby="data-title">
       <h2 class="name" id="data-title">Data from an API</h2>
       <p class="body">
-        <code>get('/objects')</code> in this page's script lists the devices below, from
+        <code>get('/users')</code> in this page's script lists the users below, from
         <code>app/apis/default.ts</code>. Loading, errors and refreshing are handled.
       </p>
-      <p class="body" if="devices.loading">Loading...</p>
-      <p class="body" else-if="devices.error">Could not load the devices: {devices.error.message}</p>
-      <ul class="devices" else>
-        <li class="device" each="device in devices.data" key="device.id">
-          <span class="id">{device.id}</span> {device.name}
+      <p class="body" if="users.loading">Loading...</p>
+      <p class="body" else-if="users.error">Could not load the users: {users.error.message}</p>
+      <ul class="users" else>
+        <li class="user" each="user in users.data" key="user.id">
+          <span class="id">{user.id}</span> {user.name}
         </li>
       </ul>
     </section>
@@ -180,7 +180,7 @@ const devices = get('/objects')
   border-top: 1px solid $color.border.default;
 }
 
-.devices {
+.users {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr));
   gap: $space.2;
@@ -189,7 +189,7 @@ const devices = get('/objects')
   list-style: none;
 }
 
-.device {
+.user {
   display: flex;
   align-items: center;
   gap: $space.2;

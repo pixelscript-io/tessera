@@ -28,7 +28,7 @@ The project is yours: `init` writes ordinary files, never overwrites one, and le
 The index page shows the three things most apps do first:
 
 - **A click.** The button reads and changes `counter`, a file in `app/state`: `counter.bump()` in the page, `{counter.count}` in its text. There is no import and no provider ([shared state](/guide/shared-state)).
-- **Data.** `get('/objects')` in the page's script lists devices from `app/apis/default.ts`, with loading and error states handled ([data](/guide/data)). `default.api.json` describes the API, so the compiler can check the call and the fields the page reads.
+- **Data.** `get('/users')` in the page's script lists users from `app/apis/default.ts`, with loading and error states handled ([data](/guide/data)). `default.api.json` describes the API, so the compiler can check the call and the fields the page reads.
 - **Styles from tokens.** Every value in the page's `<style>` is a token, so a raw value is a compile error with the nearest token suggested.
 
 The page is the same file in both presets, and uses only tokens that both define, so you can change the design system without touching the page.

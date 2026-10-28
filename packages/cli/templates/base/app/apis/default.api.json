@@ -1,12 +1,12 @@
 {
-  "base": "https://api.restful-api.dev",
-  "description": "A free test API (restful-api.dev). Delete this file to stop the compiler checking calls.",
+  "base": "https://jsonplaceholder.typicode.com",
+  "description": "A free test API (jsonplaceholder.typicode.com). Delete this file to stop the compiler checking calls.",
   "types": {
-    "Device": { "id": "string", "name": "string", "data": "object | null" }
+    "User": { "id": "number", "name": "string", "username": "string", "email": "string" }
   },
   "paths": {
-    "/objects": {
-      "get": { "returns": "Device[]", "description": "Some devices, to list." }
+    "/users": {
+      "get": { "returns": "User[]", "description": "Ten example users, to list." }
     }
   }
 }

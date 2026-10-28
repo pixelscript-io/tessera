@@ -208,7 +208,7 @@ describe('the starter app', () => {
     for (const preset of ['tailwind', 'unstyled'] as const) {
       const page = presetFiles(preset)['app/pages/index.tess']!
       expect(page, preset).toContain('counter.bump()')
-      expect(page, preset).toContain("get('/objects')")
+      expect(page, preset).toContain("get('/users')")
     }
     expect(presetFiles('tailwind')['app/pages/index.tess']).toBe(
       presetFiles('unstyled')['app/pages/index.tess'],
