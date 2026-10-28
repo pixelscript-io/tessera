@@ -26,4 +26,4 @@ features:
     link: /tutorial/
 ---
 
-Status: early development (v0.10). `@pixelscriptio/tessera` 0.10.0 is on npm. See [Releases](/releases/) for what exists and [the roadmap](/releases/roadmap) for what does not.
+Status: early development (v0.11). `@pixelscriptio/tessera` 0.11.0 is on npm. See [Releases](/releases/) for what exists and [the roadmap](/releases/roadmap) for what does not.
