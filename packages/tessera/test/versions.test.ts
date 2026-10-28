@@ -27,16 +27,15 @@ describe('versions', () => {
     expect(VERSION).toBe(tessera.version)
   })
 
-  it('are the number the Releases page and the home page name, and the page has a Breaking entry for it', () => {
+  it('are the number the Releases page and the home page name, and the page has a Breaking entry for its minor', () => {
     const page = (path: string) =>
       readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
     const releases = page('../../../website/content/releases/index.md')
     expect(releases).toContain(`The current release is ${tessera.version};`)
-    expect(releases).toMatch(
-      new RegExp(
-        `\\*\\*${tessera.version.replaceAll('.', '\\.')}: [^\\n]*\\n\\n  \\*\\*Breaking:\\*\\*`,
-      ),
-    )
+    // The release that began this minor says what broke; a patch after it has an entry of its own.
+    const minor = tessera.version.replace(/\.\d+$/, '.0').replaceAll('.', '\\.')
+    expect(releases).toMatch(new RegExp(`\\*\\*${minor}: [^\\n]*\\n\\n  \\*\\*Breaking:\\*\\*`))
+    expect(releases).toContain(`- **${tessera.version}: `)
     const home = page('../../../website/content/index.md')
     expect(home).toContain(`\`@pixelscriptio/tessera\` ${tessera.version} is on npm`)
   })
@@ -80,6 +79,39 @@ describe('versions', () => {
       expect(result.status).toBe(1)
       expect(result.stderr).toContain('until the author declares 1.0')
     }
+  })
+
+  it('cannot be published with npm while a dependency is a workspace: range, which only pnpm rewrites', () => {
+    const script = fileURLToPath(new URL('../../../scripts/check-version.mjs', import.meta.url))
+    const run = (agent: string, dependencies: Record<string, string>) => {
+      const dir = mkdtempSync(join(tmpdir(), 'tessera-workspace-'))
+      try {
+        writeFileSync(
+          join(dir, 'package.json'),
+          JSON.stringify({ name: 'x', version: '0.9.1', dependencies }),
+        )
+        return spawnSync(process.execPath, [script], {
+          cwd: dir,
+          encoding: 'utf8',
+          // Without the user agent of whatever started this test, in any letter case (Windows has no case in names).
+          env: {
+            ...Object.fromEntries(
+              Object.entries(process.env).filter(([key]) => !/^npm_config_user_agent$/i.test(key)),
+            ),
+            npm_config_user_agent: agent,
+          },
+        })
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    }
+    const npm = 'npm/10.9.0 node/v24.22.0 win32 x64 workspaces/false'
+    const pnpm = 'pnpm/10.34.7 npm/? node/v24.22.0 win32 x64'
+    const refused = run(npm, { '@pixelscriptio/tessera': 'workspace:*' })
+    expect(refused.status).toBe(1)
+    expect(refused.stderr).toContain('pnpm publish')
+    expect(run(pnpm, { '@pixelscriptio/tessera': 'workspace:*' }).status).toBe(0)
+    expect(run(npm, { acorn: '^8.14.0' }).status).toBe(0)
   })
 
   it('compare as numbers: 0.10.0 is after 0.9.0', () => {
