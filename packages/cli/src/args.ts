@@ -9,6 +9,8 @@ const WITH_VALUE = new Set([
   'root',
   'link',
   'port',
+  'docs-port',
+  'system',
   'preset',
   'prefix',
   'tokens',

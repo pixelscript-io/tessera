@@ -1,11 +1,14 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import type { InlineConfig, Plugin } from 'vite'
+import { loadConfigFile } from '@tessera/compiler/project'
+import type { InlineConfig, Plugin, ViteDevServer } from 'vite'
 import type { Args } from '../args'
 import { flag, has } from '../args'
 import type { Io } from '../io'
+import { CliError } from '../io'
 import { prerender } from '../prerender'
 import { findProjectRoot, openProject } from '../project'
+import { buildReport } from './report'
 
 const VITE_CONFIGS = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs', 'vite.config.mts']
 
@@ -90,15 +93,63 @@ export async function projectConfig(root: string, args: Args): Promise<InlineCon
   }
 }
 
-/** `tessera dev`: the dev server, with hot updates. */
+/** The two servers of `tessera dev`. `docs` is absent when the project's config says `docs: false`. */
+export interface DevServers {
+  app: ViteDevServer
+  docs?: ViteDevServer
+}
+
+/**
+ * Start the app, and beside it the docs of the design system, each on its own port: the app on `--port` (default
+ * 5173) and the docs on `--docs-port`, or the next free port. `docs: false` in `tessera.config` starts only the app.
+ */
+export async function startDev(root: string, args: Args): Promise<DevServers> {
+  const { createServer } = await import('vite')
+  const app = await createServer(await projectConfig(root, args))
+  await app.listen()
+  const config = (await loadConfigFile(root))?.options.config
+  if (config?.docs === false) return { app }
+  const given = flag(args, 'docs-port')
+  if (given !== undefined && (typeof given !== 'string' || !/^\d+$/.test(given))) {
+    await app.close()
+    throw new CliError(`"--docs-port" needs a number, got ${String(given)}.`)
+  }
+  // Loaded here, not at the top: the docs app brings in its own plugins, which no other command needs.
+  const { serveDocs } = await import('@tessera/docs')
+  try {
+    const docs = await serveDocs(root, {
+      report: (project) => buildReport(project),
+      // The app holds its port, so the docs' search for a free one starts above it.
+      port: given ? Number(given) : (app.config.server.port ?? 5173) + 1,
+    })
+    return { app, docs }
+  } catch (error) {
+    await app.close()
+    throw error
+  }
+}
+
+/** `tessera dev`: the app with hot updates, and the design system's docs beside it. */
 export async function dev(args: Args, io: Io): Promise<number> {
   const root = findProjectRoot(io.cwd, args)
-  const { createServer } = await import('vite')
-  const server = await createServer(await projectConfig(root, args))
-  await server.listen()
-  server.printUrls()
-  // The server keeps the process alive; this resolves only when it is closed.
-  await new Promise<void>((done) => server.httpServer?.on('close', done))
+  const { app, docs } = await startDev(root, args)
+  const ui = io.ui
+  const address = (server: ViteDevServer) => server.resolvedUrls?.local[0] ?? ''
+  const line = (label: string, server: ViteDevServer) =>
+    ui
+      ? `  ${ui.bold(label.padEnd(5))} ${ui.accent(ui.underline(address(server)))}`
+      : `  ${label.padEnd(5)} ${address(server)}`
+  io.out(line('App', app))
+  if (docs) io.out(line('Docs', docs))
+  else
+    io.out(
+      ui
+        ? ui.dim('  Docs  off (docs: false in tessera.config)')
+        : '  Docs  off (docs: false in tessera.config)',
+    )
+  // Closing either server ends the command; the docs only exist while the app does.
+  await new Promise<void>((done) => app.httpServer?.on('close', done))
+  await docs?.close()
   return 0
 }
 

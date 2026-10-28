@@ -75,6 +75,19 @@ export function tessera(options: TesseraOptions = {}): Plugin {
 
   const tokensDir = () => project.tokensDir()
   const loadTokens = (): DesignTokens | null => project.tokens()
+  /** The tokens of one of the configured design systems, by name, whichever is active. */
+  const tokensOfSystem = (name: string, fail: (message: string) => never): DesignTokens | null => {
+    const systems = project.config.systems ?? []
+    const found = systems.find((s) => s.name.toLowerCase() === name.toLowerCase())
+    if (!found)
+      return fail(
+        `There is no design system named "${name}". The systems are: ${systems.map((s) => s.name).join(', ') || '(none listed in tessera.config)'}.`,
+      )
+    return new Project(root, {
+      ...project.options,
+      config: { ...project.config, defaultSystem: found.name },
+    }).tokens()
+  }
   const loadComponents = (): ProjectComponents => project.components()
 
   /** Write `.tessera/components.d.ts`, only when it changed, so editors and watchers are not disturbed. */
@@ -302,12 +315,17 @@ export function tessera(options: TesseraOptions = {}): Plugin {
 
     resolveId(id) {
       if (id === ROUTES_ID) return RESOLVED_ROUTES_ID
-      return id === TOKENS_ID ? RESOLVED_TOKENS_ID : null
+      // `?system=Name` asks for one design system's style sheet; the accessibility tests use it to run in each.
+      return id === TOKENS_ID || id.startsWith(`${TOKENS_ID}?`) ? ' ' + id : null
     },
 
     load(id) {
-      if (id === RESOLVED_TOKENS_ID) {
-        const loaded = loadTokens()
+      if (id === RESOLVED_TOKENS_ID || id.startsWith(`${RESOLVED_TOKENS_ID}?`)) {
+        const named = new URLSearchParams(id.slice(id.indexOf('?') + 1)).get('system')
+        const loaded =
+          id === RESOLVED_TOKENS_ID || !named
+            ? loadTokens()
+            : tokensOfSystem(named, (m) => this.error(m))
         if (!loaded)
           this.error(
             'No design tokens found. Put *.tokens.json files in a "system/<name>/tokens" folder.',

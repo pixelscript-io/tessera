@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import type { AgentManifest } from '@tessera/compiler'
-import type { Project } from '@tessera/compiler/project'
+import { activeSystemFolder, type AgentManifest } from '@tessera/compiler'
+import { Project } from '@tessera/compiler/project'
 import {
   contrastPairs,
   exportTokens,
@@ -25,6 +25,23 @@ export interface DocsData {
   exports?: Partial<Record<InterchangeFormat, InterchangeFile[]>>
   /** Whether the system manager (write mode) is on. Set by the plugin, not by the builder. */
   edit?: boolean
+  /** The design systems of a project that has more than one, so the page can switch between them. */
+  systems?: DocsSystem[]
+  /** The name of the system `tokens` and `manifest` describe: the one the app builds with. */
+  activeSystem?: string
+}
+
+/** What changes when the components are shown with another design system's tokens. */
+export interface DocsSystem {
+  name: string
+  /** The style sheet of the system's tokens, with its themes. */
+  css: string
+  tokens: DocsTokens
+  /** The themes and densities the system defines, which the switchers offer. */
+  themes: AgentManifest['tokens']['themes']
+  hasTokens: boolean
+  /** For each component, the tokens its styles use that this system does not define. Components that are fine are left out. */
+  missing: Record<string, string[]>
 }
 
 export interface DocsComponent {
@@ -140,26 +157,72 @@ export function buildDocsData(project: Project, options: BuildOptions): DocsData
     project: { name },
     manifest,
     components,
-    tokens: {
-      scopes: ['base', ...(tokenManifest?.themes.map((t) => `${t.attribute}=${t.name}`) ?? [])],
-      entries: (tokenManifest?.tokens ?? []).map((t) => ({
-        path: t.path,
-        type: t.type,
-        tier: t.tier,
-        ...(t.description ? { description: t.description } : {}),
-        values: Object.fromEntries(
-          Object.entries(t.values).map(([scope, v]) => [
-            scope,
-            { resolved: v.resolved, ...(v.alias ? { alias: v.alias } : {}) },
-          ]),
-        ),
-      })),
-      contrast: contrastPairs(tokenManifest, manifest.rules.contrastMinimum),
-    },
+    tokens: tokensOf(tokenManifest, manifest.rules.contrastMinimum),
     ...(options.report !== undefined ? { report: options.report } : {}),
     hasTokens: !!tokenManifest && tokenManifest.tokens.length > 0,
     ...exportsOf(project, tokenManifest !== undefined),
+    ...systemsOf(project, components, manifest.rules.contrastMinimum),
   }
+}
+
+type TokenManifest = NonNullable<ReturnType<Project['tokens']> & { ok: true }>['manifest']
+
+function tokensOf(tokenManifest: TokenManifest | undefined, contrastMinimum: number): DocsTokens {
+  return {
+    scopes: ['base', ...(tokenManifest?.themes.map((t) => `${t.attribute}=${t.name}`) ?? [])],
+    entries: (tokenManifest?.tokens ?? []).map((t) => ({
+      path: t.path,
+      type: t.type,
+      tier: t.tier,
+      ...(t.description ? { description: t.description } : {}),
+      values: Object.fromEntries(
+        Object.entries(t.values).map(([scope, v]) => [
+          scope,
+          { resolved: v.resolved, ...(v.alias ? { alias: v.alias } : {}) },
+        ]),
+      ),
+    })),
+    contrast: contrastPairs(tokenManifest, contrastMinimum),
+  }
+}
+
+/**
+ * Each design system's tokens and style sheet, for a project that lists two or more. A system is read by opening
+ * the project again with that system as the default; nothing else about it differs.
+ */
+function systemsOf(
+  project: Project,
+  components: DocsComponent[],
+  contrastMinimum: number,
+): Pick<DocsData, 'systems' | 'activeSystem'> {
+  const listed = project.config.systems ?? []
+  if (listed.length < 2 || project.options.tokens) return {}
+  const systems = listed.map((system): DocsSystem => {
+    const other = new Project(project.root, {
+      ...project.options,
+      config: { ...project.config, defaultSystem: system.name },
+    })
+    const loaded = other.tokens()
+    const tokenManifest = loaded?.ok ? loaded.manifest : undefined
+    const known = new Set(tokenManifest?.tokens.map((t) => t.path))
+    const missing: Record<string, string[]> = {}
+    for (const c of components) {
+      const used = [...new Set([...styleOf(c.source).matchAll(TOKEN_REF)].map((x) => x[1]!))]
+      const lacking = used.filter((p) => !known.has(p))
+      if (lacking.length) missing[c.name] = lacking
+    }
+    return {
+      name: system.name,
+      css: loaded?.ok ? loaded.css : '',
+      tokens: tokensOf(tokenManifest, contrastMinimum),
+      themes: tokenManifest?.themes ?? [],
+      hasTokens: !!tokenManifest && tokenManifest.tokens.length > 0,
+      missing,
+    }
+  })
+  const folder = activeSystemFolder(project.config)
+  const active = listed.find((s) => activeSystemFolder({ systems: [s] }) === folder)
+  return { systems, activeSystem: (active ?? listed[0]!).name }
 }
 
 /** The tokens exported in both formats, so the docs can offer them (in the static site too). */

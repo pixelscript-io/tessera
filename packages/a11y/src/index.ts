@@ -8,7 +8,7 @@
  */
 import axe from 'axe-core'
 import { userEvent } from 'vitest/browser'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   comboboxConformance,
   dialogConformance,
@@ -77,6 +77,12 @@ export interface A11yOptions {
    * docs show too): a test may need a value the preview does not. They are given as props in every run of that component.
    */
   fixtures?: Record<string, { props?: Record<string, unknown> }>
+  /**
+   * The style sheet of each design system to run in, by name (from `virtual:tessera/tokens.css?system=Name&inline`).
+   * With none, the page's own tokens are used. With some, every axe run happens once per system, so a system
+   * whose colors fail contrast shows up as failing tests named after it.
+   */
+  systems?: Record<string, string>
 }
 
 const r = getRenderer()
@@ -384,6 +390,17 @@ function elementHarness(m: Mounted, subject: HTMLElement, content?: HTMLElement 
   })
 }
 
+/** Replace the design system's style sheet in the page, so the next component is shown with another system's tokens. */
+function useSystemCss(css: string): void {
+  let style = document.getElementById('tessera-a11y-system') as HTMLStyleElement | null
+  if (!style) {
+    style = document.createElement('style')
+    style.id = 'tessera-a11y-system'
+    document.head.append(style)
+  }
+  style.textContent = css
+}
+
 export function defineA11ySuites(options: A11yOptions): void {
   const themes = options.themes ?? [null, 'dark']
   const entries = Object.entries(options.sources)
@@ -417,26 +434,38 @@ export function defineA11ySuites(options: A11yOptions): void {
       props: { ...contract.preview?.props, ...options.fixtures?.[contract.name]?.props },
     }
     describe(`${contract.name} accessibility`, () => {
-      for (const theme of themes) {
-        const themeName = theme ?? 'default theme'
-        describe(themeName, () => {
-          for (const state of statesFor(contract)) {
-            for (const variants of variantCombinations(contract)) {
-              it(`has no axe violations: ${label(variants)}, ${state}`, async () => {
-                setTheme(theme)
-                const m = mount(component, contract, variants, {}, fixture, resolve)
-                const subject = subjectOf(m.root, contract)
-                try {
-                  await enter(state, m, subject)
-                  expect(await runAxe(m.host)).toEqual([])
-                } finally {
-                  await leave(state, m, subject)
-                  m.dispose()
+      const systems = Object.entries(options.systems ?? {})
+      const runs: Array<[string | null, string]> = systems.length ? systems : [[null, '']]
+      for (const [systemName, css] of runs) {
+        const themeRuns = () => {
+          for (const theme of themes) {
+            const themeName = theme ?? 'default theme'
+            describe(themeName, () => {
+              for (const state of statesFor(contract)) {
+                for (const variants of variantCombinations(contract)) {
+                  it(`has no axe violations: ${label(variants)}, ${state}`, async () => {
+                    setTheme(theme)
+                    const m = mount(component, contract, variants, {}, fixture, resolve)
+                    const subject = subjectOf(m.root, contract)
+                    try {
+                      await enter(state, m, subject)
+                      expect(await runAxe(m.host)).toEqual([])
+                    } finally {
+                      await leave(state, m, subject)
+                      m.dispose()
+                    }
+                  })
                 }
-              })
-            }
+              }
+            })
           }
-        })
+        }
+        if (systemName === null) themeRuns()
+        else
+          describe(`${systemName} design system`, () => {
+            beforeEach(() => useSystemCss(css))
+            themeRuns()
+          })
       }
 
       it(`has the ${contract.role} role its contract declares`, () => {

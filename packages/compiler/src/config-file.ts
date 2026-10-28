@@ -45,7 +45,20 @@ const unreadable = (error: unknown): boolean =>
  * the style config (`TesseraConfig`); the project-level options `contracts`, `tokens` and `baseline` may sit
  * beside the style fields and are separated out.
  */
-export async function loadConfigFile(root: string): Promise<LoadedConfig | undefined> {
+export function loadConfigFile(root: string): Promise<LoadedConfig | undefined> {
+  // One at a time: `tessera dev` starts several servers that each read the config, and Node fails an internal
+  // assertion when the same TypeScript file is imported twice at once (in a package that is not "type": "module").
+  const result = loading.then(() => readConfigFile(root))
+  loading = result.then(
+    () => undefined,
+    () => undefined,
+  )
+  return result
+}
+
+let loading: Promise<void> = Promise.resolve()
+
+async function readConfigFile(root: string): Promise<LoadedConfig | undefined> {
   const path = findConfigFile(root)
   if (!path) return undefined
   const shape = (loaded: { default?: Record<string, unknown> }) => loaded.default ?? {}

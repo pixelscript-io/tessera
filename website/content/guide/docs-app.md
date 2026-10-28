@@ -8,7 +8,7 @@ A design system is only used if people can find out what is in it. `tessera docs
 npx tessera docs
 ```
 
-It serves on port 5173 (or the next free one). Add `--port <n>` to choose.
+`tessera dev` starts it for you, beside the app, so you rarely run this by hand: the app is on one port and the docs on the next free one, and both addresses are printed. Set `docs: false` in `tessera.config.ts` to start only the app. `tessera docs` runs the docs alone, on port 5173 (or the next free one); add `--port <n>` to choose.
 
 ## What is generated
 
@@ -19,6 +19,8 @@ It serves on port 5173 (or the next free one). Add `--port <n>` to choose.
 **An overview with the coverage report.** The same numbers as `tessera report`: contract coverage, the share of style declarations that use tokens (by directory), `raw()` escapes with reasons and expiry, exemptions, baseline debt, where generated accessibility suites exist, and deprecated components in use. **Download report.json** gives the report as JSON.
 
 **Theme and density switchers**, always visible, for every attribute your themes define. Choosing one renders every preview in that theme. (The token tables already show every theme side by side.)
+
+**A design system switch**, when `tessera.config` lists two or more [design systems](/guide/presets#design-systems-in-system). The docs start on the one the app uses (`defaultSystem`); choosing another shows every component with that system's tokens, and the token and contrast pages show its values. A component whose styles use a token the chosen system does not define says which ones, so you can see what a system lacks before the component breaks in your app. The choice is remembered in the browser.
 
 It is live. The app reads your components and tokens when it loads, and when you add, remove or change a component, a token file or a `.docs.md` file, the page reloads with the new data. Add a component with a valid contract and it appears, with its controls, without restarting anything and without writing another file.
 

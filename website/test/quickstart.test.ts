@@ -152,7 +152,7 @@ describe('the Quick start', () => {
           180_000,
         )
         const poll = setInterval(() => {
-          const match = /Local:\s+(http:\/\/[^\s]+)/.exec(output.replace(ANSI, ''))
+          const match = /App\s+(http:\/\/[^\s]+)/.exec(output.replace(ANSI, ''))
           if (match) {
             clearInterval(poll)
             clearTimeout(timer)

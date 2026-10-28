@@ -1,7 +1,10 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import type { Project } from '@tessera/compiler/project'
 import type { Args } from '../args'
+import { flag } from '../args'
 import type { Io } from '../io'
+import { CliError } from '../io'
 import { openProject } from '../project'
 
 /** The dev dependencies the generated tests need, at the versions Tessera is tested with. */
@@ -48,10 +51,20 @@ export default defineConfig({
 `
 
 /** The test file for one folder of components. */
-export function testFile(options: { tokens: boolean; components: string[] }): string {
+export function testFile(options: {
+  tokens: boolean
+  components: string[]
+  /** Design systems to run in, by name. Each is imported as a style sheet and the suites run once per system. */
+  systems?: string[]
+}): string {
+  const systems = options.systems ?? []
   return [
     '/// <reference types="vite/client" />',
-    ...(options.tokens ? ["import 'virtual:tessera/tokens.css'"] : []),
+    // With systems the suites put each system's sheet on the page themselves; the active one would leak into the others.
+    ...(options.tokens && !systems.length ? ["import 'virtual:tessera/tokens.css'"] : []),
+    ...systems.map(
+      (name, i) => `import system${i} from 'virtual:tessera/tokens.css?system=${name}&inline'`,
+    ),
     "import { defineA11ySuites } from '@pixelscriptio/tessera/a11y'",
     '',
     '// Every component in this folder that has a contract gets accessibility tests generated from it. Adding a',
@@ -60,12 +73,41 @@ export function testFile(options: { tokens: boolean; components: string[] }): st
     'defineA11ySuites({',
     "  components: import.meta.glob('./*.tess', { eager: true, import: 'default' }),",
     "  sources: import.meta.glob('./*.tess', { query: '?raw', eager: true, import: 'default' }),",
+    ...(systems.length
+      ? [
+          `  systems: { ${systems.map((name, i) => `${JSON.stringify(name)}: system${i}`).join(', ')} },`,
+        ]
+      : []),
     '})',
     '',
   ].join('\n')
 }
 
 const FOLDERS = ['system/components', 'app/components']
+
+const KEPT =
+  'A test file is already there, so it still runs in the systems it did. To run in the ones you asked for, delete it and run this again.'
+
+/** The names `--system` asks for: `all` is every system in `tessera.config`, anything else is one of them. */
+function systemsToRun(project: Project, given: string | true | undefined): string[] {
+  if (given === undefined) return []
+  if (typeof given !== 'string') throw new CliError('"--system" needs a name, or "all".')
+  const listed = (project.config.systems ?? []).map((s) => s.name)
+  if (!listed.length) {
+    throw new CliError(
+      'This project lists no design systems, so there is nothing to run the tests in.',
+      "Add \"systems\" to tessera.config.ts, for example systems: [{ name: 'Tailwind', path: '/tailwind' }].",
+    )
+  }
+  if (given.toLowerCase() === 'all') return listed
+  const found = listed.find((n) => n.toLowerCase() === given.toLowerCase())
+  if (!found) {
+    throw new CliError(
+      `There is no design system named "${given}". The systems are: ${listed.join(', ')}.`,
+    )
+  }
+  return [found]
+}
 
 /**
  * `tessera a11y`: set up the generated accessibility tests in a project. It writes a test file in each components
@@ -76,6 +118,7 @@ export async function a11y(args: Args, io: Io): Promise<number> {
   const project = await openProject(io.cwd, args)
   const root = project.root
   const hasTokens = !!project.tokensDir()
+  const systems = systemsToRun(project, flag(args, 'system'))
   const ui = io.ui
   const wrote: string[] = []
   const left: string[] = []
@@ -109,7 +152,10 @@ export async function a11y(args: Args, io: Io): Promise<number> {
     const components = readdirSync(join(root, folder))
       .filter((n) => n.endsWith('.tess'))
       .map((n) => n.replace(/\.tess$/, ''))
-    put(`${folder}/a11y.browser.test.ts`, testFile({ tokens: hasTokens, components }))
+    put(
+      `${folder}/a11y.browser.test.ts`,
+      testFile({ tokens: hasTokens, components, ...(systems.length ? { systems } : {}) }),
+    )
   }
 
   // Vitest: write a configuration only where there is none; otherwise say what to add.
@@ -151,6 +197,8 @@ export async function a11y(args: Args, io: Io): Promise<number> {
     io.out('')
     for (const file of wrote) io.out(`  ${ui.green(ui.sym.ok)} ${file}`)
     for (const file of left) io.out(`  ${ui.dim(`${ui.sym.bullet} ${file} (already there)`)}`)
+    if (systems.length && left.some((f) => f.endsWith('a11y.browser.test.ts')))
+      io.out(ui.warn(KEPT))
     io.out('')
     if (configured) {
       io.out(
@@ -173,6 +221,7 @@ export async function a11y(args: Args, io: Io): Promise<number> {
   io.out('Set up the generated accessibility tests.')
   if (wrote.length) io.out(`Wrote: ${wrote.join(', ')}`)
   if (left.length) io.out(`Left alone (already there): ${left.join(', ')}`)
+  if (systems.length && left.some((f) => f.endsWith('a11y.browser.test.ts'))) io.out(KEPT)
   if (configured) {
     io.out(
       `${configured} already exists, so it was left alone. Run the tests in a browser project: add the plugin, include: ['{app,system}/**/*.browser.test.ts'] and the browser block from the guide.`,

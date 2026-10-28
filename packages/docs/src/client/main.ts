@@ -61,7 +61,45 @@ const afterSave = {
   discarded: () => {},
 }
 
-const tokenGroups = [...new Set(data.tokens.entries.map((t) => t.path.split('.')[0]!))]
+let tokenGroups = [...new Set(data.tokens.entries.map((t) => t.path.split('.')[0]!))]
+
+// --- design systems: the same components, shown with another system's tokens --------------------------------
+
+const systemStyle = document.createElement('style')
+systemStyle.id = 'docs-system-tokens'
+document.head.append(systemStyle)
+let currentSystem = data.activeSystem
+
+/** Show the pages with another design system: its tokens, its themes and its style sheet. */
+function useSystem(name: string): void {
+  const system = data.systems?.find((s) => s.name === name)
+  if (!system) return
+  currentSystem = name
+  data.tokens = system.tokens
+  data.hasTokens = system.hasTokens
+  data.manifest.tokens.themes = system.themes
+  tokenGroups = [...new Set(system.tokens.entries.map((t) => t.path.split('.')[0]!))]
+  systemStyle.textContent = system.css
+  // A theme the previous system set and this one lacks would leave the page unthemed: drop it, then start on the
+  // theme that follows the system, as the page does at load.
+  for (const other of data.systems ?? []) {
+    for (const t of other.themes) document.documentElement.removeAttribute(`data-${t.attribute}`)
+  }
+  for (const t of system.themes) {
+    if (t.auto) document.documentElement.setAttribute(`data-${t.attribute}`, 'auto')
+  }
+}
+
+const SYSTEM_KEY = 'tessera-docs-system'
+if (data.systems) {
+  let stored: string | null = null
+  try {
+    stored = localStorage.getItem(SYSTEM_KEY)
+  } catch {
+    // No storage: start with the app's system.
+  }
+  useSystem(stored && data.systems.some((s) => s.name === stored) ? stored : data.activeSystem!)
+}
 
 function nav(current: string): HTMLElement {
   const link = (href: string, label: string) =>
@@ -113,6 +151,19 @@ function nav(current: string): HTMLElement {
   )
 }
 
+/** A warning on a component page when the design system being shown lacks tokens the component's styles use. */
+function missingTokens(component: string): Node {
+  const missing = data.systems?.find((s) => s.name === currentSystem)?.missing[component]
+  if (!missing?.length) return document.createDocumentFragment()
+  return h(
+    'p',
+    { class: 'docs-error-line', role: 'alert' },
+    `${currentSystem} does not define ${missing.length === 1 ? 'this token' : 'these tokens'}, so the component's styles are incomplete: `,
+    ...missing.flatMap((t, i) => (i ? [', ', code(`$${t}`)] : [code(`$${t}`)])),
+    '.',
+  )
+}
+
 /** The theme and density switchers: one per attribute the tokens define, always visible. */
 function switchers(): HTMLElement {
   const attributes = new Map<string, { names: string[]; auto: boolean }>()
@@ -123,6 +174,27 @@ function switchers(): HTMLElement {
     attributes.set(t.attribute, entry)
   }
   const wrap = h('div', { class: 'docs-switch', role: 'group', 'aria-label': 'Preview settings' })
+  if (data.systems) {
+    const select = h(
+      'select',
+      {
+        id: 'switch-system',
+        onchange: (e: Event) => {
+          const value = (e.target as HTMLSelectElement).value
+          useSystem(value)
+          try {
+            localStorage.setItem(SYSTEM_KEY, value)
+          } catch {
+            // The choice just is not remembered.
+          }
+          render()
+        },
+      },
+      ...data.systems.map((s) => h('option', { value: s.name }, s.name)),
+    ) as HTMLSelectElement
+    select.value = currentSystem ?? ''
+    wrap.append(h('label', { for: 'switch-system' }, 'design system'), select)
+  }
   for (const [attribute, { names, auto }] of attributes) {
     const id = `switch-${attribute}`
     const select = h(
@@ -799,6 +871,7 @@ function componentPage(name: string): HTMLElement {
     h('p', { class: 'docs-muted' }, 'Automation does not cover:'),
     list(NOT_AUTOMATED),
     h('h2', null, 'Tokens used'),
+    missingTokens(c.name),
     c.usedTokens.length
       ? h(
           'ul',

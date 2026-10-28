@@ -33,7 +33,9 @@ npx tessera build
 npx tessera preview
 ```
 
-These run the app with no configuration files. The CLI supplies the Vite config (with the Tessera plugin) and the HTML page, so a new project has no `vite.config.ts` and no `index.html`. Add either to the project and yours is used instead: a project that has its own `vite.config.ts` registers the plugin itself, and one with its own `index.html` keeps its own page. `--port <n>` sets the port.
+These run the app with no configuration files. The CLI supplies the Vite config (with the Tessera plugin) and the HTML page, so a new project has no `vite.config.ts` and no `index.html`. Add either to the project and yours is used instead: a project that has its own `vite.config.ts` registers the plugin itself, and one with its own `index.html` keeps its own page.
+
+`dev` starts two servers and prints both addresses: the app (port 5173, or the next free one; `--port <n>` chooses) and the [docs of the design system](/guide/docs-app) beside it, on the next free port (`--docs-port <n>` chooses). The docs update by themselves when a component in `system/` or `app/`, a token or a `.docs.md` file changes, including a file you add while it runs. To start only the app, set `docs: false` in `tessera.config.ts`. `build` does not build the docs; `tessera docs --static` does that.
 
 `build` writes `dist/`, with each page as its own chunk. `preview` serves it, to check it locally.
 
@@ -75,6 +77,8 @@ Checks the CSS of any project, with or without Tessera, against your design toke
 ## `tessera a11y`
 
 Sets up the [generated accessibility tests](/tutorial/10-accessibility): a test file in `system/components` and `app/components`, a Vitest browser-mode configuration if there is none, the dev dependencies and a `test:a11y` script. It installs nothing: it ends with the three commands to run. It never overwrites a file, and with an existing Vitest configuration it says what to add instead of changing it.
+
+In a project with several [design systems](/guide/presets#design-systems-in-system), the tests run in the active one. `--system all` writes them to run in every system, each axe check once per system and named after it ("Unstyled design system"), so a system whose colors fail contrast shows up as failing tests; `--system <name>` runs in one. A test file that is already there is not changed: delete it and run the command again.
 
 ## `tessera elements`
 

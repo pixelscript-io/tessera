@@ -27,14 +27,19 @@ export const COMMANDS_DOC: CommandDoc[] = [
   },
   {
     name: 'dev',
-    usage: 'tessera dev [--port <n>]',
-    summary: 'Run the app with hot updates',
+    usage: 'tessera dev [--port <n>] [--docs-port <n>]',
+    summary: 'Run the app and its design system docs with hot updates',
     details:
-      'Starts the dev server with no configuration files: the CLI supplies the Vite config (with the Tessera plugin) and the HTML page. A project that has its own `vite.config.ts` or `index.html` uses them instead.',
+      "Starts two servers, each on its own port, and prints both addresses: the app, and the docs of the design system (a page for every component and token, generated from your contracts and tokens). The docs update by themselves when a component in `system/` or `app/` or a token changes, including a file you add while it runs. Set `docs: false` in `tessera.config.ts` to start only the app. With the CLI's own setup there are no configuration files: it supplies the Vite config (with the Tessera plugin) and the HTML page. A project that has its own `vite.config.ts` or `index.html` uses them instead.",
     options: [
       {
         flag: '--port <n>',
-        description: 'The port to serve on. Default 5173, or the next free one.',
+        description: 'The port for the app. Default 5173, or the next free one.',
+      },
+      {
+        flag: '--docs-port <n>',
+        description:
+          'The port for the docs. Default: the one after the app’s, or the next free one.',
       },
     ],
   },
@@ -97,10 +102,17 @@ export const COMMANDS_DOC: CommandDoc[] = [
   },
   {
     name: 'a11y',
-    usage: 'tessera a11y',
+    usage: 'tessera a11y [--system <name|all>]',
     summary: 'Set up the generated accessibility tests',
     details:
-      'Sets up the accessibility tests Tessera generates from your contracts: a test file in each components folder (`system/components`, `app/components`) that asks for them, a Vitest browser-mode configuration if the project has none, the dev dependencies (`vitest` 4 or newer, `@vitest/browser-playwright`, `playwright`, `axe-core`) and a `test:a11y` script in `package.json`. Components that need data to be shown, such as a combobox, get example options. It never overwrites a file, and it does not install anything: it ends with the commands to run. The tests run in a real browser. Set `TESSERA_A11Y_CHANNEL=msedge` (or `chrome`) to use one that is already installed.',
+      'Sets up the accessibility tests Tessera generates from your contracts: a test file in each components folder (`system/components`, `app/components`) that asks for them, a Vitest browser-mode configuration if the project has none, the dev dependencies (`vitest` 4 or newer, `@vitest/browser-playwright`, `playwright`, `axe-core`) and a `test:a11y` script in `package.json`. Components that need data to be shown, such as a combobox, get example options. It never overwrites a file, and it does not install anything: it ends with the commands to run. The tests run in a real browser. Set `TESSERA_A11Y_CHANNEL=msedge` (or `chrome`) to use one that is already installed. With several design systems in `tessera.config`, the tests run in the active one; `--system all` writes them to run in every system (each axe run once per system, named after it), and `--system <name>` in one. A test file that is already there is not changed: delete it and run this again.',
+    options: [
+      {
+        flag: '--system <name|all>',
+        description:
+          'Run the tests in this design system, or in every system in `tessera.config`. Default: the active system.',
+      },
+    ],
   },
   {
     name: 'baseline',

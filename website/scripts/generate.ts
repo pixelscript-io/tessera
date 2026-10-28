@@ -230,6 +230,8 @@ function config() {
       '',
       '`systems` lists the design systems in `system/`, each a folder of tokens, and `defaultSystem` names the one the app and the docs use; see [Design systems in `system/`](/guide/presets#design-systems-in-system). A mistake in either is [T2115](/reference/errors/T2115).',
       '',
+      '`docs: false` stops `tessera dev` from starting the [docs of the design system](/guide/docs-app) beside the app. The default is to start them.',
+      '',
       '## severity',
       '',
       ...table(rule.members),
