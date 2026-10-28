@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from '
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { canStripTypes, loadConfigFile } from '../src/config-file'
+import { canStripTypes, importsNatively, loadConfigFile } from '../src/config-file'
 
 function project(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'tessera-config-'))
@@ -80,6 +80,32 @@ export default { severity: [{ files: 'a/**', rules: '*', level: 'warn', reason, 
     await loadConfigFile(root)
     const left = existsSync(join(root, '.tessera')) ? readdirSync(join(root, '.tessera')) : []
     expect(left.filter((f) => f.startsWith('config.'))).toEqual([])
+  })
+})
+
+describe('a package that is not "type": "module"', () => {
+  it('loads the same config twice in a row, which Node itself cannot do for a TypeScript file there', async () => {
+    const root = project({
+      'package.json': '{ "name": "my-app", "version": "0.0.1" }\n',
+      'tessera.config.ts': 'export default { today: "2026-02-03" }\n',
+    })
+    expect((await loadConfigFile(root))!.options.today).toBe('2026-02-03')
+    expect((await loadConfigFile(root))!.options.today).toBe('2026-02-03')
+  })
+
+  it('is imported by Node itself only when the nearest package.json says "type": "module"', () => {
+    const typed = project({ 'package.json': '{ "type": "module" }\n', 'a/b.ts': '' })
+    const untyped = project({ 'package.json': '{ "name": "x" }\n', 'a/b.ts': '' })
+    const nested = project({
+      'package.json': '{ "type": "module" }\n',
+      'a/package.json': '{}\n',
+      'a/b.ts': '',
+    })
+    const none = project({ 'a/b.ts': '' })
+    expect(importsNatively(join(typed, 'a', 'b.ts'))).toBe(true)
+    expect(importsNatively(join(untyped, 'a', 'b.ts'))).toBe(false)
+    expect(importsNatively(join(nested, 'a', 'b.ts'))).toBe(false)
+    expect(importsNatively(join(none, 'a', 'b.ts'))).toBe(false)
   })
 })
 

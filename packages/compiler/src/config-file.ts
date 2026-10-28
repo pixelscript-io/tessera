@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { TesseraConfig } from './config'
 import type { ProjectOptions } from './project'
@@ -30,6 +30,25 @@ export function canStripTypes(
   if (!features.typescript) return false
   const [major = 0, minor = 0] = versions.node.split('.').map(Number)
   return major > 24 || (major === 24 && minor >= 3) || (major === 22 && minor >= 18)
+}
+
+/**
+ * Is it safe to hand this TypeScript file to Node's own import? Only in a package that says `"type": "module"`.
+ * Elsewhere Node tries it as CommonJS first and can fail an internal assertion that no `catch` sees and that ends the
+ * process (seen on Node 24.22 when the same file is imported more than once), so those configs are compiled instead.
+ */
+export function importsNatively(file: string): boolean {
+  for (let dir = dirname(file); ; dir = dirname(dir)) {
+    const manifest = join(dir, 'package.json')
+    if (existsSync(manifest)) {
+      try {
+        return (JSON.parse(readFileSync(manifest, 'utf8')) as { type?: unknown }).type === 'module'
+      } catch {
+        return false
+      }
+    }
+    if (dirname(dir) === dir) return false
+  }
 }
 
 /** An import that failed because Node could not read the TypeScript, as opposed to the file's own errors. */
@@ -65,7 +84,7 @@ async function readConfigFile(root: string): Promise<LoadedConfig | undefined> {
   let raw: Record<string, unknown> | undefined
   let temp: string | undefined
   try {
-    if (path.endsWith('.ts') && canStripTypes()) {
+    if (path.endsWith('.ts') && canStripTypes() && importsNatively(path)) {
       try {
         // A new address each time, so a long-running process sees a changed file.
         raw = shape(
