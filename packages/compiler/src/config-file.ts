@@ -88,7 +88,7 @@ async function readConfigFile(root: string): Promise<LoadedConfig | undefined> {
       try {
         // A new address each time, so a long-running process sees a changed file.
         raw = shape(
-          (await import(/* @vite-ignore */ `${pathToFileURL(path).href}?t=${Date.now()}`)) as {
+          (await import(/* @vite-ignore */ `${pathToFileURL(path).href}?tessera=${Date.now()}`)) as {
             default?: Record<string, unknown>
           },
         )

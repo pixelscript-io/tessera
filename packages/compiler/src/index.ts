@@ -68,6 +68,8 @@ export {
   type SystemEntry,
   DEFAULT_GOVERNED,
   type TesseraConfig,
+  TOKEN_CATEGORIES,
+  type TokenCategory,
   type SeverityRule,
   type GovernedMap,
   type Accept,

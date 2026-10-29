@@ -44,3 +44,63 @@ describe('tessera tokens import: a CSS file into the blank slate', () => {
     expect(read(dir, 'system/design/tokens/b.tokens.json')).toContain('"gap"')
   })
 })
+
+describe('tessera tokens import: token names that are not Tessera’s', () => {
+  const CSS_OWN = `:root {
+  --spacing-4: 1rem;
+  --spacing-8: 2rem;
+  --rounded-md: 6px;
+  --text-sm: 0.875rem;
+  --brand-600: #1d4ed8;
+  --brand-fg: #ffffff;
+}`
+
+  const PAGE = `<template>
+  <p class="p">Hello</p>
+</template>
+<style>
+.p {
+  padding: $spacing.4;
+  border-radius: $rounded.md;
+  font-size: $text.sm;
+  background: $brand.600;
+  color: $brand.fg;
+}
+</style>
+`
+
+  it('sets tokenGroups so styles may use them, and the project checks clean', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--tokens', 'none')
+    writeFileSync(join(dir, 'own.css'), CSS_OWN)
+    writeFileSync(
+      join(
+        dir,
+        'app/components/Note.tess'.replace('/components', '/pages').replace('Note', 'index'),
+      ),
+      PAGE,
+    )
+    const imported = await run(dir, 'tokens', 'import', 'own.css')
+    expect(imported.code).toBe(0)
+    expect(imported.out).toContain('spacing: spacing (2 tokens)')
+    expect(imported.out).toContain('radii: rounded (1 token)')
+    expect(imported.out).toContain(
+      "tokenGroups: { space: ['spacing'], radius: ['rounded'], fontSize: ['text'], color: false }",
+    )
+    expect(read(dir, 'tessera.config.ts')).toContain('tokenGroups:')
+    const checked = await run(dir, 'check')
+    expect(checked.err + checked.out).not.toContain('T2103')
+    expect(checked.code).toBe(0)
+  })
+
+  it('without tokenGroups the same page is refused, which is what the setting is for', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--tokens', 'none')
+    writeFileSync(join(dir, 'own.css'), CSS_OWN)
+    writeFileSync(join(dir, 'app/pages/index.tess'), PAGE)
+    await run(dir, 'tokens', 'import', 'own.css', '--out', 'system/design/tokens')
+    const checked = await run(dir, 'check')
+    expect(checked.code).toBe(1)
+    expect(checked.err + checked.out).toContain('T2103')
+  })
+})

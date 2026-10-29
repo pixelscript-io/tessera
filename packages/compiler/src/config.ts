@@ -21,7 +21,26 @@ export interface SeverityRule {
   expires?: string
 }
 
+/** The kinds of value that come from token groups, and the group each is read from by default. */
+export const TOKEN_CATEGORIES = {
+  space: 'space',
+  radius: 'radius',
+  fontSize: 'font.size',
+  opacity: 'opacity',
+  duration: 'motion.duration',
+  easing: 'motion.easing',
+  shadow: 'shadow',
+  color: 'color',
+} as const
+export type TokenCategory = keyof typeof TOKEN_CATEGORIES
+
 export interface TesseraConfig {
+  /**
+   * Which token groups hold each kind of value, when yours are not called `space`, `radius`, `font.size`, `opacity`,
+   * `motion.duration`, `motion.easing`, `shadow` and `color`: `{ space: ['spacing'], color: false }`. `false` (or an empty
+   * list) accepts a token of the right type from any group. Applies to every property the defaults govern.
+   */
+  tokenGroups?: Partial<Record<TokenCategory, string[] | false>>
   /** Properties whose values must come from tokens. Merged over the defaults. */
   governed?: GovernedMap
   /** WCAG contrast needed between a part's text and background. Default `AA` (4.5). */
@@ -120,7 +139,22 @@ export function defineConfig(config: TesseraConfig): TesseraConfig {
 
 export function resolveConfig(config: TesseraConfig = {}): ResolvedConfig {
   const governed: Record<string, Accept[]> = {}
-  for (const [property, accepts] of Object.entries({ ...DEFAULT_GOVERNED, ...config.governed })) {
+  // A default accept that reads a category's default group reads the groups `tokenGroups` names instead.
+  const regroup = (accept: Accept): Accept => {
+    for (const [category, group] of Object.entries(TOKEN_CATEGORIES)) {
+      const given = config.tokenGroups?.[category as TokenCategory]
+      if (given === undefined || accept.groups?.length !== 1 || accept.groups[0] !== group) continue
+      return given && given.length ? { ...accept, groups: given } : { type: accept.type }
+    }
+    return accept
+  }
+  const defaults = Object.fromEntries(
+    Object.entries(DEFAULT_GOVERNED).map(([property, accepts]) => [
+      property,
+      accepts === false ? false : Array.isArray(accepts) ? accepts.map(regroup) : regroup(accepts),
+    ]),
+  ) as GovernedMap
+  for (const [property, accepts] of Object.entries({ ...defaults, ...config.governed })) {
     if (accepts === false) continue
     governed[property] = Array.isArray(accepts) ? accepts : [accepts]
   }

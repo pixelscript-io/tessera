@@ -17,6 +17,7 @@ import { flag, has } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
 import { figmaTokenFromEnv, isFigmaLink, tokensFromFigma } from '../figma-styles'
+import { addTokenGroups, classifyTokens, tokenGroupsSource } from '../classify'
 import { openProject } from '../project'
 
 const FORMATS = ['dtcg', 'tokens-studio']
@@ -173,8 +174,8 @@ async function importCommand(args: Args, inputs: string[], io: Io): Promise<numb
   }
 
   const given = flag(args, 'out')
-  const out =
-    typeof given === 'string' ? resolve(io.cwd, given) : (await tokensFolder(io, args)).dir
+  const folder = typeof given === 'string' ? undefined : await tokensFolder(io, args)
+  const out = folder ? folder.dir : resolve(io.cwd, String(given))
   const targets = [
     ...result.base.map((f) => ({ path: join(out, f.path), content: f.content })),
     ...result.themes.map((f) => ({ path: join(out, f.path), content: f.content })),
@@ -195,7 +196,59 @@ async function importCommand(args: Args, inputs: string[], io: Io): Promise<numb
     `Imported ${lines(result.base.length, 'token file')} and ${lines(result.themes.length, 'theme')} into ${forward(relative(io.cwd, out)) || '.'}` +
       (warnings ? `, with ${lines(warnings, 'note')} above.` : '.'),
   )
+  // Into the project's own tokens: tell enforcement which of these groups hold spacing, radii and so on.
+  if (folder) describeTokens(io, folder.root, folder.dir)
   return 0
+}
+
+/** What each kind of value is called in the report. */
+const KIND: Record<string, string> = {
+  space: 'spacing',
+  radius: 'radii',
+  fontSize: 'font sizes',
+  opacity: 'opacities',
+  duration: 'durations',
+  easing: 'easings',
+  shadow: 'shadows',
+  color: 'colors',
+}
+
+/**
+ * After an import: which of the project's token groups hold which kind of value, written into `tessera.config.ts` as
+ * `tokenGroups` so a name like `spacing.4` is accepted for `padding`. Says what it could not place.
+ */
+function describeTokens(io: Io, root: string, dir: string): void {
+  const built = buildTokens(loadTokenDir(dir))
+  if (!built.ok || !built.manifest) return
+  const result = classifyTokens(built.manifest.tokens.map((t) => ({ path: t.path, type: t.type })))
+  if (result.found.length) {
+    io.out('')
+    io.out('Your tokens, by what they are for:')
+    for (const f of result.found) {
+      io.out(
+        `  ${KIND[f.category] ?? f.category}: ${f.groups.length ? f.groups.join(', ') : 'any group'} (${lines(f.count, 'token')})`,
+      )
+    }
+  }
+  for (const u of result.unplaced) {
+    io.out(
+      `  Not placed: ${lines(u.count, `${u.type} token`)} in "${u.group}", for example "${u.example}": no spacing, radius or font size name. Name the group (space, radius, font.size) or set tokenGroups in tessera.config.ts.`,
+    )
+  }
+  if (!Object.keys(result.tokenGroups).length) return
+  const snippet = tokenGroupsSource(result.tokenGroups)
+  const configPath = join(root, 'tessera.config.ts')
+  if (!existsSync(configPath)) {
+    io.out(`Add this to tessera.config.ts so styles may use them: ${snippet}`)
+    return
+  }
+  const edited = addTokenGroups(readFileSync(configPath, 'utf8'), result.tokenGroups)
+  if ('reason' in edited) {
+    io.out(`Not changing tessera.config.ts (${edited.reason}). Set this there: ${snippet}`)
+    return
+  }
+  writeFileSync(configPath, edited.text)
+  io.out(`Set ${snippet} in tessera.config.ts, so styles may use these groups.`)
 }
 
 async function exportCommand(args: Args, io: Io): Promise<number> {

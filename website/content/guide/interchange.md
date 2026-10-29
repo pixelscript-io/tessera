@@ -85,6 +85,23 @@ npx tessera tokens import tokens/        # every .json and .css file in the fold
 
 **What is left out is counted, never guessed:** `calc()`, `clamp()` and `url()` (a token is one value), gradients and keywords such as `currentColor`, a longer expression that mixes in a `var()`, and any value whose type cannot be told. Each is a note such as `Values computed with calc(), clamp(), min(), max() or url(): 4, for example "--radius-sm: calc(var(--radius) - 4px)".`
 
+## Your own token names
+
+Tessera does not ask for its token names. Enforcement reads **groups**: by default `padding` and `gap` take a dimension token from `space`, `border-radius` from `radius`, `font-size` from `font.size`, and so on. After `tokens import` into your project, Tessera looks at the type of each token and the words in its path (`spacing`, `gap`, `rounded`, `fontSizes`, `text`, `elevation`, `duration`; camelCase, dashes and dots read alike) and tells enforcement which of **your** groups hold what:
+
+```bash
+Your tokens, by what they are for:
+  spacing: layout.gap, spacing (14 tokens)
+  radii: rounded (5 tokens)
+  font sizes: text (9 tokens)
+  colors: any group (62 tokens)
+Set tokenGroups: { space: ['layout.gap', 'spacing'], radius: ['rounded'], fontSize: ['text'], color: false } in tessera.config.ts, so styles may use these groups.
+```
+
+`tokenGroups` in `tessera.config.ts` is the setting it writes, and you can write it yourself. The kinds are `space`, `radius`, `fontSize`, `opacity`, `duration`, `easing`, `shadow` and `color`; each takes a list of groups, or `false` for a token of the right type from any group. It changes every property the defaults govern at once (`padding`, `margin`, `gap` and the rest for `space`). Groups that already match the defaults are not written. If `tokenGroups` is already in the file, or the file is not shaped like `export default { ... }`, the setting is printed for you to add.
+
+A dimension or number token in no recognizable group (`sizes.px`, `z.modal`) is counted in a "Not placed" line, not guessed: name its group `space`, `radius` or `font.size`, or set `tokenGroups` for it.
+
 ## From Figma styles
 
 A link to a page or a frame of a Figma file is a source like any file. `tessera tokens import` reads the styles used under it through Figma's REST API and makes one token file of them:
