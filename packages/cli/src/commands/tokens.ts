@@ -70,7 +70,7 @@ function readInputs(io: Io, inputs: string[]): InterchangeFile[] {
       for (const name of readdirSync(abs).sort()) {
         if (name === 'node_modules') continue
         const child = join(abs, name)
-        if (statSync(child).isDirectory() || name.endsWith('.json')) walk(child)
+        if (statSync(child).isDirectory() || /\.(json|css)$/.test(name)) walk(child)
       }
     } else if (!out.some((f) => resolve(io.cwd, f.path) === abs)) add(abs)
   }
@@ -140,7 +140,7 @@ async function importCommand(args: Args, inputs: string[], io: Io): Promise<numb
   if (!inputs.length) {
     throw new CliError(
       'Say which file or folder to import.',
-      'tessera tokens import tokens.resolver.json   (or a Tokens Studio export, a DTCG file, or a link to a Figma page)',
+      'tessera tokens import tokens.resolver.json   (or a CSS file with custom properties, Style Dictionary JSON, a Tokens Studio export, a DTCG file, or a link to a Figma page)',
     )
   }
   // A link to a page or frame of a Figma file is read through its API: the styles under it become one DTCG file.

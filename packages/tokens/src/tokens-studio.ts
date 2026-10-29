@@ -14,7 +14,9 @@ import {
   type InterchangeFormat,
   type ThemeDoc,
 } from './interchange'
+import { prepareFiles } from './loose'
 import { parseJson } from './parse'
+import { SUPPORTED_TYPES } from './values'
 
 /**
  * The Tokens Studio adapter. Tokens Studio (and Penpot, which exports the same shape) does not write strict
@@ -286,5 +288,11 @@ export function importTokens(
   files: InterchangeFile[],
   format: InterchangeFormat | 'auto' = 'auto',
 ): ImportResult {
-  return importWith(files, format, fromTokensStudio)
+  // CSS files become token files and untyped JSON gets types before the import reads it.
+  const notes: TokenDiagnostic[] = []
+  const known = (type: string) =>
+    type in TYPES || (SUPPORTED_TYPES as readonly string[]).includes(type)
+  const result = importWith(prepareFiles(files, known, notes), format, fromTokensStudio)
+  result.diagnostics.unshift(...notes)
+  return result
 }

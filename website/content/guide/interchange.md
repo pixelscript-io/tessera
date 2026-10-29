@@ -68,6 +68,23 @@ Themes come from `$themes`. A token set that **every** theme turns on is the bas
 
 Some things cannot be written as a Tessera token: a gradient, a typography or composition composite, a math expression such as `{spacing.base} * 2`, an `em` or percent letter spacing, or a token that references one of those. Each is skipped with a [T1016](/reference/errors/T1016) note that names it, and **kept** under `$extensions.tessera.skipped` in the file it came from. Nothing disappears silently, and `tessera tokens export` puts the skipped tokens back, so a design tool's own token survives a trip through Tessera.
 
+## From CSS variables and untyped JSON
+
+Most teams do not have their tokens in a token format. They have a stylesheet of custom properties, or the JSON of Style Dictionary, which has no types. `tessera tokens import` reads both, and **keeps your names**: nothing is renamed to fit Tessera, and no size, naming scheme or number of tiers is required.
+
+```bash
+npx tessera tokens import src/globals.css
+npx tessera tokens import tokens/        # every .json and .css file in the folder
+```
+
+**CSS.** The custom properties of `:root`, `html`, `:host`, `@layer` and Tailwind's `@theme` become tokens. A name is split at its dashes: `--color-brand-600` is `color.brand.600`. A name that is also the start of another (`--primary` and `--primary-foreground`) becomes the group's `$root`. `var(--x)` stays a reference (an alias) to `x`, and `var(--x, fallback)` uses the fallback when `--x` is not in the file. Custom properties in any other selector or media query (`.dark`, `@media (prefers-color-scheme: dark)`, a component) are not imported, and a note counts them with an example.
+
+**Types come from values.** `#1d4ed8`, `rgb()`, `hsl()`, `oklch()` and the like are colors; `1rem` and `16px` are dimensions; `200ms` is a duration; `cubic-bezier()` is an easing; `0 1px 2px rgb(0 0 0 / 5%)` is a shadow (several layers are fine); `1px solid #ccc` is a border; a font stack with `sans-serif` or a name like `--font-sans` is a font family. A bare number could be several things, so the words in its name decide: `weight` is a font weight, `opacity` and `line-height` are numbers, `space`, `radius` or `size` is a length in pixels, `duration` is milliseconds, and anything else is a number.
+
+**Style Dictionary.** A token with no `type`, or one of Style Dictionary's own (`size`, `time`), is typed the same way, and a reference written as `{color.base.gray.900.value}` becomes `{color.base.gray.900}`. Files in a Tokens Studio or Resolver export, and tokens that already have a type Tessera knows, are left as they are.
+
+**What is left out is counted, never guessed:** `calc()`, `clamp()` and `url()` (a token is one value), gradients and keywords such as `currentColor`, a longer expression that mixes in a `var()`, and any value whose type cannot be told. Each is a note such as `Values computed with calc(), clamp(), min(), max() or url(): 4, for example "--radius-sm: calc(var(--radius) - 4px)".`
+
 ## From Figma styles
 
 A link to a page or a frame of a Figma file is a source like any file. `tessera tokens import` reads the styles used under it through Figma's REST API and makes one token file of them:
