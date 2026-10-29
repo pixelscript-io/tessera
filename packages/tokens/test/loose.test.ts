@@ -35,8 +35,8 @@ const SHADCN = `
   --background: oklch(0.145 0 0);
   --primary: oklch(0.922 0 0);
 }
-@media (prefers-color-scheme: dark) {
-  :root { --background: black; }
+.card {
+  --card-pad: 1rem;
 }
 `
 
@@ -73,11 +73,10 @@ describe('CSS custom properties', () => {
     expect(doc.ring.$type).toBe('color')
   })
 
-  it('does not import calc(), and says custom properties outside the root were not imported', () => {
+  it('does not import calc(), and says custom properties in a component were not imported', () => {
     const m = notes(importTokens([file('globals.css', SHADCN)])).join('\n')
     expect(m).toContain('calc()')
-    expect(m).toMatch(/outside the root[^]*\.dark/)
-    expect(m).not.toContain('--background: black')
+    expect(m).toMatch(/outside the root and its themes[^]*"\.card"/)
   })
 
   it('builds as a Tessera token set', () => {
@@ -158,5 +157,135 @@ describe('notes', () => {
     expect(m).toContain('...')
     expect(m).not.toMatch(/for example "[^"]*\n/)
     expect(m).toContain('@media (min-width: 1px) and (max-width: 9px) :root')
+  })
+})
+
+const themeOf = (r: ReturnType<typeof importTokens>, name: string) => {
+  const f = r.themes.find((x) => x.path === `themes/${name}.tokens.json`)
+  return f ? JSON.parse(f.content) : undefined
+}
+
+describe('themes in CSS', () => {
+  it('reads a .dark block as a theme that overrides the root, and nothing it does not change', () => {
+    const r = importTokens([file('globals.css', SHADCN)])
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([])
+    const dark = themeOf(r, 'dark')
+    expect(dark.$extends).toBe('base')
+    expect(dark.background.$value.components[0]).toBeCloseTo(0.145)
+    expect(dark.primary.$root.$value.components[0]).toBeCloseTo(0.922)
+    // Not in the dark block, so not in the theme.
+    expect(dark.radius).toBeUndefined()
+    expect(dark.ring).toBeUndefined()
+  })
+
+  it.each([
+    '.dark',
+    'html.dark',
+    ':root.dark',
+    '.theme-dark',
+    '[data-theme=dark]',
+    ':root[data-theme="dark"]',
+    '[data-bs-theme=dark]',
+    '[data-color-mode="dark"]',
+  ])('knows %s as the dark theme', (selector) => {
+    const css = `:root { --bg: #ffffff }\n${selector} { --bg: #000000 }`
+    const dark = themeOf(importTokens([file('a.css', css)]), 'dark')
+    expect(dark.bg.$value.components).toEqual([0, 0, 0])
+  })
+
+  it('takes prefers-color-scheme: dark as a theme that the system turns on', () => {
+    const css = `:root { --bg: #ffffff }\n@media (prefers-color-scheme: dark) {\n  :root:not([data-theme=light]) { --bg: #101010 }\n}`
+    const dark = themeOf(importTokens([file('a.css', css)]), 'dark')
+    expect(dark.$auto).toBe('prefers-color-scheme: dark')
+    expect(dark.bg.$value.components[0]).toBeCloseTo(0.0627, 3)
+  })
+
+  it('joins the class and the media query into one dark theme, the later rule winning', () => {
+    const css = `:root { --bg: #ffffff }
+@media (prefers-color-scheme: dark) { :root { --bg: #111111 } }
+[data-theme=dark] { --bg: #000000 }`
+    const r = importTokens([file('a.css', css)])
+    expect(r.themes).toHaveLength(1)
+    const dark = themeOf(r, 'dark')
+    expect(dark.$auto).toBe('prefers-color-scheme: dark')
+    expect(dark.bg.$value.components).toEqual([0, 0, 0])
+  })
+
+  it('names another theme by its attribute value', () => {
+    const css = ':root { --bg: #ffffff }\n[data-theme=ocean] { --bg: #003355 }'
+    expect(themeOf(importTokens([file('a.css', css)]), 'ocean')).toBeDefined()
+  })
+
+  it('leaves a descendant rule, light, and a value the root already has out of the theme', () => {
+    const css = `:root { --bg: #ffffff; --fg: #111111 }
+.dark .card { --bg: #000000 }
+.dark { --fg: #111111 }
+[data-theme=light] { --bg: #fefefe }`
+    const r = importTokens([file('a.css', css)])
+    expect(r.themes).toEqual([])
+    expect(notes(r).join('\n')).toContain('".dark .card"')
+  })
+
+  it('aliases a root token, and leaves out a name the root lacks and a value of another type', () => {
+    const css = `:root { --brand: #1d4ed8; --bg: #ffffff; --gap: 4px }
+.dark { --bg: var(--brand); --only-dark: #000000; --gap: #000000 }`
+    const r = importTokens([file('a.css', css)])
+    const dark = themeOf(r, 'dark')
+    expect(dark.bg.$value).toBe('{brand}')
+    expect(dark.only).toBeUndefined()
+    expect(dark.gap).toBeUndefined()
+    const m = notes(r).join('\n')
+    expect(m).toContain('only in the dark theme')
+    expect(m).toContain("change a token's type (in the dark theme)")
+  })
+
+  it('merges the dark themes of several files into one', () => {
+    const r = importTokens([
+      file('a.css', ':root { --a: #ffffff }\n.dark { --a: #000000 }'),
+      file('b.css', ':root { --b: #ffffff }\n.dark { --b: #000000 }'),
+    ])
+    expect(r.themes).toHaveLength(1)
+    const dark = themeOf(r, 'dark')
+    expect(
+      Object.keys(dark)
+        .filter((k) => !k.startsWith('$'))
+        .sort(),
+    ).toEqual(['a', 'b'])
+  })
+
+  it('builds with the theme applied', () => {
+    const r = importTokens([file('globals.css', SHADCN)])
+    const built = buildTokens({
+      baseName: 'base',
+      base: r.base.map((f) => ({ file: f.path, content: f.content })),
+      themes: r.themes.map((f) => ({ file: f.path, content: f.content })),
+    })
+    expect(built.diagnostics.filter((d) => d.severity === 'error')).toEqual([])
+    expect(built.manifest!.themes.map((x) => x.name)).toEqual(['dark'])
+  })
+
+  it('reads a theme file of a Tessera project as a theme, not a base file', () => {
+    const base = JSON.stringify({ bg: { $type: 'color', $value: '#ffffff' } })
+    const dark = JSON.stringify({
+      $extends: 'base',
+      $auto: 'prefers-color-scheme: dark',
+      bg: { $value: '#000000' },
+    })
+    const r = importTokens([file('base.tokens.json', base), file('themes/dark.tokens.json', dark)])
+    expect(r.base).toHaveLength(1)
+    expect(themeOf(r, 'dark').$auto).toBe('prefers-color-scheme: dark')
+  })
+})
+
+describe('light and dark together', () => {
+  it('takes [data-bs-theme=light] with the root, and finds only what dark changes', () => {
+    const css = `:root, [data-bs-theme=light] { --shadow-strength: 1; --gap: 4px }
+@media (prefers-color-scheme: dark) { :root, :host { --shadow-strength: 2.4 } }
+[data-bs-theme=dark] { --shadow-strength: 2.4; color-scheme: dark }`
+    const r = importTokens([file('a.css', css)])
+    expect(notes(r)).toEqual([])
+    const dark = themeOf(r, 'dark')
+    expect(Object.keys(dark).filter((k) => !k.startsWith('$'))).toEqual(['shadow'])
+    expect(JSON.parse(r.base[0]!.content).gap).toBeDefined()
   })
 })

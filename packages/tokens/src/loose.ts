@@ -233,9 +233,55 @@ interface Declaration {
 
 interface CssRead {
   declarations: Declaration[]
-  /** Custom properties in a selector or condition that is not the root (a dark theme, a component), by selector. */
+  /** Custom properties of a theme (`.dark`, `[data-theme=dark]`, `prefers-color-scheme: dark`), by the theme's name. */
+  themes: Map<string, { auto: boolean; declarations: Declaration[] }>
+  /** Custom properties in a selector or condition that is not the root or a theme (a component), by selector. */
   elsewhere: Map<string, number>
 }
+
+/** The root, with conditions on it that leave it the root (`:root:not([data-theme=light])`). */
+const ROOTISH = /^(:root|html|:host|\*|body)(:not\([^)]*\))*$/i
+
+/** Attributes a page switches its theme with. */
+const THEME_ATTRIBUTES = new Set([
+  'data-theme',
+  'data-bs-theme',
+  'data-color-mode',
+  'data-color-scheme',
+  'data-mode',
+  'data-theme-mode',
+  'data-md-color-scheme',
+])
+
+/**
+ * The theme a selector switches on, by name: `.dark`, `.theme-dark`, `html.dark`, `:root[data-theme="dark"]`,
+ * `[data-bs-theme=dark]`. Not a descendant (`.dark .card`), and not `light`, which is the root.
+ */
+function themeOf(selector: string): string | undefined {
+  const rest = selector.trim().replace(/^(:root|html|:host|body|\*)(?=[.[])/i, '')
+  const attr = /^\[([\w-]+)\s*=\s*["']?([\w-]+)["']?\]$/.exec(rest)
+  if (attr) {
+    const value = attr[2]!.toLowerCase()
+    return THEME_ATTRIBUTES.has(attr[1]!.toLowerCase()) && value !== 'light'
+      ? sanitizeName(value) || undefined
+      : undefined
+  }
+  const cls = /^\.([\w-]+)$/.exec(rest)
+  if (cls && /(^|[-_])dark([-_]|$)/i.test(cls[1]!)) return 'dark'
+  return undefined
+}
+
+/** The light theme is the root: `[data-bs-theme=light]`, `.light`, `:root.theme-light` say what the root already is. */
+function isLight(selector: string): boolean {
+  const rest = selector.trim().replace(/^(:root|html|:host|body|\*)(?=[.[])/i, '')
+  const attr = /^\[([\w-]+)\s*=\s*["']?light["']?\]$/i.exec(rest)
+  if (attr) return THEME_ATTRIBUTES.has(attr[1]!.toLowerCase())
+  const cls = /^\.([\w-]+)$/.exec(rest)
+  return !!cls && /(^|[-_])light([-_]|$)/i.test(cls[1]!)
+}
+
+const isDarkMedia = (head: string): boolean =>
+  /^@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)$/i.test(head.trim())
 
 /** The text between `start` (just after a `{`) and its matching `}`, and where that `}` is. */
 function matchBrace(css: string, start: number): number {
@@ -296,7 +342,7 @@ function splitBody(body: string): {
 
 function readCss(source: string): CssRead {
   const css = source.replace(/\/\*[\s\S]*?\*\//g, '')
-  const read: CssRead = { declarations: [], elsewhere: new Map() }
+  const read: CssRead = { declarations: [], themes: new Map(), elsewhere: new Map() }
 
   const customProperties = (declarations: string[]): Declaration[] =>
     declarations.flatMap((d) => {
@@ -313,67 +359,85 @@ function readCss(source: string): CssRead {
       ]
     })
 
-  /** Only at-rules that do not change when a value applies (a layer, Tailwind's theme) keep a rule at the root. */
-  const transparent = (context: string[]) =>
-    context.every((c) => TRANSPARENT_AT.has(/^@([\w-]+)/.exec(c)?.[1]?.toLowerCase() ?? ''))
+  /** Where the custom properties of a block go: the root, a theme, or nowhere we read. */
+  type Target =
+    { kind: 'root' } | { kind: 'theme'; name: string; auto: boolean } | { kind: 'other' }
+  /** What the rules inside a block can be: at the root, inside `@media (prefers-color-scheme: dark)`, or neither. */
+  type Container = 'root' | 'dark-media' | 'other'
 
-  const walk = (text: string, context: string[], rootLike: boolean) => {
+  const walk = (text: string, context: string[], target: Target, container: Container) => {
     const { declarations, nested } = splitBody(text)
     const found = customProperties(declarations)
-    if (rootLike) read.declarations.push(...found)
-    else if (found.length) {
+    if (target.kind === 'root') read.declarations.push(...found)
+    else if (target.kind === 'theme') {
+      const theme = read.themes.get(target.name) ?? { auto: false, declarations: [] }
+      theme.auto ||= target.auto
+      theme.declarations.push(...found)
+      read.themes.set(target.name, theme)
+    } else if (found.length) {
       const where = context.join(' ').replace(/\s+/g, ' ') || 'the file'
       read.elsewhere.set(where, (read.elsewhere.get(where) ?? 0) + found.length)
     }
     for (const { head, body } of nested) {
       if (head.startsWith('@')) {
         const at = /^@([\w-]+)/.exec(head)![1]!.toLowerCase()
-        walk(body, [...context, head], transparent(context) && TRANSPARENT_AT.has(at))
-      } else {
-        const selectors = splitTop(head, ',').map((s) => s.trim())
-        walk(
-          body,
-          [...context, head],
-          transparent(context) && selectors.every((s) => ROOT_LIKE.test(s)),
-        )
+        if (container === 'root' && TRANSPARENT_AT.has(at)) {
+          walk(body, [...context, head], { kind: 'root' }, 'root')
+        } else if (container === 'root' && isDarkMedia(head)) {
+          walk(body, [...context, head], { kind: 'other' }, 'dark-media')
+        } else walk(body, [...context, head], { kind: 'other' }, 'other')
+        continue
       }
-    }
-  }
-  // The top level is "the file": a rule there is root-like or not, an at-rule is looked into.
-  const top = splitBody(
-    css.replace(/@(import|charset|namespace|tailwind|plugin|source|config)\b[^;{]*;/gi, ''),
-  )
-  for (const { head, body } of top.nested) {
-    if (head.startsWith('@')) {
-      const at = /^@([\w-]+)/.exec(head)![1]!.toLowerCase()
-      walk(body, [head], TRANSPARENT_AT.has(at))
-    } else {
       const selectors = splitTop(head, ',').map((s) => s.trim())
-      walk(
-        body,
-        [head],
-        selectors.every((s) => ROOT_LIKE.test(s)),
-      )
+      let inner: Target = { kind: 'other' }
+      if (container === 'root') {
+        const names = new Set(selectors.map(themeOf))
+        if (selectors.every((s) => ROOTISH.test(s) || ROOT_LIKE.test(s) || isLight(s))) {
+          inner = { kind: 'root' }
+        } else if (names.size === 1 && !names.has(undefined)) {
+          inner = { kind: 'theme', name: [...names][0]!, auto: false }
+        }
+      } else if (container === 'dark-media') {
+        if (selectors.every((s) => ROOTISH.test(s) || themeOf(s) === 'dark')) {
+          inner = { kind: 'theme', name: 'dark', auto: true }
+        }
+      }
+      walk(body, [...context, head], inner, 'other')
     }
   }
+  // The top level is "the file": a rule there is the root or a theme or neither, an at-rule is looked into.
+  const statements = /@(import|charset|namespace|tailwind|plugin|source|config)\b[^;{]*;/gi
+  walk(css.replace(statements, ''), [], { kind: 'other' }, 'root')
   return read
 }
 
 const VAR = /^var\(\s*--([^,\s)]+)\s*(?:,\s*([\s\S]+))?\)$/
 
-/** The tokens in a CSS file as a DTCG document with loose values, plus what could not be read. */
+/** A theme read from a CSS file: its name, whether the system's setting turns it on, and the tokens it overrides. */
+export interface CssTheme {
+  name: string
+  auto: boolean
+  doc: Doc
+}
+
+export interface CssTokens {
+  doc: Doc
+  themes: CssTheme[]
+}
+
+/** The tokens in a CSS file as a DTCG document with loose values, its themes, and what could not be read. */
 export function cssToDoc(
   source: string,
   file: string,
   diagnostics: TokenDiagnostic[],
-): Doc | undefined {
+): CssTokens | undefined {
   const read = readCss(source)
   const skips = new Skips()
 
   // Last write wins, as it does in the cascade.
   const declared = new Map<string, string>()
   for (const d of read.declarations) declared.set(d.name, d.value)
-  if (declared.size === 0 && read.elsewhere.size === 0) return undefined
+  if (declared.size === 0 && read.themes.size === 0 && read.elsewhere.size === 0) return undefined
 
   const segmentsOf = (name: string) =>
     name
@@ -405,23 +469,25 @@ export function cssToDoc(
     return undefined
   }
 
-  const entries: Array<{ name: string; path: string[]; token: Doc }> = []
-  const typeOfAlias: Array<{ name: string; token: Doc; target: string }> = []
-  for (const [name, raw] of declared) {
-    if (!segments.has(name)) continue
+  /**
+   * One declaration as a token: an alias (which takes its target's type later), or a typed value. A value that cannot
+   * be one is counted in `skips` and gives undefined. `where` says what it is in the note.
+   */
+  const convert = (
+    name: string,
+    raw: string,
+    where: string,
+    group: string,
+  ): { token: Doc; target?: string } | undefined => {
     const path = finalPath(name)
-    const where = `--${name}: ${raw}`
     const resolved = resolve(raw, new Set([name]))
     if (resolved === undefined) {
-      skips.add('Values that refer to a custom property the file does not define', where)
-      continue
+      skips.add(`Values that refer to a custom property the file does not define${group}`, where)
+      return undefined
     }
     if (isAlias(resolved)) {
       const target = [...segments.keys()].find((n) => aliasOf(n) === resolved)!
-      const token: Doc = { $value: resolved }
-      entries.push({ name, path, token })
-      typeOfAlias.push({ name, token, target })
-      continue
+      return { token: { $value: resolved }, target }
     }
     // `var()` inside a larger value: only a shadow or border can hold a reference (to its color).
     let text = resolved
@@ -434,26 +500,33 @@ export function cssToDoc(
         },
       )
       if (/\bvar\(/.test(text)) {
-        skips.add('Values that mix a custom property into a longer expression', where)
-        continue
+        skips.add(`Values that mix a custom property into a longer expression${group}`, where)
+        return undefined
       }
     }
     if (/\b(calc|clamp|min|max|env|attr|url)\(/i.test(text) && !isColor(text)) {
       skips.add(
-        'Values computed with calc(), clamp(), min(), max() or url() (a token is one value)',
+        `Values computed with calc(), clamp(), min(), max() or url() (a token is one value)${group}`,
         where,
       )
-      continue
+      return undefined
     }
     const inferred = inferToken(path, text)
     if (!inferred) {
       skips.add(
-        'Values whose type could not be told (a keyword, a gradient, a font shorthand)',
+        `Values whose type could not be told (a keyword, a gradient, a font shorthand)${group}`,
         where,
       )
-      continue
+      return undefined
     }
-    entries.push({ name, path, token: { $type: inferred.type, $value: inferred.value } })
+    return { token: { $type: inferred.type, $value: inferred.value } }
+  }
+
+  const entries: Array<{ name: string; path: string[]; token: Doc; target?: string }> = []
+  for (const [name, raw] of declared) {
+    if (!segments.has(name)) continue
+    const got = convert(name, raw, `--${name}: ${raw}`, '')
+    if (got) entries.push({ name, path: finalPath(name), ...got })
   }
 
   // An alias takes its target's type (following a chain), or is left out with its target.
@@ -462,8 +535,7 @@ export function cssToDoc(
     const entry = byName.get(name)
     if (!entry || depth > 20) return undefined
     if (typeof entry.token.$type === 'string') return entry.token.$type
-    const link = typeOfAlias.find((a) => a.name === name)
-    return link ? typeOf(link.target, depth + 1) : undefined
+    return entry.target ? typeOf(entry.target, depth + 1) : undefined
   }
   const kept: typeof entries = []
   for (const e of entries) {
@@ -477,9 +549,9 @@ export function cssToDoc(
     }
     kept.push(e)
   }
+  const keptByName = new Map(kept.map((e) => [e.name, e]))
 
-  const doc: Doc = {}
-  for (const { path, token } of kept) {
+  const place = (doc: Doc, path: string[], token: Doc) => {
     let node = doc
     for (const segment of path.slice(0, -1)) {
       node[segment] =
@@ -487,6 +559,42 @@ export function cssToDoc(
       node = node[segment] as Doc
     }
     node[path[path.length - 1]!] = token
+  }
+  const doc: Doc = {}
+  for (const { path, token } of kept) place(doc, path, token)
+
+  // A theme overrides tokens of the root: a name it declares that the root does not is left out, and so is a value
+  // that would change a token's type (the build takes a theme's type from the base).
+  const themes: CssTheme[] = []
+  for (const [themeName, theme] of read.themes) {
+    const values = new Map<string, string>()
+    for (const d of theme.declarations) values.set(d.name, d.value)
+    const group = ` (in the ${themeName} theme)`
+    const themeDoc: Doc = {}
+    for (const [name, raw] of values) {
+      const base = keptByName.get(name)
+      if (!base) {
+        if (!declared.has(name)) {
+          skips.add(
+            `Custom properties only in the ${themeName} theme, not in the root`,
+            `--${name}: ${raw}`,
+          )
+        }
+        continue
+      }
+      // The same value as the root's says nothing.
+      if (raw === declared.get(name)) continue
+      const got = convert(name, raw, `--${name}: ${raw}`, group)
+      if (!got) continue
+      const type = typeof got.token.$type === 'string' ? got.token.$type : typeOf(got.target ?? '')
+      if (type !== base.token.$type) {
+        skips.add(`Values that would change a token's type${group}`, `--${name}: ${raw}`)
+        continue
+      }
+      place(themeDoc, base.path, { $value: got.token.$value })
+    }
+    if (Object.keys(themeDoc).length)
+      themes.push({ name: themeName, auto: theme.auto, doc: themeDoc })
   }
 
   diagnostics.push(...skips.notes(file))
@@ -496,11 +604,11 @@ export function cssToDoc(
     diagnostics.push(
       warn(
         file,
-        `Custom properties outside the root (a dark theme, a media query, a component) were not imported: ${total} in ${read.elsewhere.size} place${read.elsewhere.size === 1 ? '' : 's'}, for example in "${example}".`,
+        `Custom properties outside the root and its themes (a component, a media query) were not imported: ${total} in ${read.elsewhere.size} place${read.elsewhere.size === 1 ? '' : 's'}, for example in "${example}".`,
       ),
     )
   }
-  return Object.keys(doc).length ? doc : undefined
+  return Object.keys(doc).length || themes.length ? { doc, themes } : undefined
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -646,13 +754,32 @@ export function prepareFiles(
   const out: InterchangeFile[] = []
   for (const f of files) {
     if (/\.css$/i.test(f.path)) {
-      const doc = cssToDoc(f.content, f.path, diagnostics)
-      if (doc) {
+      const got = cssToDoc(f.content, f.path, diagnostics)
+      if (got) {
+        const folder = f.path.replace(/[^/\\]*$/, '')
         const base = named(f.path).replace(/\.css$/i, '')
-        out.push({
-          path: f.path.replace(/[^/\\]*$/, '') + `${base}.tokens.json`,
-          content: JSON.stringify(doc, null, 2) + '\n',
-        })
+        if (Object.keys(got.doc).length) {
+          out.push({
+            path: `${folder}${base}.tokens.json`,
+            content: JSON.stringify(got.doc, null, 2) + '\n',
+          })
+        }
+        // A theme is a file that extends the base, as a project writes one: the import reads it as a theme.
+        for (const theme of got.themes) {
+          out.push({
+            path: `${folder}themes/${theme.name}.tokens.json`,
+            content:
+              JSON.stringify(
+                {
+                  $extends: 'base',
+                  ...(theme.auto ? { $auto: 'prefers-color-scheme: dark' } : {}),
+                  ...theme.doc,
+                },
+                null,
+                2,
+              ) + '\n',
+          })
+        }
       } else diagnostics.push(warn(f.path, 'No custom properties were found in this file.'))
       continue
     }

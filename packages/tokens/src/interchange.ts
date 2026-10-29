@@ -100,7 +100,8 @@ function prune(node: Doc): boolean {
     if (!isObject(child) || key.startsWith('$') || '$value' in child) continue
     if (prune(child)) delete node[key]
   }
-  return Object.keys(node).every((k) => k.startsWith('$'))
+  // `$root` is a token of the group, not metadata about it.
+  return Object.keys(node).every((k) => k.startsWith('$') && k !== '$root')
 }
 
 /** Where a skipped token is kept, so an export can put it back. */
@@ -641,13 +642,28 @@ export function importWith(
       const got = importResolver(resolver.file, resolver.doc!, byPath, diagnostics)
       if (got) ({ base, baseName, themes } = got)
     } else {
-      // Plain DTCG documents: each is a base file of its own.
+      // Plain DTCG documents: each is a base file of its own, unless it extends the base (a theme file, as a Tessera
+      // project writes one, or as the CSS reader makes one): then it is a theme, and files of one name are one theme.
       for (const p of parsed) {
-        if (p.doc)
-          base.push({
-            name: uniqueName(sanitizeName(nameOf(p.file.path)) || 'tokens', base),
-            doc: p.doc,
-          })
+        if (!p.doc) continue
+        if (typeof p.doc.$extends === 'string') {
+          const name = sanitizeName(nameOf(p.file.path)) || 'theme'
+          const tokens = { ...p.doc }
+          const { $attribute, $auto } = tokens
+          for (const key of ['$extends', '$attribute', '$auto']) delete tokens[key]
+          const attribute = typeof $attribute === 'string' ? $attribute : 'theme'
+          const auto = typeof $auto === 'string' ? $auto : undefined
+          const same = themes.find((t) => t.name === name && t.attribute === attribute)
+          if (same) {
+            same.doc = merge(same.doc, tokens)
+            if (auto && !same.auto) same.auto = auto
+          } else themes.push({ name, attribute, ...(auto ? { auto } : {}), doc: tokens })
+          continue
+        }
+        base.push({
+          name: uniqueName(sanitizeName(nameOf(p.file.path)) || 'tokens', base),
+          doc: p.doc,
+        })
       }
     }
   }
