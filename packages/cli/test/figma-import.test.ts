@@ -98,6 +98,28 @@ describe('importing the Button', () => {
     expect(style).toMatch(/outline-offset: -1px/)
   })
 
+  it('gives an icon the color of the text, on its own part, and never a color on the root', () => {
+    const style = /<style>([\s\S]*)<\/style>/.exec(result.tess)![1]!
+    // The root is checked as one block (a background and a color there are held against each other), so the color is
+    // on the parts that hold the slots.
+    expect(style).toMatch(/\.icon \{[^}]*color: \$color\.figma-/)
+    expect(style).toMatch(/\.icon-end \{[^}]*color: \$color\.figma-/)
+    const blocks = [...style.matchAll(/^(\.root[^{]*) \{([^}]*)\}/gm)]
+    expect(blocks.length).toBeGreaterThan(10)
+    for (const [, selector, body] of blocks) {
+      // Only the blocks of the root itself: a part's selector has a second compound after a space.
+      if (/ \.(icon|label|icon-end)$/.test(selector!)) continue
+      expect(body, selector).not.toMatch(/^\s*color:/m)
+    }
+  })
+
+  it('gives the focus state an outline that is not seen, for a screen where shadows are not drawn', () => {
+    const style = /<style>([\s\S]*)<\/style>/.exec(result.tess)![1]!
+    const focus = /\.root:focus-visible \{([^}]*)\}/.exec(style)![1]!
+    expect(focus).toContain('outline: 2px solid transparent;')
+    expect(focus).toContain('box-shadow: $shadow.figma-focus-rings-focus-ring;')
+  })
+
   it('names tokens after the styles of the design, and the rest after their values', () => {
     const colors = Object.keys((result.tokens.color as Record<string, unknown>) ?? {})
     expect(colors).toEqual(expect.arrayContaining(['figma-brand-600', 'figma-base-white']))

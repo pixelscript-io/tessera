@@ -147,6 +147,12 @@ A failure names the variant and the share: `Size=md, Hierarchy=Primary, Icon=Def
 
 It proves the boxes of every part, and the paint of everything that is compared: the fill, the strokes, the radii and the shadows, including the focus ring. It does not prove the label's letters or an icon. An icon is what the caller supplies. Type is drawn by two renderers, so the edges of the letters differ even with the same font file: with the label compared, most of the Button's variants were 1 to 4% different at the edges of the letters and none anywhere else, so the Button's map leaves the label out of the pixels (`"ignore"`). The label's box is still held to the design's, so the font's size, weight and line height are. Put the design's font in the map's `fonts`, or the label's width will not match.
 
+## One design, one theme
+
+A Figma file usually draws a component in one theme. The imported component has that theme's colors, so it is right in light mode, and `npm run test:a11y` runs every variant in both themes. For the Untitled UI Button the light run passes entirely. In dark mode the hierarchies that have a fill (primary and the two secondaries) pass, because their fill and text were designed together. The four that have **no fill** (tertiary and link, gray and color) fail the contrast check there: dark purple or gray text, drawn for a white page, on a dark one. That is a real finding about the design, not a fault of the import.
+
+To fix it, give the dark theme its own value for the colors those variants use, in the project's dark token file, for example `$color.figma-gray-700` and `$color.figma-brand-700`. The import does not invent dark colors.
+
 ## Not built yet
 
 Components other than a button, nested instances as slots, icons as vector layers, a round trip back to Figma, and the Variables API (the file's variables arrive through [`tokens import`](/guide/interchange)).

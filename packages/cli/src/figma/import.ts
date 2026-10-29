@@ -468,6 +468,21 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
       const text = ref !== '$' && ref.text ? firstText(layer, ref.text) : undefined
       styles.set(part, layerStyle(ctx, layer, ref === '$' ? 'root' : 'part', text))
     }
+    const root = styles.get('root')
+    // An icon is a slot and takes the color of the text (as a stroke in the design does). It is set on the icon's own
+    // part, not on the root: the root's background and a color there would be checked against each other as one block.
+    const ink = partNames.map((p) => styles.get(p)?.color).find(Boolean)
+    for (const slot of Object.keys(map.slots ?? {})) {
+      const style = styles.get(slot)
+      if (style && ink) style.color = ink
+    }
+    // The design's focus ring is a shadow. A focus state also needs an outline, so that it shows where shadows are
+    // removed (a high-contrast mode): a transparent one costs nothing where shadows show.
+    const state = stateAxis ? stateAxis.states![v.axes[stateAxis.figma]!] : undefined
+    if (root && state === ':focus-visible' && !root.outline) {
+      root.outline = '2px solid transparent'
+      root['outline-offset'] = '0'
+    }
     return { styles, boxes }
   })
 
