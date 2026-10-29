@@ -52,6 +52,11 @@ ${fonts.length ? `const style = document.createElement('style')\nstyle.textConte
 // The page the test runs in is shown at the size the window allows: a small one is not scaled down to fit.
 beforeAll(async () => {
   await page.viewport(480, 600)
+  // The design's fonts are loaded before the first variant is measured, or its label is set in another face.
+  await Promise.all(
+    ${JSON.stringify(fonts.map((f) => f.family))}.map((family: string) => document.fonts.load('14px "' + family + '"')),
+  )
+  await document.fonts.ready
 })
 
 afterEach(() => {
@@ -69,14 +74,22 @@ async function show(variant: (typeof design.variants)[number]) {
   const props = Object.fromEntries(Object.entries(variant.props).map(([k, v]) => [k, state(v)]))
   const disabled = state(variant.state === ':disabled')
   // What the design has in the slots: something the size of an icon, so the boxes can be compared.
-  const slot = () => ['\\u200b']
+  const slot = (name: string) => () => [
+    variant.content[name]
+      ? r.el('span', {
+          attrs: {
+            style: \`display: block; width: \${variant.content[name].width}px; height: \${variant.content[name].height}px;\`,
+          },
+        })
+      : '\\u200b',
+  ]
   dispose = r.mount(host, () =>
     ${name}({
-      props: { ...props, disabled },
+      props: design.kind === 'button' ? { ...props, disabled } : props,
       events: {},
       slots: {
         default: () => [design.sample],
-        ...Object.fromEntries(design.slots.map((s: string) => [s, slot])),
+        ...Object.fromEntries(design.slots.map((s: string) => [s, slot(s)])),
       },
     }),
   )
@@ -126,7 +139,9 @@ describe('${name} against the design', () => {
       const el = await show(variant)
       // Across, a pixel, and a little more for the type: the browser sets the same font a few percent wider or narrower
       // than the design's tool does, and every box that holds or follows the label moves with it.
-      const across = 1 + 0.04 * ((variant.boxes as Record<string, Box | null>).label?.width ?? 0)
+      // With the design's font loaded the label is within 4%; with another face (no font given) within 15%.
+      const across =
+        1 + ${fonts.length ? 0.04 : 0.15} * ((variant.boxes as Record<string, Box | null>).label?.width ?? 0)
       const close = (a: number, b: number, tolerance = 1) => Math.abs(a - b) <= tolerance
       const got = Object.fromEntries(design.parts.map((p) => [p, partBox(el, p)]))
       for (const part of design.parts) {

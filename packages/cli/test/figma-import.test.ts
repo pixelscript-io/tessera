@@ -23,6 +23,9 @@ mkdirSync(scratch, { recursive: true })
 afterAll(() => rmSync(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 }))
 
 const file = JSON.parse(readFileSync(`${fixtures}/button-set.json`, 'utf8')) as ComponentSetFile
+const badge = JSON.parse(
+  readFileSync(`${fixtures}/../badge/button-set.json`, 'utf8'),
+) as ComponentSetFile
 const small = JSON.parse(
   readFileSync(`${fixtures}/../button-small/button-set.json`, 'utf8'),
 ) as ComponentSetFile
@@ -208,7 +211,7 @@ describe('what the map must say', () => {
       'The map is for the component set "Cards", but the file has "Buttons/Button".',
     )
     expect(fails(() => importComponentSet(file, { ...map, kind: 'dialog' })).message).toBe(
-      '"kind" is "dialog", and only "button" can be imported so far.',
+      '"kind" is "dialog", and only "button" and "inline" can be imported so far.',
     )
     const m = clone(map)
     delete (m.parts as Record<string, unknown>).root
@@ -415,12 +418,18 @@ describe('a map worked out from the design', () => {
   })
 
   it('stops at a component that is not a button, and at a state it cannot read', () => {
-    const e = fails(() => inferMap({ ...file, set: { ...file.set, name: 'Cards/Card' } }))
+    // A set whose layers are not in a row (a card) is neither a button nor a label in a row.
+    const column = clone(file)
+    column.set.name = 'Cards/Card'
+    for (const v of column.set.children!) v.layoutMode = 'VERTICAL'
+    const e = fails(() => inferMap(column))
     expect(e.code).toBe('F001')
     expect(e.message).toBe(
-      'The component set "Cards/Card" does not look like a button, and only a button can be imported so far.',
+      'The component set "Cards/Card" is not a button or a label in a row, and those are the only ones that can be imported so far.',
     )
-    expect(e.hint).toBe('If it is one, give a map with "kind": "button" (--map).')
+    expect(e.hint).toBe(
+      'If it is one of those, give a map with "kind": "button" or "inline" (--map).',
+    )
     const odd = clone(file)
     odd.set.componentPropertyDefinitions!.State!.variantOptions = ['Default', 'Hover', 'Wobbly']
     const s = fails(() => inferMap(odd))
@@ -435,6 +444,123 @@ describe('a map worked out from the design', () => {
     const e = fails(() => importComponentSet(file, m))
     expect(e.code).toBe('F015')
     expect(e.message).toBe('The slot "icon" has the same name as the prop "icon".')
+  })
+})
+
+describe('a label in a row that is not a button', () => {
+  const m = inferMap(badge)
+
+  it('is read as inline: a span with no behavior, and the layers beside the label as slots', () => {
+    expect(m.kind).toBe('inline')
+    expect(m.role).toBe('generic')
+    expect(m.behavior).toBeUndefined()
+    // The Badge has no switches, so the layers before and after the label are found by where they are.
+    expect(Object.keys(m.slots!)).toEqual(['leading', 'trailing'])
+    expect(m.parts.leading).toEqual({ beside: 'label', side: 'before' })
+    expect(m.parts.trailing).toEqual({ beside: 'label', side: 'after' })
+    expect(m.props.Color).toEqual({ prop: 'color', default: 'Gray' })
+    expect(m.props.State).toBeUndefined()
+  })
+
+  it('writes a span and no script, with no events and no state', () => {
+    const result = importComponentSet(badge, m)
+    expect(result.variants).toHaveLength(144)
+    expect(result.tess).toContain('<span class="root">')
+    expect(result.tess).not.toContain('<button')
+    expect(result.tess).not.toContain('<script>')
+    const contract = JSON.parse(/<contract>\n([\s\S]*?)\n<\/contract>/.exec(result.tess)![1]!)
+    expect(contract.role).toBe('generic')
+    expect(contract.events).toEqual({})
+    expect(contract.states).toEqual([])
+    expect(contract.behavior).toBeUndefined()
+    expect(contract.variants.color).toEqual(['gray', 'brand', 'error'])
+    expect(result.tess).not.toContain('cursor: pointer')
+  })
+
+  it('records the size of what a slot holds when the slot is as big as its content', () => {
+    const result = importComponentSet(badge, m)
+    const close = result.variants.find(
+      (v) => v.name === 'Size=sm, Type=Pill color, Icon=X close, Color=Brand',
+    )!
+    // The close button hugs a 12 pixel icon: a test that puts something else there would measure something else.
+    expect(close.content.trailing).toEqual({ width: 12, height: 12 })
+    expect(close.boxes.trailing).toMatchObject({ width: 16, height: 16 })
+  })
+
+  it('checks clean in a project, with no raw value and no unknown token', async () => {
+    const root = project()
+    const run = io(root)
+    const code = await main(
+      ['figma', 'import', '--from-json', `${fixtures}/../badge/button-set.json`],
+      run.handle,
+    )
+    expect(run.err()).toBe('')
+    expect(code).toBe(0)
+    const checked = io(root)
+    expect(await main(['check'], checked.handle)).toBe(0)
+    expect(checked.out()).toContain('0 errors, 0 warnings')
+  }, 120_000)
+})
+
+describe('what is refused, so that nothing half imported looks done', () => {
+  it('refuses a component with layers that are not a label or something beside one', () => {
+    // Every variant gets a layer the importer has no part for: a track, say. (Where a dot comes before the label, a
+    // layer after the label is found as the trailing slot, so it is not counted there: 240 of the 380.)
+    const bar = clone(file)
+    for (const v of bar.set.children!)
+      v.children!.push({ id: v.id + '-x', name: 'Track', type: 'FRAME', children: [] })
+    const e = fails(() => importComponentSet(bar, inferMap(bar)))
+    expect(e.code).toBe('F018')
+    expect(e.message).toBe(
+      '"Buttons/Button" has layers that are not a label or something beside one: "Track" (in 240 of 380 variants).',
+    )
+    expect(e.hint).toBe(
+      'Only a label with something before or after it can be imported so far. A component with a track, a thumb, a field or an image needs more.',
+    )
+  })
+
+  it('refuses a second piece of text next to the label, which is not the label', () => {
+    const two = clone(file)
+    for (const v of two.set.children!)
+      v.children!.push({
+        id: v.id + '-t',
+        name: 'Supporting text',
+        type: 'TEXT',
+        characters: 'More',
+      })
+    const e = fails(() => importComponentSet(two, inferMap(two)))
+    expect(e.code).toBe('F018')
+    expect(e.message).toContain('"Supporting text" (in 140 of 380 variants)')
+  })
+
+  it('refuses two variants that have the same properties, and says which', () => {
+    const dup = clone(file)
+    dup.set.children!.push({ ...dup.set.children![0]!, id: 'dup' })
+    const e = fails(() => importComponentSet(dup, inferMap(dup)))
+    expect(e.code).toBe('F019')
+    expect(e.message).toMatch(
+      /^Two variants have the same properties: "Size=[^"]+" and "Size=[^"]+"\.$/,
+    )
+  })
+
+  it('reads the names a state goes by', () => {
+    const odd = clone(file)
+    odd.set.componentPropertyDefinitions!.State!.variantOptions = [
+      'Default',
+      'Hover/active',
+      'Focus',
+      'Pressed',
+      'Disabled',
+    ]
+    expect(inferMap(odd).props.State).toEqual({
+      states: {
+        Default: null,
+        'Hover/active': 'hover',
+        Focus: 'focus-visible',
+        Pressed: 'active',
+        Disabled: 'disabled',
+      },
+    })
   })
 })
 

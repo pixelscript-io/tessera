@@ -1,0 +1,60 @@
+{
+  "component": "Badge",
+  "name": "Badge",
+  "kind": "inline",
+  "role": "generic",
+  "description": "Badge, imported from Figma.",
+  "props": {
+    "Size": {
+      "prop": "size",
+      "default": "sm"
+    },
+    "Type": {
+      "prop": "type",
+      "default": "Pill color"
+    },
+    "Icon": {
+      "prop": "icon",
+      "default": "False"
+    },
+    "Color": {
+      "prop": "color",
+      "default": "Gray"
+    }
+  },
+  "ignore": {
+    "🔀 Flag swap#3918:0": "the icon is what the slot holds",
+    "🔀 Icon trailing swap#3920:0": "the icon is what the slot holds",
+    "🔀 Icon leading swap#3920:433": "the icon is what the slot holds"
+  },
+  "parts": {
+    "root": "$",
+    "leading": {
+      "beside": "label",
+      "side": "before"
+    },
+    "label": {
+      "layer": "Text",
+      "text": "Text"
+    },
+    "trailing": {
+      "beside": "label",
+      "side": "after"
+    }
+  },
+  "slots": {
+    "leading": {
+      "description": "something before the label (optional)",
+      "side": "before"
+    },
+    "trailing": {
+      "description": "something after the label (optional)",
+      "side": "after"
+    }
+  },
+  "sample": "Label",
+  "fidelity": {
+    "threshold": 0.01,
+    "ignore": ["leading", "trailing", "label"]
+  }
+}

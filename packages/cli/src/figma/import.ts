@@ -397,6 +397,8 @@ export interface ImportResult {
     ignore: Array<{ x: number; y: number; width: number; height: number }>
     /** Where each part is in this variant, from the corner of the box (null: it is not there). */
     boxes: Record<string, { x: number; y: number; width: number; height: number } | null>
+    /** The size of what each slot holds in the design (its first layer inside), for a slot that is as big as its content. */
+    content: Record<string, { width: number; height: number } | null>
     file: string
   }>
 }
@@ -408,11 +410,11 @@ export interface ImportResult {
  */
 export function importComponentSet(file: ComponentSetFile, map: FigmaMap): ImportResult {
   const set = file.set
-  if (map.kind !== 'button')
+  if (map.kind !== 'button' && map.kind !== 'inline')
     throw new FigmaError(
       'F001',
-      `"kind" is "${map.kind}", and only "button" can be imported so far.`,
-      'Set "kind": "button" in the map.',
+      `"kind" is "${map.kind}", and only "button" and "inline" can be imported so far.`,
+      'Set "kind" to "button", or to "inline" for a label with something before and after it (a badge, a tag).',
     )
   if (set.name !== map.component)
     throw new FigmaError(
@@ -497,6 +499,19 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
 
   const variants = (set.children ?? []).filter((c) => c.type === 'COMPONENT').map(parseVariant)
   if (!variants.length) throw new FigmaError('F007', `The set "${set.name}" has no variants.`)
+  // Variants are told apart by the properties of the set. Two that are not are a set with a property it no longer lists.
+  const seenPlaces = new Map<string, string>()
+  for (const v of variants) {
+    const key = axes.map((a) => `${a.figma}=${v.axes[a.figma]}`).join(', ')
+    const prior = seenPlaces.get(key)
+    if (prior !== undefined)
+      throw new FigmaError(
+        'F019',
+        `Two variants have the same properties: "${prior}" and "${v.node.name}".`,
+        'A variant property that the set no longer lists is still in their names. Remove one of them in Figma.',
+      )
+    seenPlaces.set(key, v.node.name)
+  }
 
   const report: Report = { mapped: [], tokens: [], skipped: [], unbound: [] }
   const ctx: Context = { tokens: new TokenSet(), styles: file.styles, report, skipped: new Set() }
@@ -543,6 +558,43 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
     return { styles, boxes }
   })
 
+  // Every layer of every variant must be a part, or inside one: a component with a track, a thumb, a field or an image
+  // would come out with those missing and still look as if it had been imported. It is refused instead, with the layers.
+  const uncovered = new Map<string, number>()
+  variants.forEach((v, i) => {
+    const layers = [...perVariant[i]!.boxes.values()].filter((l): l is FigmaNode => !!l)
+    for (const child of v.node.children ?? []) {
+      if (child.visible === false) continue
+      if (layers.some((l) => l === child || descendants(child).includes(l))) continue
+      uncovered.set(child.name, (uncovered.get(child.name) ?? 0) + 1)
+    }
+    // A second piece of text next to the label (a hint under a title) is not the label.
+    const labelLayer = perVariant[i]!.boxes.get('label')
+    const slotLayers = (Object.keys(map.slots ?? {}) as string[])
+      .map((s) => perVariant[i]!.boxes.get(s))
+      .filter((l): l is FigmaNode => !!l)
+    const texts = descendants(v.node).filter(
+      (d) =>
+        d.type === 'TEXT' &&
+        d.visible !== false &&
+        !slotLayers.some((s) => s === d || descendants(s).includes(d)),
+    )
+    for (const extra of texts.slice(1)) {
+      if (labelLayer && (labelLayer === extra || descendants(labelLayer).includes(extra))) {
+        uncovered.set(extra.name, (uncovered.get(extra.name) ?? 0) + 1)
+      }
+    }
+  })
+  if (uncovered.size)
+    throw new FigmaError(
+      'F018',
+      `"${set.name}" has layers that are not a label or something beside one: ${[...uncovered]
+        .slice(0, 5)
+        .map(([name, n]) => `"${name}" (in ${n} of ${variants.length} variants)`)
+        .join(', ')}${uncovered.size > 5 ? ', and more' : ''}.`,
+      'Only a label with something before or after it can be imported so far. A component with a track, a thumb, a field or an image needs more.',
+    )
+
   // The rules: for each property of each part, a base and the conditions that change it.
   const places = variants.map((v) => v.axes)
   const learnAxes = axes.map((a) => ({
@@ -570,7 +622,17 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
         if (!style) return prop === 'display' ? 'none' : (INITIAL[prop] ?? 'initial')
         return style[prop] ?? INITIAL[prop] ?? 'initial'
       })
-      const { base, rules: learned } = learn({ places, values, axes: learnAxes, light })
+      let learnt: ReturnType<typeof learn>
+      try {
+        learnt = learn({ places, values, axes: learnAxes, light })
+      } catch {
+        throw new FigmaError(
+          'F020',
+          `The rules for "${prop}" of "${part}" could not be worked out.`,
+          'This is a fault in the importer. Report it with the design.',
+        )
+      }
+      const { base, rules: learned } = learnt
       // A base that is the property's initial value needs no line (a display never does: it is what hides a part).
       const baseWritten = base === INITIAL[prop] && prop !== 'display' ? undefined : base
       if (baseWritten !== undefined)
@@ -647,10 +709,14 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
   css.push(`.label {\n  white-space: nowrap;\n}`)
   // What a button has that the design does not draw: the browser's own border and focus ring (the design's focus state
   // is a rule above, and a stroke is an outline that a rule above sets).
-  css.push(
-    `.root {\n  box-sizing: border-box;\n  margin: 0;\n  border: 0;\n  outline: none;\n  cursor: pointer;\n}`,
-  )
-  css.push(`.root:disabled {\n  cursor: not-allowed;\n}`)
+  if (map.kind === 'button') {
+    css.push(
+      `.root {\n  box-sizing: border-box;\n  margin: 0;\n  border: 0;\n  outline: none;\n  cursor: pointer;\n}`,
+    )
+    css.push(`.root:disabled {\n  cursor: not-allowed;\n}`)
+  } else {
+    css.push(`.root {\n  box-sizing: border-box;\n  margin: 0;\n}`)
+  }
 
   // The contract.
   const variantsDecl = Object.fromEntries(
@@ -693,34 +759,45 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
     states,
     ...(map.behavior ? { behavior: map.behavior } : {}),
     slots: slotsDecl,
-    events: {
-      press: "fired on click, Enter, or Space, with { source: 'pointer' | 'keyboard' | 'virtual' }",
-    },
+    events:
+      map.kind === 'button'
+        ? {
+            press:
+              "fired on click, Enter, or Space, with { source: 'pointer' | 'keyboard' | 'virtual' }",
+          }
+        : {},
     preview: {
       slots: { default: sample, ...Object.fromEntries(slotEntries.map((s) => [s.name, ring])) },
     },
   }
   const slotLine = (s: { name: string }) =>
     '    <span class="' + s.name + '"><slot name="' + s.name + '" /></span>'
+  const button = map.kind === 'button'
   const template = [
-    '  <button class="root" :type="type" :disabled="disabled" @press="emit(' +
-      "'press', $event" +
-      ')">',
+    button
+      ? '  <button class="root" :type="type" :disabled="disabled" @press="emit(' +
+        "'press', $event" +
+        ')">'
+      : '  <span class="root">',
     ...slotEntries.filter((s) => s.side === 'before').map(slotLine),
     '    <span class="label"><slot /></span>',
     ...slotEntries.filter((s) => s.side === 'after').map(slotLine),
-    '  </button>',
+    button ? '  </button>' : '  </span>',
   ].join('\n')
 
   const tess = `<contract>
 ${JSON.stringify(contract, null, 2)}
 </contract>
 
-<script>
+${
+  button
+    ? `<script>
 const { disabled, type } = props({ disabled: false, type: 'button' })
 </script>
 
-<template>
+`
+    : ''
+}<template>
 ${template}
 </template>
 
@@ -750,6 +827,12 @@ ${css.join('\n\n')}
         ]
       }),
     )
+    const content = Object.fromEntries(
+      Object.keys(map.slots ?? {}).map((slot) => {
+        const inner = perVariant[i]!.boxes.get(slot)?.children?.[0]?.absoluteBoundingBox
+        return [slot, inner ? { width: n2(inner.width), height: n2(inner.height) } : null]
+      }),
+    )
     const ignore = (map.fidelity?.ignore ?? [])
       .map((p) => boxes[p])
       .filter((b): b is NonNullable<typeof b> => !!b)
@@ -768,6 +851,7 @@ ${css.join('\n\n')}
       },
       ignore,
       boxes,
+      content,
       file: `${slug(v.node.name)}.png`,
     }
   })

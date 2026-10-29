@@ -4,7 +4,7 @@ Introduced in v0.14 (Milestone 51).
 
 `tessera figma import` turns one component set of a Figma file into a Tessera component: its structure, its variants and its styles. It also writes a test that compares the component with the design, variant by variant, so "it matches" is something that is checked.
 
-It needs nothing but the link. Figma says a lot about what a component is: its variant properties, which of them is the state, which layer each icon switch controls, and where the text is. The import reads all of that and writes down what it understood, in a **map** next to the component, which you can change and use again. What Figma cannot say is behavior (that it is a button), so the kind is read from the name, and only a button can be imported so far.
+It needs nothing but the link. Figma says a lot about what a component is: its variant properties, which of them is the state, which layer each icon switch controls, and where the text is. The import reads all of that and writes down what it understood, in a **map** next to the component, which you can change and use again. What Figma cannot say is behavior (that it is a button), so the kind is read from the name: a **button**, or an **inline** component, a label in a row with something optionally before and after it, such as a badge, a tag or a chip. Those are the two that can be imported so far (see [What can be imported](#what-can-be-imported)).
 
 ::: tip What was tested
 The Button of the Untitled UI kit (the Buttons page: 380 variants of size, hierarchy, icon and state, and a smaller page of 120), read through Figma's REST API on a Pro plan. Every one of the 380 variants has the right box for each part in a real browser, and the pictures Figma made of 47 of them were compared with the component. The section on what the comparison does and does not prove says what that covers.
@@ -133,6 +133,25 @@ F005: The boolean property "⬅️ Icon leading#3287:1577" is not in the map.
 F004: The state values "Hover" of "State" are not in the map.
 ```
 
+## What can be imported
+
+The import builds a component from what it can represent, and refuses the rest, naming the layers, so that nothing half made looks finished.
+
+| Kind     | What it is                                                                   | Becomes                                                                       |
+| -------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `button` | A set whose name says button                                                 | A `<button>` with the `press` behavior, a `disabled` prop and a `press` event |
+| `inline` | A set laid out in a row, with a text layer, such as a badge, a tag or a chip | A `<span>` with a generic role, and no behavior                               |
+
+Both have a label, and optionally something before and after it, which are slots. In a design with no switches for them (a badge), the layer before the label is the slot `leading` and the one after it is `trailing`.
+
+A component with anything else in it, such as a track and a thumb (a toggle, a slider), a field (an input), an image (an avatar), a second line of text (a tooltip with supporting text), or other components nested as parts (a button group), is refused with `F018`, for example:
+
+```text
+F018: "Progress bar" has layers that are not a label or something beside one: "Percentage" (in 22 of 55 variants).
+```
+
+Trying it on the Untitled UI file showed what works and what does not. The Badge (576 variants) imports, and the Button does. Of the other pages tried (tags, toggles, checkboxes, inputs, dropdowns, avatars, tooltips, progress, sliders, button groups), most have layers of those kinds, and need a component model with more than a label and its neighbors, which is not built yet.
+
 ## How the styles are made
 
 Each variant is one place on every axis of the set: `Size=md, Hierarchy=Primary, Icon=Default, State=Default`. A stylesheet written variant by variant would have 380 blocks. Instead, for each property of each part, the import finds a base and the smallest set of conditions that change it. The size alone decides the padding, so there is one rule for each size. The hierarchy and the state decide the color, so there is one for each pair. Where rules overlap the stronger one wins: more conditions, and then the later axis, so a hierarchy's padding beats a size's. The 380-variant Button is about 500 lines.
@@ -169,7 +188,7 @@ For each variant it mounts the component the way the design shows it (the sample
 1. **Where things are.** The box of the component and of each part is within a pixel of the design's. A part the design does not have is not shown. The label's width and what follows it may differ by 4%: the browser sets the same font a little wider or narrower than Figma does.
 2. **What it looks like.** A screenshot of the component against Figma's picture of the variant, on white. The share of pixels that differ (by more than a tenth) must stay under the threshold, leaving out the parts in `fidelity.ignore`.
 
-A failure names the variant and the share: `Size=md, Hierarchy=Primary, Icon=Default, State=Focused: 23.73% of the pixels differ from the design (the most allowed is 1%)`.
+With no font file given in the map, the label's width is compared loosely (within 15%) instead of within 4%, because the browser draws another face. A failure names the variant and the share: `Size=md, Hierarchy=Primary, Icon=Default, State=Focused: 23.73% of the pixels differ from the design (the most allowed is 1%)`.
 
 ### What the comparison does and does not prove
 
@@ -189,7 +208,7 @@ Components other than a button, nested instances as slots, icons as vector layer
 
 | Code         | Means                                                                                               |
 | ------------ | --------------------------------------------------------------------------------------------------- |
-| F001         | The set is not a button (by its name, or the map's `kind`). Only a button can be imported so far.   |
+| F001         | The set is neither a button nor a label in a row (by its name and layout, or the map's `kind`).     |
 | F002         | The set in the map is not the set in the file.                                                      |
 | F003 to F006 | A property of the set is not in the map, or the map names one the set does not have.                |
 | F008         | `parts` has no `"root": "$"`.                                                                       |
@@ -201,3 +220,6 @@ Components other than a button, nested instances as slots, icons as vector layer
 | F015         | A slot has the name of a prop.                                                                      |
 | F016         | The set has no text layer to be the label.                                                          |
 | F017         | The link has several component sets: say which with `--component`.                                  |
+| F018         | The set has layers that are not a label or something beside one. They are named.                    |
+| F019         | Two variants have the same properties (the set lists fewer properties than its variants name).      |
+| F020         | The rules for a property could not be worked out. This is a fault in the import.                    |

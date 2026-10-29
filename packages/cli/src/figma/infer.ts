@@ -38,38 +38,47 @@ function descendants(node: FigmaNode): FigmaNode[] {
   return (node.children ?? []).flatMap((c) => [c, ...descendants(c)])
 }
 
-/** What each state value of a design is in CSS. A name that is not here needs a hand-written map. */
-const STATES: Record<string, string | null> = {
-  default: null,
-  rest: null,
-  enabled: null,
-  normal: null,
-  idle: null,
-  hover: 'hover',
-  hovered: 'hover',
-  focus: 'focus-visible',
-  focused: 'focus-visible',
-  'focus-visible': 'focus-visible',
-  pressed: 'active',
-  active: 'active',
-  disabled: 'disabled',
+/**
+ * What a state value of a design is in CSS, read by what it says: "Hover", "Hovered", "Hover/active" are `:hover`; a
+ * name with "focus" is `:focus-visible`; "Pressed" and "Active" are `:active`; "Disabled" is `:disabled`; "Default",
+ * "Rest" and the like need none. `undefined` is a name this cannot read (it needs a hand-written map).
+ */
+function stateOf(value: string): string | null | undefined {
+  const v = slug(value)
+  if (/disabled|inactive/.test(v)) return 'disabled'
+  if (/focus/.test(v)) return 'focus-visible'
+  if (/hover/.test(v)) return 'hover'
+  if (/press|active|down/.test(v)) return 'active'
+  if (/^(default|rest|enabled|normal|idle|base|empty)$/.test(v)) return null
+  return undefined
 }
 
 const isState = (name: string, options: string[]): boolean =>
   /^(state|status)$/i.test(name) ||
-  options.some((o) => /^(hover|hovered|focus|focused|pressed)$/i.test(o))
+  options.some((o) => {
+    const state = stateOf(o)
+    return state !== undefined && state !== null
+  })
 
 export function inferMap(file: ComponentSetFile): FigmaMap {
   const set = file.set
   const defs = set.componentPropertyDefinitions ?? {}
-  if (!/button|btn/i.test(set.name))
-    throw new FigmaError(
-      'F001',
-      `The component set "${set.name}" does not look like a button, and only a button can be imported so far.`,
-      'If it is one, give a map with "kind": "button" (--map).',
-    )
   const variants = (set.children ?? []).filter((c) => c.type === 'COMPONENT')
   if (!variants.length) throw new FigmaError('F007', `The set "${set.name}" has no variants.`)
+  // What it is: a button by its name; otherwise a label in a row (a badge, a tag, a chip), by its layout. Anything else
+  // (a card, an avatar, an input) needs more than this can read.
+  const kind: 'button' | 'inline' | undefined = /button|btn/i.test(set.name)
+    ? 'button'
+    : variants.some((v) => v.layoutMode === 'HORIZONTAL') &&
+        variants.some((v) => descendants(v).some((d) => d.type === 'TEXT'))
+      ? 'inline'
+      : undefined
+  if (!kind)
+    throw new FigmaError(
+      'F001',
+      `The component set "${set.name}" is not a button or a label in a row, and those are the only ones that can be imported so far.`,
+      'If it is one of those, give a map with "kind": "button" or "inline" (--map).',
+    )
 
   // The variant properties: each is a prop, except the state.
   const props: FigmaMap['props'] = {}
@@ -80,9 +89,9 @@ export function inferMap(file: ComponentSetFile): FigmaMap {
       const states: Record<string, string | null> = {}
       const unknown: string[] = []
       for (const o of options) {
-        const key = slug(o)
-        if (key in STATES) states[o] = STATES[key]!
-        else unknown.push(o)
+        const state = stateOf(o)
+        if (state === undefined) unknown.push(o)
+        else states[o] = state
       }
       if (unknown.length)
         throw new FigmaError(
@@ -168,6 +177,24 @@ export function inferMap(file: ComponentSetFile): FigmaMap {
     ;(side === 'before' ? before : after).push([slot, spec])
   }
 
+  // With no switch for a side, the layer there (if any variant has one) is a slot all the same, found beside the label.
+  for (const side of ['before', 'after'] as const) {
+    const list = side === 'before' ? before : after
+    if (list.length) continue
+    const there = variants.some((v) => {
+      const row = v.children ?? []
+      const text = descendants(v).find((d) => d.type === 'TEXT')
+      const at = row.findIndex(
+        (c) => c === text || (text !== undefined && descendants(c).includes(text)),
+      )
+      return at >= 0 && (side === 'before' ? at > 0 : at < row.length - 1)
+    })
+    if (!there) continue
+    const slot = side === 'before' ? 'leading' : 'trailing'
+    slots[slot] = { description: `something ${side} the label (optional)`, side }
+    list.push([slot, { beside: 'label', side }])
+  }
+
   const parts: Record<string, PartSpec> = { root: '$' }
   for (const [slot, spec] of before) parts[slot] = spec
   parts.label = labelSpecs.length === 1 ? labelSpecs[0]! : labelSpecs
@@ -177,10 +204,13 @@ export function inferMap(file: ComponentSetFile): FigmaMap {
   return {
     component: set.name,
     name,
-    kind: 'button',
-    role: 'button',
-    description: 'Triggers an action. Press it with a mouse, a finger, Enter or Space.',
-    behavior: 'press',
+    kind,
+    role: kind === 'button' ? 'button' : 'generic',
+    description:
+      kind === 'button'
+        ? 'Triggers an action. Press it with a mouse, a finger, Enter or Space.'
+        : `${name}, imported from Figma.`,
+    ...(kind === 'button' ? { behavior: 'press' } : {}),
     props,
     ignore,
     parts,

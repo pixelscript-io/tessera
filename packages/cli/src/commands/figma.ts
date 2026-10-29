@@ -148,6 +148,7 @@ export async function figma(args: Args, io: Io): Promise<number> {
           name: map.name,
           sample: map.sample ?? map.name,
           parts: Object.keys(map.parts),
+          kind: map.kind,
           slots: Object.keys(map.slots ?? {}),
           threshold: map.fidelity?.threshold ?? 0.01,
           variants: result.variants,
