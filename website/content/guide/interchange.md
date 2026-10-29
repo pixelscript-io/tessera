@@ -68,6 +68,45 @@ Themes come from `$themes`. A token set that **every** theme turns on is the bas
 
 Some things cannot be written as a Tessera token: a gradient, a typography or composition composite, a math expression such as `{spacing.base} * 2`, an `em` or percent letter spacing, or a token that references one of those. Each is skipped with a [T1016](/reference/errors/T1016) note that names it, and **kept** under `$extensions.tessera.skipped` in the file it came from. Nothing disappears silently, and `tessera tokens export` puts the skipped tokens back, so a design tool's own token survives a trip through Tessera.
 
+## From Figma styles
+
+A link to a page or a frame of a Figma file is a source like any file. `tessera tokens import` reads the styles used under it through Figma's REST API and makes one token file of them:
+
+```bash
+npx tessera tokens import "https://www.figma.com/design/KEY/Name?node-id=1-2"
+```
+
+The link is the one Figma copies for **Copy link to selection**. Point it at the page or frame that uses the styles (the Colors page, the Typography page), or give several links, or mix links with files. A link with no page or frame in it is refused, because a whole file is tens of megabytes.
+
+It needs a **personal access token** (Figma, Settings, Security, Personal access tokens, with the **File content** read scope) in your environment. It works on any plan, because it reads styles, not the Variables API, which needs Enterprise. The token is read from the environment only and is never written or printed.
+
+In a Bash terminal:
+
+```bash
+export FIGMA_TOKEN=your_token_here
+```
+
+In PowerShell:
+
+```powershell
+$env:FIGMA_TOKEN = "your_token_here"
+```
+
+A style's name is its path: `Gray/900` is `color.gray.900`, and `Base/White` is `color.base.white`, in lower case with dashes. A first segment that only names the kind of style (`Colors/`, `Shadows/`, `Typography/`) is dropped.
+
+| Figma style                            | Tessera tokens                                                                                                                                                                                                                    |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fill (a solid color, with its opacity) | A `color` token                                                                                                                                                                                                                   |
+| Effect: drop and inner shadows         | One `shadow` token, the layers from the top down, an inner shadow as `inset`                                                                                                                                                      |
+| Effect: layer or background blur       | A `blur` dimension                                                                                                                                                                                                                |
+| Text                                   | A `font.size`, a `font.weight`, a `font.line-height` and, if it is not zero, a `font.letter-spacing`, each at the style's path (`Text md/Medium` is `font.size.text-md.medium`), and each font family once as `font.family.inter` |
+
+Tessera has no text composite, which is why a text style is several tokens. What is left out is listed as [T1016](/reference/errors/T1016), with how many and an example: gradients (Tessera has no gradient token), layout grids, effects that are not shadows or blurs, a style with more than one paint, the text case and decoration of a text style (the rest of it is imported), and a style from a library that is not in the file. Two styles that make one path keep the first; a name that is a group and a token at once (`Gray` and `Gray/500`) is refused.
+
+Spacing and radii are not styles in Figma, so there is nothing to read for them: they arrive as variables, through [Tokens Studio or the plugin routes below](#the-figma-mapping).
+
+Tested on the Untitled UI kit: its Colors, Effect styles and Typography pages gave 350 colors, 14 shadows, 4 blurs, 45 text styles and a font family in two seconds, and the 519 tokens built with no errors. The 110 gradient styles and 2 text styles with a text case or underline were listed as left out.
+
 ## The Figma mapping
 
 Tessera does not ship a Figma plugin. The route from Figma is through a tool that writes tokens, and the mapping is the same in each:

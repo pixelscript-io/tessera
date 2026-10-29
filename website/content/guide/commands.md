@@ -179,8 +179,11 @@ npx tessera tokens build --out public/tokens
 
 Brings in tokens another tool wrote and writes Tessera token files: strict DTCG, a DTCG Resolver document, or a Tokens Studio or Penpot export. The format is detected unless `--format` says. Values from earlier drafts and from tools that write strings (`"#ff0000"`, `"16px"`) become the strict forms, and aliases stay aliases. What Tessera cannot represent (a gradient, a typography composite, a math expression) is skipped and reported. It writes nothing if the result does not build, and does not overwrite files without `--force`. See [Importing and exporting tokens](/guide/interchange).
 
+A link to a page or a frame of a Figma file is read through Figma's API (a personal access token in `FIGMA_TOKEN`): its color, shadow, blur and text styles become tokens. See [From Figma styles](/guide/interchange#from-figma-styles).
+
 ```bash
 npx tessera tokens import tokens-export.json --out system/brand/tokens
+npx tessera tokens import "https://www.figma.com/design/KEY/Name?node-id=1-2"
 ```
 
 ### `tessera tokens export`

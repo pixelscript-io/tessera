@@ -9,12 +9,14 @@ import {
   resolverRefs,
   type InterchangeFile,
   type InterchangeFormat,
+  type TokenDiagnostic,
 } from '@tessera/tokens'
 import { loadTokenDir } from '@tessera/tokens/node'
 import type { Args } from '../args'
 import { flag, has } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
+import { figmaTokenFromEnv, isFigmaLink, tokensFromFigma } from '../figma-styles'
 import { openProject } from '../project'
 
 const FORMATS = ['dtcg', 'tokens-studio']
@@ -38,6 +40,15 @@ async function tokensFolder(io: Io, args: Args): Promise<{ dir: string; root: st
 }
 
 const forward = (p: string) => p.replaceAll('\\', '/')
+
+/** What the styles of a Figma file made, as the report says it for one. */
+const SINGULAR: Record<string, string> = {
+  colors: 'color',
+  shadows: 'shadow',
+  blurs: 'blur',
+  'text styles': 'text style',
+  'font families': 'font family',
+}
 
 /** Every `.json` file under a path, as paths relative to the working folder (a Resolver names its files relatively). */
 function readInputs(io: Io, inputs: string[]): InterchangeFile[] {
@@ -129,11 +140,30 @@ async function importCommand(args: Args, inputs: string[], io: Io): Promise<numb
   if (!inputs.length) {
     throw new CliError(
       'Say which file or folder to import.',
-      'tessera tokens import tokens.resolver.json   (or a Tokens Studio export, or a DTCG file)',
+      'tessera tokens import tokens.resolver.json   (or a Tokens Studio export, a DTCG file, or a link to a Figma page)',
     )
   }
-  const files = readInputs(io, inputs)
+  // A link to a page or frame of a Figma file is read through its API: the styles under it become one DTCG file.
+  const links = inputs.filter(isFigmaLink)
+  const files = readInputs(
+    io,
+    inputs.filter((i) => !isFigmaLink(i)),
+  )
+  const notes: TokenDiagnostic[] = []
+  if (links.length) {
+    const made = await tokensFromFigma(links, figmaTokenFromEnv())
+    files.push(made.file)
+    notes.push(...made.diagnostics)
+    io.out(
+      `Read the styles under ${lines(links.length, 'Figma link')}: ${
+        Object.entries(made.counts)
+          .map(([kind, n]) => `${n} ${n === 1 ? (SINGULAR[kind] ?? kind) : kind}`)
+          .join(', ') || 'nothing that can be a token'
+      }.`,
+    )
+  }
   const result = importTokens(files, flag(args, 'format') === undefined ? 'auto' : formatOf(args))
+  result.diagnostics.unshift(...notes)
   for (const d of result.diagnostics)
     (d.severity === 'error' ? io.err : io.out)(formatDiagnostic(d) + '\n')
   const errors = result.diagnostics.filter((d) => d.severity === 'error').length
