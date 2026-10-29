@@ -77,7 +77,22 @@ export async function figma(args: Args, io: Io): Promise<number> {
     const inferred = map === undefined
     map ??= inferMap(file)
 
-    const result = importComponentSet(file, map)
+    // Where the files go, and the tokens an earlier import wrote: the tokens of every component of a design are in one
+    // file, so this import adds to it, and takes the colors it shares.
+    const project = await openProject(io.cwd, args)
+    const tokensFile = join(project.tokensDirOrDefault(), 'figma.tokens.json')
+    let earlierTokens: Record<string, unknown> | undefined
+    if (existsSync(tokensFile)) {
+      try {
+        earlierTokens = JSON.parse(readFileSync(tokensFile, 'utf8')) as Record<string, unknown>
+      } catch {
+        throw new CliError(
+          `The file ${shown(io, tokensFile)} is not valid JSON, so the tokens in it cannot be added to.`,
+          'Fix it, or move it away, and run the import again.',
+        )
+      }
+    }
+    const result = importComponentSet(file, map, earlierTokens)
     if (has(args, 'strict') && result.report.unbound.length) {
       throw new FigmaError(
         'F014',
@@ -96,8 +111,6 @@ export async function figma(args: Args, io: Io): Promise<number> {
       )
     }
 
-    // Where the files go.
-    const project = await openProject(io.cwd, args)
     const given = flag(args, 'out')
     const components =
       typeof given === 'string'
@@ -106,7 +119,6 @@ export async function figma(args: Args, io: Io): Promise<number> {
             project.root,
             FOLDERS.find((f) => existsSync(join(project.root, f))) ?? 'app/components',
           )
-    const tokensDir = project.tokensDirOrDefault()
     const design = join(components, 'figma', map.name)
     // A file is written again when the person says so, when an earlier import wrote it, or when it is the starter's own
     // (the Button the project began with): importing a design is what replaces that.
@@ -140,7 +152,10 @@ export async function figma(args: Args, io: Io): Promise<number> {
       wrote.push(shown(io, notes) + ' (removed: it described the starter Button)')
     }
     if (inferred) put(join(design, 'figma.map.json'), JSON.stringify(map, null, 2) + '\n')
-    put(join(tokensDir, 'figma.tokens.json'), JSON.stringify(result.tokens, null, 2) + '\n')
+    // The tokens file holds those of every import, so it is written again whatever is in it.
+    mkdirSync(dirname(tokensFile), { recursive: true })
+    writeFileSync(tokensFile, JSON.stringify(result.tokens, null, 2) + '\n')
+    wrote.push(shown(io, tokensFile))
     put(
       join(design, `${map.name}.figma.json`),
       JSON.stringify(

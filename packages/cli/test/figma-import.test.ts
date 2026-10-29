@@ -502,6 +502,82 @@ describe('a label in a row that is not a button', () => {
   }, 120_000)
 })
 
+describe('two components of one design', () => {
+  it('share one tokens file: the second import adds to it and takes the colors the first made', async () => {
+    const root = project()
+    const first = io(root)
+    expect(
+      await main(['figma', 'import', '--from-json', `${fixtures}/button-set.json`], first.handle),
+    ).toBe(0)
+    const tokensFile = join(root, 'system/tailwind/tokens/figma.tokens.json')
+    const before = JSON.parse(readFileSync(tokensFile, 'utf8'))
+
+    // A second component, with no --replace: the tokens file is not "already there", it is added to.
+    const second = io(root)
+    expect(
+      await main(
+        ['figma', 'import', '--from-json', `${fixtures}/../badge/button-set.json`],
+        second.handle,
+      ),
+    ).toBe(0)
+    expect(second.out()).not.toContain('figma.tokens.json (already there')
+    const after = JSON.parse(readFileSync(tokensFile, 'utf8'))
+    // The Button's tokens are all still there, unchanged, and the Badge's are with them.
+    for (const [name, token] of Object.entries(before.color))
+      if (!name.startsWith('$')) expect(after.color[name]).toEqual(token)
+    expect(Object.keys(after.color).length).toBeGreaterThan(Object.keys(before.color).length)
+    expect(Object.keys(after.color)).toContain('figma-error-200')
+    // A color both use is one token, not two.
+    expect(Object.keys(after.color).filter((n) => n.startsWith('figma-gray-200'))).toEqual([
+      'figma-gray-200',
+    ])
+
+    // Both components compile against it: nothing a component names is missing.
+    const checked = io(root)
+    expect(await main(['check'], checked.handle)).toBe(0)
+    expect(checked.out()).toContain('0 errors, 0 warnings')
+    expect(existsSync(join(root, 'system/components/Badge.tess'))).toBe(true)
+    expect(readFileSync(join(root, 'system/components/Button.tess'), 'utf8')).toContain(
+      'figma-brand-600',
+    )
+  }, 120_000)
+
+  it('numbers a color that has the name of one that is there with another value, and uses it', () => {
+    const existing = {
+      $description: 'Made by `tessera figma import`.',
+      color: {
+        $extensions: { tessera: { tier: 'semantic' } },
+        'figma-gray-200': {
+          $type: 'color',
+          $value: { colorSpace: 'srgb', components: [0, 0, 0] },
+        },
+      },
+    }
+    const result = importComponentSet(badge, inferMap(badge), existing)
+    const colors = result.tokens.color as Record<string, { $value: { components: number[] } }>
+    // The one that was there is kept as it was; this design's is the numbered one, and the component names that.
+    expect(colors['figma-gray-200']!.$value.components).toEqual([0, 0, 0])
+    expect(colors['figma-gray-200-2']).toBeDefined()
+    expect(result.tess).toContain('$color.figma-gray-200-2')
+    expect(result.tess).not.toMatch(/\$color\.figma-gray-200[^-]/)
+  })
+
+  it('says when the tokens file is not JSON, and writes nothing', async () => {
+    const root = project()
+    writeFileSync(join(root, 'system/tailwind/tokens/figma.tokens.json'), '{ not json')
+    const run = io(root)
+    const code = await main(
+      ['figma', 'import', '--from-json', `${fixtures}/button-set.json`],
+      run.handle,
+    )
+    expect(code).toBe(1)
+    expect(run.err()).toContain(
+      'The file system/tailwind/tokens/figma.tokens.json is not valid JSON, so the tokens in it cannot be added to.',
+    )
+    expect(existsSync(join(root, 'system/components/Button.figma.browser.test.ts'))).toBe(false)
+  }, 120_000)
+})
+
 describe('what is refused, so that nothing half imported looks done', () => {
   it('refuses a component with layers that are not a label or something beside one', () => {
     // Every variant gets a layer the importer has no part for: a track, say. (Where a dot comes before the label, a

@@ -173,6 +173,8 @@ The compiler refuses a raw value (T2102), so the import makes tokens for what th
 - A value that uses a Figma **style** gets a token named after the style: the fill style `Brand/600` is `$color.figma-brand-600`, and the effect style `Shadows/shadow-xs-skeuomorphic` is `$shadow.figma-shadows-shadow-xs-skeuomorphic`.
 - A value with **no style** gets a token named after the value (`$space.figma-14`, `$color.figma-1d2939`). The import lists these, because a design that uses styles everywhere has none. `--strict` stops instead.
 
+The tokens of every component you import are in the one file, `figma.tokens.json`. A later import adds to it, and a color two components share (the same style) is one token, not two. If a name is there already with a different value, the new one is numbered (`figma-gray-200-2`) and the new component uses that; the earlier one is left as it was. The file is rewritten by each import, so keep your own tokens in other files.
+
 These are your tokens now: rename them, alias them to your own, or point your components at others. The gradient border and the multi-layer shadow of this kit have no equivalent in a flat token set, so they are tokens like the rest: the design is kept exactly, and flattening it is a change you make in Figma.
 
 ## The test

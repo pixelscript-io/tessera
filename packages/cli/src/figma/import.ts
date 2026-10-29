@@ -59,7 +59,30 @@ type Json = Record<string, unknown>
 /** The tokens the import makes, in the groups the compiler governs, as one DTCG document. */
 export class TokenSet {
   private groups = new Map<string, Map<string, Json>>()
+  /** The tokens this import added (not the ones that were already there). */
   readonly names: string[] = []
+
+  /**
+   * `existing` is the document an earlier import wrote. Its tokens are kept, and a value this import needs that one of
+   * them already has is that token: two components of one design share their colors. A name that is there with another
+   * value is numbered, as two styles with one name are.
+   */
+  constructor(existing?: Json) {
+    if (existing) this.load(existing, [])
+  }
+
+  private load(node: Json, path: string[]): void {
+    for (const [key, value] of Object.entries(node)) {
+      if (key.startsWith('$') || typeof value !== 'object' || value === null) continue
+      const child = value as Json
+      if ('$value' in child) {
+        const group = path.join('.')
+        const bucket = this.groups.get(group) ?? new Map<string, Json>()
+        this.groups.set(group, bucket)
+        bucket.set(key, { $type: child.$type, $value: child.$value })
+      } else this.load(child, [...path, key])
+    }
+  }
 
   private add(group: string, name: string, type: string, value: unknown): string {
     const bucket = this.groups.get(group) ?? new Map<string, Json>()
@@ -408,7 +431,12 @@ export interface ImportResult {
  * in common: a property that the size alone decides is written once for each size, and one that the hierarchy and the
  * state decide once for each pair.
  */
-export function importComponentSet(file: ComponentSetFile, map: FigmaMap): ImportResult {
+export function importComponentSet(
+  file: ComponentSetFile,
+  map: FigmaMap,
+  /** The tokens an earlier import wrote, which this one adds to. */
+  existing?: Record<string, unknown>,
+): ImportResult {
   const set = file.set
   if (map.kind !== 'button' && map.kind !== 'inline')
     throw new FigmaError(
@@ -514,7 +542,12 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
   }
 
   const report: Report = { mapped: [], tokens: [], skipped: [], unbound: [] }
-  const ctx: Context = { tokens: new TokenSet(), styles: file.styles, report, skipped: new Set() }
+  const ctx: Context = {
+    tokens: new TokenSet(existing),
+    styles: file.styles,
+    report,
+    skipped: new Set(),
+  }
 
   // The layers, per part: the CSS each variant gives each part.
   const partNames = Object.keys(map.parts)
