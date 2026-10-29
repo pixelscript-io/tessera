@@ -17,6 +17,7 @@ import { flag, has } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
 import { figmaTokenFromEnv, isFigmaLink, tokensFromFigma } from '../figma-styles'
+import { fetchSources, isRemoteSource } from '../remote'
 import {
   addSetting,
   addTokenGroups,
@@ -153,10 +154,17 @@ async function importCommand(args: Args, inputs: string[], io: Io): Promise<numb
   }
   // A link to a page or frame of a Figma file is read through its API: the styles under it become one DTCG file.
   const links = inputs.filter(isFigmaLink)
+  const addresses = inputs.filter((i) => !isFigmaLink(i) && isRemoteSource(i))
   const files = readInputs(
     io,
-    inputs.filter((i) => !isFigmaLink(i)),
+    inputs.filter((i) => !isFigmaLink(i) && !isRemoteSource(i)),
   )
+  // An address: a file anywhere on https, or a file or folder on GitHub. Read-only, and bounded (see remote.ts).
+  if (addresses.length) {
+    const fetched = await fetchSources(addresses, { githubToken: process.env.GITHUB_TOKEN })
+    files.push(...fetched.files)
+    io.out(fetched.summary)
+  }
   const notes: TokenDiagnostic[] = []
   if (links.length) {
     const made = await tokensFromFigma(links, figmaTokenFromEnv())
@@ -237,9 +245,14 @@ function describeTokens(io: Io, root: string, dir: string): void {
       )
     }
   }
-  for (const u of result.unplaced) {
+  if (result.unplaced.length) {
+    const total = result.unplaced.reduce((n, u) => n + u.count, 0)
+    const examples = result.unplaced
+      .slice(0, 3)
+      .map((u) => `"${u.example}"`)
+      .join(', ')
     io.out(
-      `  Not placed: ${lines(u.count, `${u.type} token`)} in "${u.group}", for example "${u.example}": no spacing, radius or font size name. Name the group (space, radius, font.size) or set tokenGroups in tessera.config.ts.`,
+      `  Not placed: ${lines(total, 'length token')} in groups with no spacing, radius or font size name, for example ${examples}. Fine if they are not for padding, margin, gap, radius or font size; otherwise name the group (space, radius, font.size) or set tokenGroups in tessera.config.ts.`,
     )
   }
   const configPath = join(root, 'tessera.config.ts')

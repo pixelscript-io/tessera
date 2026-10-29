@@ -149,3 +149,14 @@ describe('Style Dictionary JSON without types', () => {
     expect(JSON.parse(r.base[0]!.content).a.$type).toBe('color')
   })
 })
+
+describe('notes', () => {
+  it('keep an example to one short line', () => {
+    const long = `0 1px 2px ${'rgb(0 0 0 / 5%), 0 1px 2px '.repeat(20)}red`
+    const css = `:root {\n  --big: calc(1px + ${long});\n}\n@media (min-width: 1px)\n  and (max-width: 9px) {\n  :root { --x: 1 }\n}`
+    const m = notes(importTokens([file('a.css', css)])).join('\n')
+    expect(m).toContain('...')
+    expect(m).not.toMatch(/for example "[^"]*\n/)
+    expect(m).toContain('@media (min-width: 1px) and (max-width: 9px) :root')
+  })
+})

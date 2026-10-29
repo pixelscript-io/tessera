@@ -198,13 +198,19 @@ function inferNumber(joined: string, text: string): Inferred {
   return { type: 'number', value: n }
 }
 
+/** An example in a note is one line and short: a real shadow or font stack can run to hundreds of characters. */
+const shorten = (text: string): string => {
+  const one = text.replace(/\s+/g, ' ').trim()
+  return one.length > 100 ? `${one.slice(0, 97)}...` : one
+}
+
 /** What is left out, counted: `reason: N, for example "x".` */
 class Skips {
   private reasons = new Map<string, { count: number; example: string }>()
   add(reason: string, example: string) {
     const entry = this.reasons.get(reason)
     if (entry) entry.count++
-    else this.reasons.set(reason, { count: 1, example })
+    else this.reasons.set(reason, { count: 1, example: shorten(example) })
   }
   notes(file: string): TokenDiagnostic[] {
     return [...this.reasons].map(([reason, { count, example }]) =>
@@ -316,7 +322,7 @@ function readCss(source: string): CssRead {
     const found = customProperties(declarations)
     if (rootLike) read.declarations.push(...found)
     else if (found.length) {
-      const where = context.join(' ') || 'the file'
+      const where = context.join(' ').replace(/\s+/g, ' ') || 'the file'
       read.elsewhere.set(where, (read.elsewhere.get(where) ?? 0) + found.length)
     }
     for (const { head, body } of nested) {

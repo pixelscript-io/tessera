@@ -140,6 +140,9 @@ const withoutRoot = (path: string) => path.replace(/\.\$root$/, '')
 const parentGroup = (segments: string[]): string =>
   segments.length > 1 ? segments.slice(0, -1).join('.') : segments.join('.')
 
+/** More groups than this for one kind are named by their first segment. */
+const MANY_GROUPS = 4
+
 export function classifyTokens(tokens: TokenRef[]): Classification {
   const groups = new Map<TokenCategory, Map<string, number>>()
   const unplaced = new Map<
@@ -160,7 +163,7 @@ export function classifyTokens(tokens: TokenRef[]): Classification {
       (r) => r.type === type && (r.at(segments) !== -1 || UNAMBIGUOUS.has(r.category)),
     )
     if (!rule) {
-      if (type === 'dimension' || type === 'number') {
+      if (type === 'dimension') {
         const group = parentGroup(segments)
         const key = `${group}|${type}`
         const entry = unplaced.get(key)
@@ -179,7 +182,12 @@ export function classifyTokens(tokens: TokenRef[]): Classification {
   const tokenGroups: Classification['tokenGroups'] = {}
   const found: Classification['found'] = []
   for (const [category, map] of groups) {
-    const names = [...map.keys()].sort()
+    let names = [...map.keys()].sort()
+    // A design system with its tokens spread through components (bs.btn.input.gap, bs.list.padding) has a group for
+    // each. Past a few, name the top-level groups instead, which is what a person would write.
+    if (names.length > MANY_GROUPS) {
+      names = [...new Set(names.map((g) => g.split('.')[0]!))].sort()
+    }
     found.push({ category, groups: names, count: [...map.values()].reduce((a, b) => a + b, 0) })
     const home = TOKEN_CATEGORIES[category]
     // Already read from the default group (or below it): nothing to say.

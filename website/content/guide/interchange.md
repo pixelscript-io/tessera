@@ -68,6 +68,20 @@ Themes come from `$themes`. A token set that **every** theme turns on is the bas
 
 Some things cannot be written as a Tessera token: a gradient, a typography or composition composite, a math expression such as `{spacing.base} * 2`, an `em` or percent letter spacing, or a token that references one of those. Each is skipped with a [T1016](/reference/errors/T1016) note that names it, and **kept** under `$extensions.tessera.skipped` in the file it came from. Nothing disappears silently, and `tessera tokens export` puts the skipped tokens back, so a design tool's own token survives a trip through Tessera.
 
+## From an address or a GitHub repository
+
+A source can be a web address instead of a file, so a team can import from where its tokens already are:
+
+```bash
+npx tessera tokens import https://example.com/design/tokens.json
+npx tessera tokens import https://github.com/acme/design/blob/main/src/globals.css
+npx tessera tokens import https://github.com/acme/design/tree/main/tokens   # every .json and .css file below it
+```
+
+An address is read as a file (named by its last part, or by what is in it when it has no extension). A GitHub file or folder page address is turned into the raw file or GitHub's own listing of the folder, three levels deep; `package.json`, `tsconfig.json` and similar files, `node_modules` and dot folders are skipped. A Resolver document's files that sit beside it or below it are fetched with it. A bare repository address is not enough: say which file or folder. For a private repository, set `GITHUB_TOKEN` to a token that can read it; it is sent only to GitHub's hosts and is never printed or written.
+
+What is read is limited, because the address may have come from somewhere you do not control: https only (no `http://`), no user name or password in the address, no IP address, `localhost` or internal name (also after a redirect, of which three are followed), at most 2 MB a file, 50 files and 80 requests, and 15 seconds a request. An address that answers with a web page is refused with a hint. Download the file and import it from disk for anything these rules refuse.
+
 ## From CSS variables and untyped JSON
 
 Most teams do not have their tokens in a token format. They have a stylesheet of custom properties, or the JSON of Style Dictionary, which has no types. `tessera tokens import` reads both, and **keeps your names**: nothing is renamed to fit Tessera, and no size, naming scheme or number of tiers is required.

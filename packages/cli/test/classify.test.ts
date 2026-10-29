@@ -55,16 +55,16 @@ describe('classifyTokens', () => {
     expect(r.tokenGroups.space).toEqual(['Spacing'])
   })
 
-  it('counts dimensions it cannot place instead of guessing', () => {
+  it('counts lengths it cannot place instead of guessing, and does not mention numbers no property governs', () => {
     const r = classifyTokens([
       t('sizes.px', 'dimension'),
       t('sizes.1', 'dimension'),
       t('z.modal', 'number'),
+      t('line.height', 'number'),
     ])
     expect(r.tokenGroups).toEqual({})
     expect(r.unplaced).toEqual([
       { group: 'sizes', type: 'dimension', count: 2, example: 'sizes.px' },
-      { group: 'z', type: 'number', count: 1, example: 'z.modal' },
     ])
   })
 
@@ -100,5 +100,27 @@ describe('addTokenGroups', () => {
 
   it('writes false for any group', () => {
     expect(tokenGroupsSource({ color: false })).toBe('tokenGroups: { color: false }')
+  })
+})
+
+describe('many groups', () => {
+  it('names the top-level group when a kind is spread through components', () => {
+    const r = classifyTokens(
+      [
+        'bs.btn.gap',
+        'bs.btn.lg.gap',
+        'bs.list.padding',
+        'bs.spacer',
+        'bs.card.margin',
+        'bs.legend.margin',
+      ].map((p) => t(p, 'dimension')),
+    )
+    expect(r.tokenGroups).toEqual({ space: ['bs'] })
+    expect(r.found[0]!.groups).toEqual(['bs'])
+  })
+
+  it('keeps a few groups as they are', () => {
+    const r = classifyTokens([t('spacing.4', 'dimension'), t('layout.gap.md', 'dimension')])
+    expect(r.tokenGroups).toEqual({ space: ['layout.gap', 'spacing'] })
   })
 })
