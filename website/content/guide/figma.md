@@ -4,25 +4,75 @@ Introduced in v0.14 (Milestone 51).
 
 `tessera figma import` turns one component set of a Figma file into a Tessera component: its structure, its variants and its styles. It also writes a test that compares the component with the design, variant by variant, so "it matches" is something that is checked.
 
-It does not guess what a design cannot say. Figma knows how a button looks. It does not know that it is a button, what the keyboard does, or which of its properties are props and which are states. A hand-written **map** says that, and the import refuses to continue when the map and the design disagree.
+It needs nothing but the link. Figma says a lot about what a component is: its variant properties, which of them is the state, which layer each icon switch controls, and where the text is. The import reads all of that and writes down what it understood, in a **map** next to the component, which you can change and use again. What Figma cannot say is behavior (that it is a button), so the kind is read from the name, and only a button can be imported so far.
 
 ::: tip What was tested
-The Button of the Untitled UI kit (the Buttons page: 380 variants of size, hierarchy, icon and state), read through Figma's REST API on a Pro plan. Every one of its 380 variants has the right box for each part in a real browser, and the pictures Figma made of 47 of them were compared with the component. The section on what the comparison does and does not prove says what that covers. Only a button can be imported so far.
+The Button of the Untitled UI kit (the Buttons page: 380 variants of size, hierarchy, icon and state, and a smaller page of 120), read through Figma's REST API on a Pro plan. Every one of the 380 variants has the right box for each part in a real browser, and the pictures Figma made of 47 of them were compared with the component. The section on what the comparison does and does not prove says what that covers.
 :::
 
 ## What you need
 
 - A Figma file with the component set, and a **personal access token** (Figma, Settings, Security, Personal access tokens) with the **File content** read scope. The free plan works: the import uses the file and image endpoints, not the Variables API, which needs an Enterprise plan.
-- The token in your environment, never in a file:
+- The token in your environment, never in a file. In a Bash terminal:
 
 ```bash
 export FIGMA_TOKEN=your_token_here
 ```
 
-- A map, `figma.map.json`.
-- Optional: the design's font as a file, so the comparison draws the same type.
+In PowerShell:
 
-## The map
+```powershell
+$env:FIGMA_TOKEN = "your_token_here"
+```
+
+- A Tessera project to import into.
+
+## Import
+
+```bash
+npx tessera figma import --url "https://www.figma.com/design/KEY/Name?node-id=1-1183"
+```
+
+The link is the one Figma copies for **Copy link to selection** on the page or on the component set. A page with one component set is enough. If it has several, the import lists them and `--component "Buttons/Button"` says which. To work without a token, from a response you saved:
+
+```bash
+npx tessera figma import --from-json button-set.json
+```
+
+It writes, in `system/components` or `app/components` (or `--out`):
+
+- `Button.tess`: the contract, the template, and the styles;
+- `figma/Button/`: `figma.map.json` (what it understood), the numbers the test compares with, and Figma's pictures of the variants;
+- `Button.figma.browser.test.ts`: the test;
+
+and, in the project's tokens folder, `figma.tokens.json`. It also sets up the browser tests that run it, as [`tessera a11y`](/guide/commands#tessera-a11y) does (a Vitest configuration and dev dependencies). After it:
+
+```bash
+npm install
+npm run dev
+npm run test:a11y
+```
+
+`npm run dev` shows the component in the design system docs. `npm run test:a11y` runs the comparison with the design, and the accessibility tests generated from the component's contract.
+
+It writes over the Button the project started with (and the notes that described it) and over what an earlier import wrote. It never writes over a file of yours without `--replace`, and says which it left.
+
+## What it works out
+
+| Figma                                                                   | Tessera                                                                                                |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| The set's name (`Buttons/Button`)                                       | The component's name (`Button`), and the kind (a button)                                               |
+| A variant property (`Size`, `Hierarchy`, `Icon`)                        | A prop, in lower case, with the design's default first                                                 |
+| The property for the state (`State`: Default, Hover, Focused, Disabled) | Pseudo-classes: none, `:hover`, `:focus-visible`, `:disabled`                                          |
+| A switch that shows or hides a layer (`Icon leading`, `Icon trailing`)  | A slot of that name (`icon-leading`, `icon-trailing`), before or after the label by where the layer is |
+| An instance swap for that icon                                          | Nothing: the icon is what the slot holds                                                               |
+| The text layer, and the frame around it                                 | The `label` part                                                                                       |
+
+A slot and a prop can not have the same name (the docs could not tell them apart), which is why the slot is `icon-leading` and not `icon` next to a prop `icon`. The slots show the design's own placeholder in the docs, a ring the size of an icon, instead of text.
+
+### A map of your own
+
+The import writes the map it used as `figma/Button/figma.map.json`. Edit it and give it back with `--map` to change what it says, for example to name a prop differently, to say which of several layers is which part, or to give the design's font for the comparison:
 
 ```json
 {
@@ -33,9 +83,8 @@ export FIGMA_TOKEN=your_token_here
   "description": "Triggers an action. Press it with a mouse, a finger, Enter or Space.",
   "behavior": "press",
   "props": {
-    "Size": { "prop": "size", "default": "md" },
+    "Size": { "prop": "size", "default": "sm" },
     "Hierarchy": { "prop": "hierarchy", "default": "Primary" },
-    "Icon": { "prop": "icon", "default": "Default" },
     "State": {
       "states": {
         "Default": null,
@@ -45,66 +94,44 @@ export FIGMA_TOKEN=your_token_here
       }
     }
   },
-  "ignore": {
-    "⬅️ Icon leading#3287:1577": "an icon is a slot: it shows when the slot has something in it"
-  },
+  "ignore": { "🔀 Icon leading swap#3466:91": "the icon is what the slot holds" },
   "parts": {
     "root": "$",
-    "icon": [{ "layer": "placeholder", "index": 0 }, { "layer": "_Dot" }],
+    "icon-leading": [
+      { "property": ["⬅️ Icon leading#3287:1577"] },
+      { "beside": "label", "side": "before" }
+    ],
     "label": [
       { "layer": "Text padding", "text": "Text" },
       { "layer": "Text", "text": "Text" }
-    ],
-    "icon-end": { "layer": "placeholder", "index": 1 }
+    ]
   },
-  "slots": {
-    "icon": "optional icon before the label",
-    "icon-end": "optional icon after the label"
-  },
-  "sample": "Button CTA",
+  "slots": { "icon-leading": { "description": "an icon before the label", "side": "before" } },
   "fidelity": {
     "threshold": 0.01,
-    "ignore": ["icon", "icon-end", "label"],
+    "ignore": ["icon-leading", "label"],
     "fonts": [{ "family": "Inter", "file": "fonts/Inter.woff2" }]
   }
 }
 ```
 
-| Key         | What it says                                                                                                                                                                                                                |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `component` | The name of the component set in Figma.                                                                                                                                                                                     |
-| `name`      | The name of the Tessera component.                                                                                                                                                                                          |
-| `props`     | Each variant property of the set. A normal one becomes a prop, with the value to use as the default. **One** is the state: each of its values is a pseudo-class (`hover`, `focus-visible`, `disabled`), or `null` for none. |
-| `ignore`    | The other properties of the set (booleans, instance swaps), each with why it is not a prop.                                                                                                                                 |
-| `parts`     | Which layer is which part. `"$"` is the component itself. A layer is found by name (`index` picks the n-th of that name). A list is tried in order: a variant may draw the same part with another layer.                    |
-| `fidelity`  | `threshold` is the share of pixels that may differ (default 1%). `ignore` lists the parts whose pixels are not compared: an icon is what the caller puts in the slot. `fonts` are files, relative to the map.               |
+| Key         | What it says                                                                                                                                                                                                                                             |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `component` | The name of the component set in Figma.                                                                                                                                                                                                                  |
+| `name`      | The name of the Tessera component.                                                                                                                                                                                                                       |
+| `props`     | Each variant property of the set. A normal one becomes a prop, with the value to use as the default. **One** is the state: each of its values is a pseudo-class (`hover`, `focus-visible`, `disabled`), or `null` for none.                              |
+| `ignore`    | The other properties of the set (booleans, instance swaps) that are not a prop or a slot, each with why.                                                                                                                                                 |
+| `parts`     | Which layer is which part. `"$"` is the component itself. A layer is found by `layer` name (`index` picks the n-th), by the `property` (switch or swap) that controls it, or `beside` the label (`side`: `before` or `after`). A list is tried in order. |
+| `slots`     | The parts that hold what the caller gives, with their side of the label.                                                                                                                                                                                 |
+| `fidelity`  | `threshold` is the share of pixels that may differ (default 1%). `ignore` lists the parts whose pixels are not compared. `fonts` are files, relative to the map.                                                                                         |
 
-What the map does not mention is an error, not a default:
+With a map you give, what it does not mention is an error, not a default:
 
 ```text
 F003: The variant property "Hierarchy" is not in the map.
 F005: The boolean property "⬅️ Icon leading#3287:1577" is not in the map.
 F004: The state values "Hover" of "State" are not in the map.
 ```
-
-## Import
-
-```bash
-npx tessera figma import --map figma.map.json --url "https://www.figma.com/design/KEY/Name?node-id=1-1183"
-```
-
-The link is the one Figma copies for **Copy link to selection** on the page or the set. The set named in `component` is found inside it. To work without a token, from a response you saved:
-
-```bash
-npx tessera figma import --map figma.map.json --from-json button-set.json
-```
-
-It writes, in `system/components` or `app/components` (or `--out`):
-
-- `Button.tess`: the contract, the template, and the styles;
-- `Button.figma.browser.test.ts` and `figma/Button/`: the test, the numbers it compares with, Figma's pictures of the variants and the font;
-
-and, in the project's tokens folder, `figma.tokens.json`. It never overwrites a file without `--replace`, and says which it left.
 
 ## How the styles are made
 
@@ -116,7 +143,8 @@ Then every variant is replayed against the stylesheet, in the order the rules ar
 - **A stroke** is drawn as an outline pulled inward (`outline` and a negative `outline-offset`), because in Figma a stroke sits inside the box and does not change its size, and a CSS border would.
 - **A gradient stroke** is a gradient under the fill, which is smaller by the width of the stroke.
 - **Shadows** keep their order (Figma lists them from the bottom up, CSS from the top down), with the inner ones as `inset`.
-- **An icon** is a slot. A part that is empty is hidden (`.icon:empty`), as in the Figma variants that have none.
+- **An icon** is a slot. A slot that is empty is hidden (`.icon-leading:empty`), as in the Figma variants that have none.
+- **A label the design does not show** (an icon-only button) is hidden from the eye and kept for a screen reader, with a one-pixel clip. `display: none` would also take it from the accessibility tree, and an icon-only button would have no name. The generated accessibility tests found that.
 - **Layout** comes from auto layout: direction, gap, padding, alignment, and fixed sizes. A layer that is not in an auto layout is reported and not translated.
 
 ## Tokens
@@ -130,7 +158,7 @@ These are your tokens now: rename them, alias them to your own, or point your co
 
 ## The test
 
-`tessera a11y` sets up the browser tests, and the import writes one more beside the component. Run it with the others:
+The import sets up the browser tests (as `tessera a11y` does) and writes one more beside the component. Run them together:
 
 ```bash
 npm run test:a11y
@@ -161,7 +189,7 @@ Components other than a button, nested instances as slots, icons as vector layer
 
 | Code         | Means                                                                                               |
 | ------------ | --------------------------------------------------------------------------------------------------- |
-| F001         | The map's `kind` is not `button`.                                                                   |
+| F001         | The set is not a button (by its name, or the map's `kind`). Only a button can be imported so far.   |
 | F002         | The set in the map is not the set in the file.                                                      |
 | F003 to F006 | A property of the set is not in the map, or the map names one the set does not have.                |
 | F008         | `parts` has no `"root": "$"`.                                                                       |
@@ -170,3 +198,6 @@ Components other than a button, nested instances as slots, icons as vector layer
 | F011         | The link has no file or node.                                                                       |
 | F012         | Figma refused: the token is wrong, expired, or lacks the scope; or the file is not visible to it.   |
 | F014         | `--strict`, and a value has no style.                                                               |
+| F015         | A slot has the name of a prop.                                                                      |
+| F016         | The set has no text layer to be the label.                                                          |
+| F017         | The link has several component sets: say which with `--component`.                                  |

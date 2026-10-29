@@ -1,10 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type { Args } from '../args'
 import { flag, has } from '../args'
 import { fetchComponentSet, fetchImages, parseSource, tokenFromEnv } from '../figma/fetch'
 import { fidelityTestFile } from '../figma/fidelity'
 import { importComponentSet } from '../figma/import'
+import { inferMap } from '../figma/infer'
+import { a11y } from './a11y'
+import { presetFiles } from './init'
 import { FigmaError, type ComponentSetFile, type FigmaMap } from '../figma/model'
 import type { Io } from '../io'
 import { CliError } from '../io'
@@ -40,16 +43,14 @@ export async function figma(args: Args, io: Io): Promise<number> {
   if (sub !== 'import') {
     throw new CliError(
       sub ? `Unknown figma command "${sub}".` : 'Say what to do with Figma.',
-      'Available: tessera figma import --map <file> (--url <link> | --from-json <file>)',
+      'Available: tessera figma import --url <link>',
     )
   }
+  // The map is optional: the design says almost everything, and what it says is written next to the component so it
+  // can be changed and used again.
   const mapPath = flag(args, 'map')
-  if (typeof mapPath !== 'string')
-    throw new CliError(
-      'Say which map to use: --map <file>.',
-      'The map says which Figma component set becomes which component, and what its parts, props and states are.',
-    )
-  const map = readJson<FigmaMap>(io, mapPath, 'map')
+  let map = typeof mapPath === 'string' ? readJson<FigmaMap>(io, mapPath, 'map') : undefined
+  const component = flag(args, 'component')
 
   try {
     // Where the data comes from.
@@ -67,8 +68,14 @@ export async function figma(args: Args, io: Io): Promise<number> {
         typeof flag(args, 'file') === 'string' ? String(flag(args, 'file')) : undefined,
         typeof flag(args, 'node') === 'string' ? String(flag(args, 'node')) : undefined,
       )
-      file = await fetchComponentSet(source, map.component, token)
+      file = await fetchComponentSet(
+        source,
+        map?.component ?? (typeof component === 'string' ? component : undefined),
+        token,
+      )
     }
+    const inferred = map === undefined
+    map ??= inferMap(file)
 
     const result = importComponentSet(file, map)
     if (has(args, 'strict') && result.report.unbound.length) {
@@ -101,12 +108,22 @@ export async function figma(args: Args, io: Io): Promise<number> {
           )
     const tokensDir = project.tokensDirOrDefault()
     const design = join(components, 'figma', map.name)
-    const replace = has(args, 'replace')
+    // A file is written again when the person says so, when an earlier import wrote it, or when it is the starter's own
+    // (the Button the project began with): importing a design is what replaces that.
+    const starters = new Set(
+      ['tailwind', 'unstyled'].flatMap((preset) =>
+        Object.values(presetFiles(preset as 'tailwind')),
+      ),
+    )
+    const earlier = existsSync(join(design, map.name + '.figma.json'))
+    const replace = has(args, 'replace') || earlier
+    const replaceable = (abs: string) =>
+      replace || (existsSync(abs) && starters.has(readFileSync(abs, 'utf8')))
 
     const wrote: string[] = []
     const left: string[] = []
     const put = (abs: string, content: string | Uint8Array) => {
-      if (existsSync(abs) && !replace) {
+      if (existsSync(abs) && !replaceable(abs)) {
         left.push(shown(io, abs))
         return
       }
@@ -115,7 +132,14 @@ export async function figma(args: Args, io: Io): Promise<number> {
       wrote.push(shown(io, abs))
     }
 
-    put(join(components, `${map.name}.tess`), result.tess)
+    put(join(components, map.name + '.tess'), result.tess)
+    // The starter's notes on its own Button describe a component that is no longer there.
+    const notes = join(components, map.name + '.docs.md')
+    if (existsSync(notes) && starters.has(readFileSync(notes, 'utf8'))) {
+      rmSync(notes)
+      wrote.push(shown(io, notes) + ' (removed: it described the starter Button)')
+    }
+    if (inferred) put(join(design, 'figma.map.json'), JSON.stringify(map, null, 2) + '\n')
     put(join(tokensDir, 'figma.tokens.json'), JSON.stringify(result.tokens, null, 2) + '\n')
     put(
       join(design, `${map.name}.figma.json`),
@@ -124,6 +148,7 @@ export async function figma(args: Args, io: Io): Promise<number> {
           name: map.name,
           sample: map.sample ?? map.name,
           parts: Object.keys(map.parts),
+          slots: Object.keys(map.slots ?? {}),
           threshold: map.fidelity?.threshold ?? 0.01,
           variants: result.variants,
         },
@@ -140,7 +165,7 @@ export async function figma(args: Args, io: Io): Promise<number> {
     for (const font of fonts) {
       const from = isAbsolute(font.file)
         ? font.file
-        : resolve(dirname(resolve(io.cwd, mapPath)), font.file)
+        : resolve(dirname(resolve(io.cwd, String(mapPath))), font.file)
       if (!existsSync(from))
         throw new CliError(`The font file "${font.file}" in the map is not there.`)
       put(join(design, 'fonts', font.file.split('/').pop()!), readFileSync(from))
@@ -154,8 +179,17 @@ export async function figma(args: Args, io: Io): Promise<number> {
       }),
     )
 
+    // The tests that come with it need the browser setup of `tessera a11y`; it is done here, and never overwrites a file.
+    const quiet: Io = { ...io, out: () => {}, err: () => {}, ui: undefined }
+    await a11y({ positional: [], flags: new Map() }, quiet).catch(() => 1)
+
     const ui = io.ui
     const r = result.report
+    const note = inferred
+      ? 'The map was worked out from the design and is in ' +
+        shown(io, join(design, 'figma.map.json')) +
+        '; use it with --map to change what it says.'
+      : undefined
     if (ui) {
       io.out(ui.ok(ui.bold(`Imported ${map.name} from Figma`)))
       io.out('')
@@ -174,11 +208,15 @@ export async function figma(args: Args, io: Io): Promise<number> {
             `  ${r.unbound.length} value${r.unbound.length === 1 ? '' : 's'} had no style in Figma, so ${r.unbound.length === 1 ? 'its token is' : 'their tokens are'} named from the value. Use --strict to stop on these.`,
           ),
         )
+      if (note) io.out(ui.dim('  ' + note))
       io.out('')
       io.out(ui.heading('Next'))
-      io.out(`  ${ui.dim('1')}  ${ui.bold('npx tessera check')}`)
+      io.out(`  ${ui.dim('1')}  ${ui.bold('npm install')}`)
       io.out(
-        `  ${ui.dim('2')}  ${ui.bold('npx tessera a11y')}  ${ui.dim('(once), then')} ${ui.bold('npm run test:a11y')}`,
+        `  ${ui.dim('2')}  ${ui.bold('npm run dev')}  ${ui.dim('and open the docs to see ' + map.name)}`,
+      )
+      io.out(
+        `  ${ui.dim('3')}  ${ui.bold('npm run test:a11y')}  ${ui.dim('to test it against the design')}`,
       )
       return 0
     }
@@ -189,6 +227,8 @@ export async function figma(args: Args, io: Io): Promise<number> {
     for (const line of r.mapped) io.out(`- ${line}`)
     io.out(`- ${r.tokens.length} tokens made from the design's styles and values`)
     for (const line of r.skipped) io.out(`Skipped: ${line}`)
+    if (note) io.out(note)
+    io.out('Next: npm install, npm run dev (and open the docs), npm run test:a11y.')
     return 0
   } catch (error) {
     if (error instanceof FigmaError)

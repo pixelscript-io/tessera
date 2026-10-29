@@ -24,6 +24,24 @@ const INITIAL: Record<string, string> = {
   gap: '0',
   opacity: '1',
   display: 'none',
+  position: 'static',
+  width: 'auto',
+  height: 'auto',
+  overflow: 'visible',
+  clip: 'auto',
+}
+
+/**
+ * A label the design does not show (an icon-only button) is hidden from the eye and not from a screen reader: it is
+ * the button's name. `display: none` would take it from both.
+ */
+const HIDDEN_TEXT: Record<string, string> = {
+  display: 'flex',
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
 }
 
 const n2 = (n: number): number => Math.round(n * 100) / 100
@@ -162,19 +180,35 @@ function descendants(node: FigmaNode): FigmaNode[] {
 }
 
 /** The layer a part is, in one variant: the n-th layer of that name, or nothing if this variant has none. */
-function findLayer(root: FigmaNode, ref: PartRef): FigmaNode | undefined {
+function findLayer(root: FigmaNode, ref: PartRef, label?: FigmaNode): FigmaNode | undefined {
   if (ref === '$') return root
-  const found = descendants(root).filter((d) => d.name === ref.layer)
-  return found[ref.index ?? 0]
+  if ('layer' in ref) return descendants(root).filter((d) => d.name === ref.layer)[ref.index ?? 0]
+  if ('property' in ref) {
+    // The layer that a switch or a swap of the component controls: the design says which layer is which.
+    return descendants(root).find((d) => {
+      const r = d.componentPropertyReferences
+      return !!r && ref.property.some((p) => r.visible === p || r.mainComponent === p)
+    })
+  }
+  // The layer next to the label in the row of the root. With no label (an icon-only button) the one layer is the first.
+  const row = root.children ?? []
+  const at = label ? row.findIndex((c) => c === label || descendants(c).includes(label)) : -1
+  if (at < 0) return ref.side === 'before' ? row[0] : undefined
+  return row[ref.side === 'before' ? at - 1 : at + 1]
 }
 
 /** The layer of a variant that a part is, with the reference that found it. */
 function resolvePart(
   root: FigmaNode,
   spec: PartSpec,
+  parts: Record<string, PartSpec>,
+  depth = 0,
 ): { layer: FigmaNode; ref: PartRef } | undefined {
   for (const ref of [spec].flat()) {
-    const layer = findLayer(root, ref)
+    const beside = typeof ref === 'object' && 'beside' in ref ? parts[ref.beside] : undefined
+    const label =
+      beside && depth < 2 ? resolvePart(root, beside, parts, depth + 1)?.layer : undefined
+    const layer = findLayer(root, ref, label)
     if (layer) return { layer, ref }
   }
   return undefined
@@ -387,7 +421,15 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
     )
   const defs = set.componentPropertyDefinitions ?? {}
 
-  // Every property of the set is accounted for in the map, or the import says which is not.
+  // Every property of the set is accounted for in the map, or the import says which is not. A switch or a swap that a
+  // part is tied to is accounted for by that part.
+  const tied = new Set(
+    Object.values(map.parts).flatMap((spec) =>
+      [spec]
+        .flat()
+        .flatMap((ref) => (typeof ref === 'object' && 'property' in ref ? ref.property : [])),
+    ),
+  )
   const axes: AxisInfo[] = []
   for (const [name, def] of Object.entries(defs)) {
     const given = map.props[name]
@@ -426,7 +468,7 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
           defaultValue: given.default ?? String(def.defaultValue ?? options[0]),
         })
       }
-    } else if (!(name in (map.ignore ?? {}))) {
+    } else if (!(name in (map.ignore ?? {})) && !tied.has(name)) {
       throw new FigmaError(
         'F005',
         `The ${def.type.toLowerCase()} property "${name}" is not in the map.`,
@@ -443,6 +485,15 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
   }
   const stateAxis = axes.find((a) => a.states)
   const propAxes = axes.filter((a) => !a.states)
+  for (const slot of Object.keys(map.slots ?? {})) {
+    const clash = propAxes.find((a) => a.prop === slot)
+    if (clash)
+      throw new FigmaError(
+        'F015',
+        'The slot "' + slot + '" has the same name as the prop "' + clash.prop + '".',
+        'A slot and a prop of one name cannot both be controlled in the docs. Rename the slot in "slots" and "parts".',
+      )
+  }
 
   const variants = (set.children ?? []).filter((c) => c.type === 'COMPONENT').map(parseVariant)
   if (!variants.length) throw new FigmaError('F007', `The set "${set.name}" has no variants.`)
@@ -458,14 +509,20 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
     const styles = new Map<string, Record<string, string> | undefined>()
     const boxes = new Map<string, FigmaNode | undefined>()
     for (const part of partNames) {
-      const found = resolvePart(v.node, map.parts[part]!)
+      const found = resolvePart(v.node, map.parts[part]!, map.parts)
       boxes.set(part, found?.layer)
       if (!found || found.layer.visible === false) {
-        styles.set(part, undefined)
+        const holdsText = [map.parts[part]!]
+          .flat()
+          .some((r) => typeof r === 'object' && 'text' in r && r.text)
+        styles.set(part, holdsText ? HIDDEN_TEXT : undefined)
         continue
       }
       const { layer, ref } = found
-      const text = ref !== '$' && ref.text ? firstText(layer, ref.text) : undefined
+      const text =
+        typeof ref === 'object' && 'text' in ref && ref.text
+          ? firstText(layer, ref.text)
+          : undefined
       styles.set(part, layerStyle(ctx, layer, ref === '$' ? 'root' : 'part', text))
     }
     const root = styles.get('root')
@@ -607,11 +664,25 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
         .filter(Boolean)
         .map((s) => s.slice(1))
     : []
-  const sample =
-    map.sample ??
-    firstText(findLayer(variants[0]!.node, '$') ?? variants[0]!.node)?.characters ??
-    map.name
-  const slotsDecl: Record<string, string> = { default: 'label content', ...(map.slots ?? {}) }
+  const sample = map.sample ?? firstText(variants[0]!.node)?.characters ?? map.name
+  const slotEntries = Object.entries(map.slots ?? {}).map(([name, v], i) => ({
+    name,
+    description: typeof v === 'string' ? v : v.description,
+    // A slot with no side is before the label if it is the first, after it otherwise.
+    side: (typeof v === 'object' && v.side) || (i === 0 ? 'before' : 'after'),
+  }))
+  const slotsDecl: Record<string, string> = {
+    default: 'label content',
+    ...Object.fromEntries(slotEntries.map((s) => [s.name, s.description])),
+  }
+  // In the docs an icon slot shows what the design's own placeholder is: a ring the size of an icon.
+  const ring = {
+    tag: 'span',
+    attrs: {
+      style:
+        'display: block; box-sizing: border-box; width: 16.67px; height: 16.67px; border: 1.67px solid currentColor; border-radius: 50%;',
+    },
+  }
   const contract = {
     name: map.name,
     role: map.role,
@@ -625,16 +696,20 @@ export function importComponentSet(file: ComponentSetFile, map: FigmaMap): Impor
     events: {
       press: "fired on click, Enter, or Space, with { source: 'pointer' | 'keyboard' | 'virtual' }",
     },
-    preview: { slots: { default: sample } },
+    preview: {
+      slots: { default: sample, ...Object.fromEntries(slotEntries.map((s) => [s.name, ring])) },
+    },
   }
-  const iconPart = partNames.find((p) => p === 'icon')
-  const endPart = partNames.find((p) => p === 'icon-end')
+  const slotLine = (s: { name: string }) =>
+    '    <span class="' + s.name + '"><slot name="' + s.name + '" /></span>'
   const template = [
-    `  <button class="root" :type="type" :disabled="disabled" @press="emit('press', $event)">`,
-    ...(iconPart ? [`    <span class="icon"><slot name="icon" /></span>`] : []),
-    `    <span class="label"><slot /></span>`,
-    ...(endPart ? [`    <span class="icon-end"><slot name="icon-end" /></span>`] : []),
-    `  </button>`,
+    '  <button class="root" :type="type" :disabled="disabled" @press="emit(' +
+      "'press', $event" +
+      ')">',
+    ...slotEntries.filter((s) => s.side === 'before').map(slotLine),
+    '    <span class="label"><slot /></span>',
+    ...slotEntries.filter((s) => s.side === 'after').map(slotLine),
+    '  </button>',
   ].join('\n')
 
   const tess = `<contract>

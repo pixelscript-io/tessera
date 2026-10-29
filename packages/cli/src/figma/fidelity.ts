@@ -74,7 +74,10 @@ async function show(variant: (typeof design.variants)[number]) {
     ${name}({
       props: { ...props, disabled },
       events: {},
-      slots: { default: () => [design.sample], icon: slot, 'icon-end': slot },
+      slots: {
+        default: () => [design.sample],
+        ...Object.fromEntries(design.slots.map((s: string) => [s, slot])),
+      },
     }),
   )
   flush()
@@ -92,7 +95,8 @@ const partBox = (el: HTMLElement, part: string): Box | null => {
   const node = part === 'root' ? el : el.querySelector<HTMLElement>(\`[class*="__\${part}"]\`)
   if (!node) return null
   const b = node.getBoundingClientRect()
-  if (!b.width && !b.height) return null
+  // Not shown: nothing, or a label cut down to a pixel (hidden from the eye, kept for a screen reader).
+  if (b.width <= 1 && b.height <= 1) return null
   const o = el.getBoundingClientRect()
   return { x: b.x - o.x, y: b.y - o.y, width: b.width, height: b.height }
 }

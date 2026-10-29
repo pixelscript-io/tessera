@@ -71,19 +71,34 @@ describe('the imported Button against the design, in a browser', () => {
     )
     expect(existsSync(report), run.stdout + run.stderr).toBe(true)
     const result = JSON.parse(readFileSync(report, 'utf8')) as {
-      numTotalTests: number
-      numPassedTests: number
       testResults: Array<{
-        assertionResults: Array<{ status: string; title: string; failureMessages: string[] }>
+        assertionResults: Array<{
+          status: string
+          title: string
+          fullName: string
+          failureMessages: string[]
+        }>
       }>
     }
-    const failed = result.testResults
-      .flatMap((r) => r.assertionResults)
-      .filter((a) => a.status !== 'passed')
-      .map((a) => `${a.title}: ${(a.failureMessages[0] ?? '').split('\n')[0]}`)
-    expect(failed).toEqual([])
-    // 380 for the boxes and 47 for the pictures.
-    expect(result.numTotalTests).toBe(427)
-    expect(result.numPassedTests).toBe(427)
+    const all = result.testResults.flatMap((r) => r.assertionResults)
+
+    // The comparison with the design: 380 for the boxes and 47 for the pictures, every one of them.
+    const design = all.filter((a) => a.fullName.startsWith('Button against the design'))
+    expect(design).toHaveLength(427)
+    expect(
+      design.filter((a) => a.status !== 'passed').map((a) => `${a.title}: ${a.failureMessages[0]}`),
+    ).toEqual([])
+
+    // The accessibility suite, generated from the contract, in both themes. The design has one theme: the four
+    // hierarchies with no fill (tertiary and link) put its dark text on a dark page in dark mode. Nothing else fails,
+    // and nothing in light mode.
+    const failed = all
+      .filter((a) => a.status !== 'passed' && !a.fullName.startsWith('Button against the design'))
+      .map((a) => a.fullName)
+    expect(failed.length).toBeGreaterThan(0)
+    expect(
+      failed.filter((name) => !(/ dark /.test(name) && /hierarchy=(tertiary|link)-/.test(name))),
+    ).toEqual([])
+    expect(all.filter((a) => a.status === 'passed').length).toBeGreaterThan(1000)
   }, 290_000)
 })

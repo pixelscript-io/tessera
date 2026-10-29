@@ -6,6 +6,7 @@ import { main } from '../src'
 import { presetFiles } from '../src/commands/init'
 import { fetchComponentSet, fetchImages, parseSource, tokenFromEnv } from '../src/figma/fetch'
 import { importComponentSet } from '../src/figma/import'
+import { inferMap } from '../src/figma/infer'
 import { learn, winner } from '../src/figma/learn'
 import { FigmaError, type ComponentSetFile, type FigmaMap } from '../src/figma/model'
 import type { Io } from '../src/io'
@@ -22,6 +23,9 @@ mkdirSync(scratch, { recursive: true })
 afterAll(() => rmSync(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 }))
 
 const file = JSON.parse(readFileSync(`${fixtures}/button-set.json`, 'utf8')) as ComponentSetFile
+const small = JSON.parse(
+  readFileSync(`${fixtures}/../button-small/button-set.json`, 'utf8'),
+) as ComponentSetFile
 const map = JSON.parse(readFileSync(`${fixtures}/figma.map.json`, 'utf8')) as FigmaMap
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
@@ -70,13 +74,16 @@ describe('importing the Button', () => {
   it('writes a contract with the default first, the states as states, and the slots', () => {
     const contract = JSON.parse(/<contract>\n([\s\S]*?)\n<\/contract>/.exec(result.tess)![1]!)
     expect(contract.name).toBe('Button')
-    expect(contract.variants.size).toEqual(['md', 'sm', 'lg', 'xl', '2xl'])
+    expect(contract.variants.size).toEqual(['sm', 'md', 'lg', 'xl', '2xl'])
     expect(contract.variants.hierarchy[0]).toBe('primary')
     expect(contract.variants.hierarchy).toContain('secondary-gray')
     expect(contract.variants.icon).toEqual(['default', 'dot-leading', 'only'])
     expect(contract.states).toEqual(['hover', 'focus-visible', 'disabled'])
-    expect(contract.parts).toEqual(['root', 'icon', 'label', 'icon-end'])
-    expect(Object.keys(contract.slots)).toEqual(['default', 'icon', 'icon-end'])
+    expect(contract.parts).toEqual(['root', 'icon-leading', 'label', 'icon-trailing'])
+    expect(Object.keys(contract.slots)).toEqual(['default', 'icon-leading', 'icon-trailing'])
+    // In the docs a slot shows the design's placeholder, a ring the size of an icon, not its own name.
+    expect(contract.preview.slots['icon-leading'].tag).toBe('span')
+    expect(contract.preview.slots['icon-leading'].attrs.style).toContain('border-radius: 50%')
     expect(contract.behavior).toBe('press')
   })
 
@@ -102,13 +109,13 @@ describe('importing the Button', () => {
     const style = /<style>([\s\S]*)<\/style>/.exec(result.tess)![1]!
     // The root is checked as one block (a background and a color there are held against each other), so the color is
     // on the parts that hold the slots.
-    expect(style).toMatch(/\.icon \{[^}]*color: \$color\.figma-/)
-    expect(style).toMatch(/\.icon-end \{[^}]*color: \$color\.figma-/)
+    expect(style).toMatch(/\.icon-leading \{[^}]*color: \$color\.figma-/)
+    expect(style).toMatch(/\.icon-trailing \{[^}]*color: \$color\.figma-/)
     const blocks = [...style.matchAll(/^(\.root[^{]*) \{([^}]*)\}/gm)]
     expect(blocks.length).toBeGreaterThan(10)
     for (const [, selector, body] of blocks) {
       // Only the blocks of the root itself: a part's selector has a second compound after a space.
-      if (/ \.(icon|label|icon-end)$/.test(selector!)) continue
+      if (/ \.(icon-leading|label|icon-trailing)$/.test(selector!)) continue
       expect(body, selector).not.toMatch(/^\s*color:/m)
     }
   })
@@ -148,8 +155,8 @@ describe('importing the Button', () => {
     )!
     expect(md.width).toBe(158)
     expect(md.height).toBe(40)
-    expect(Object.keys(md.boxes)).toEqual(['root', 'icon', 'label', 'icon-end'])
-    expect(md.boxes.icon).toEqual({ x: 14, y: 10, width: 20, height: 20 })
+    expect(Object.keys(md.boxes)).toEqual(['root', 'icon-leading', 'label', 'icon-trailing'])
+    expect(md.boxes['icon-leading']).toEqual({ x: 14, y: 10, width: 20, height: 20 })
     // The focus ring reaches past the box.
     const focused = result.variants.find(
       (v) =>
@@ -172,7 +179,9 @@ describe('what the map must say', () => {
 
   it('stops at a boolean or a swap that is not accounted for', () => {
     const m = clone(map)
-    delete m.ignore!['⬅️ Icon leading#3287:1577']
+    // The switch is accounted for by the slot it controls; without the slot it is not.
+    delete m.parts['icon-leading']
+    delete m.slots!['icon-leading']
     const e = fails(() => importComponentSet(file, m))
     expect(e.code).toBe('F005')
     expect(e.message).toBe('The boolean property "⬅️ Icon leading#3287:1577" is not in the map.')
@@ -348,61 +357,206 @@ describe('asking Figma', () => {
   })
 })
 
+describe('a map worked out from the design', () => {
+  it('finds the props, the state, the label and the two icons of the Button with nothing to read but the file', () => {
+    const m = inferMap(file)
+    expect(m.component).toBe('Buttons/Button')
+    expect(m.name).toBe('Button')
+    expect(m.props.Size).toEqual({ prop: 'size', default: 'sm' })
+    expect(m.props.Hierarchy).toEqual({ prop: 'hierarchy', default: 'Primary' })
+    expect(m.props.State).toEqual({
+      states: { Default: null, Hover: 'hover', Focused: 'focus-visible', Disabled: 'disabled' },
+    })
+    // The two switches become the two slots, named as the design names them, before and after the label.
+    expect(Object.keys(m.slots!)).toEqual(['icon-leading', 'icon-trailing'])
+    expect(m.slots!['icon-leading']).toMatchObject({ side: 'before' })
+    expect(m.slots!['icon-trailing']).toMatchObject({ side: 'after' })
+    expect(Object.keys(m.parts)).toEqual(['root', 'icon-leading', 'label', 'icon-trailing'])
+    // The swaps are what a slot holds; nothing is left for the person to say.
+    expect(Object.keys(m.ignore!)).toEqual([
+      '🔀 Icon leading swap#3466:91',
+      '🔀 Icon trailing swap#3466:852',
+    ])
+    expect(m.sample).toBe('Button CTA')
+    // The frame that holds the text is tried before the bare text: a variant that has it is read with its padding.
+    expect(m.parts.label).toEqual([
+      { layer: 'Text padding', text: 'Text' },
+      { layer: 'Text', text: 'Text' },
+    ])
+  })
+
+  it('imports every variant with it, and it is the map the fixture ships', () => {
+    const result = importComponentSet(file, inferMap(file))
+    expect(result.variants).toHaveLength(380)
+    expect(JSON.parse(readFileSync(`${fixtures}/figma.map.json`, 'utf8'))).toEqual(inferMap(file))
+  })
+
+  it('reads a smaller page of the same design: fewer hierarchies', () => {
+    const m = inferMap(small)
+    expect(m.props.Hierarchy).toEqual({ prop: 'hierarchy', default: 'Primary' })
+    const result = importComponentSet(small, m)
+    expect(result.variants).toHaveLength(120)
+    const contract = JSON.parse(/<contract>\n([\s\S]*?)\n<\/contract>/.exec(result.tess)![1]!)
+    expect(contract.variants.hierarchy).toEqual(['primary', 'secondary-gray'])
+    expect(Object.keys(contract.slots)).toEqual(['default', 'icon-leading', 'icon-trailing'])
+  })
+
+  it('finds the icon in a variant whose icon is another layer, and the one icon of an icon-only button', () => {
+    const result = importComponentSet(small, inferMap(small))
+    const find = (name: string) => result.variants.find((v) => v.name === name)!
+    // A dot has no switch of its own: it is the layer before the label.
+    const dot = find('Size=md, Hierarchy=Primary, Icon=Dot leading, State=Default')
+    expect(dot.boxes['icon-leading']).toMatchObject({ width: 10, height: 10 })
+    expect(dot.boxes['icon-trailing']).toBeNull()
+    // The one icon of an icon-only button is the leading one.
+    const only = find('Size=md, Hierarchy=Primary, Icon=Only, State=Default')
+    expect(only.boxes['icon-leading']).not.toBeNull()
+    expect(only.boxes.label).toBeNull()
+  })
+
+  it('stops at a component that is not a button, and at a state it cannot read', () => {
+    const e = fails(() => inferMap({ ...file, set: { ...file.set, name: 'Cards/Card' } }))
+    expect(e.code).toBe('F001')
+    expect(e.message).toBe(
+      'The component set "Cards/Card" does not look like a button, and only a button can be imported so far.',
+    )
+    expect(e.hint).toBe('If it is one, give a map with "kind": "button" (--map).')
+    const odd = clone(file)
+    odd.set.componentPropertyDefinitions!.State!.variantOptions = ['Default', 'Hover', 'Wobbly']
+    const s = fails(() => inferMap(odd))
+    expect(s.code).toBe('F004')
+    expect(s.message).toBe('The state values "Wobbly" of "State" are not ones this can read.')
+  })
+
+  it('stops at a slot that has the name of a prop, which the docs could not tell apart', () => {
+    const m = clone(inferMap(file))
+    m.slots = { icon: 'an icon' }
+    m.parts.icon = m.parts['icon-leading']!
+    const e = fails(() => importComponentSet(file, m))
+    expect(e.code).toBe('F015')
+    expect(e.message).toBe('The slot "icon" has the same name as the prop "icon".')
+  })
+})
+
+describe('finding the set in a page', () => {
+  const sets = (names: string[]) => ({
+    name: 'The file',
+    nodes: {
+      '1:1': {
+        document: {
+          id: '1:1',
+          name: 'Page',
+          type: 'CANVAS',
+          children: names.map((name, i) => ({ ...file.set, id: `1:${i + 2}`, name })),
+        },
+        styles: {},
+      },
+    },
+  })
+  const reply = (body: unknown) =>
+    (async () => new Response(JSON.stringify(body))) as unknown as typeof fetch
+  const ask = (names: string[], name?: string) =>
+    fetchComponentSet({ fileKey: 'k', nodeId: '1:1' }, name, 't', reply(sets(names)))
+
+  it('takes the one set there is', async () => {
+    expect((await ask(['Buttons/Button'])).set.name).toBe('Buttons/Button')
+  })
+
+  it('says which sets there are when there are several, and takes one by name', async () => {
+    const e = (await ask(['Buttons/Button', 'Social button']).catch(
+      (x: FigmaError) => x,
+    )) as FigmaError
+    expect(e.code).toBe('F017')
+    expect(e.message).toBe('2 component sets are there: "Buttons/Button", "Social button".')
+    expect(e.hint).toBe('Say which one: --component "<name>", or link to the set itself.')
+    expect((await ask(['Buttons/Button', 'Social button'], 'Social button')).set.name).toBe(
+      'Social button',
+    )
+  })
+
+  it('says when there is none, or not the one asked for', async () => {
+    const none = (await ask([]).catch((x: FigmaError) => x)) as FigmaError
+    expect(none.message).toBe('There is no component set at 1:1.')
+    const wrong = (await ask(['Buttons/Button'], 'Cards').catch((x: FigmaError) => x)) as FigmaError
+    expect(wrong.message).toBe('There is no component set called "Cards" at 1:1.')
+    expect(wrong.hint).toBe('The sets there: "Buttons/Button".')
+  })
+})
+
 describe('tessera figma import', () => {
-  it('writes the component, the tokens, the design and the test, and the project still checks clean', async () => {
+  const saved = ['--from-json', `${fixtures}/button-set.json`]
+
+  it('needs nothing but the design: it writes the component, the map it worked out, the tokens, and the tests', async () => {
     const root = project()
     const run = io(root)
-    const code = await main(
-      [
-        'figma',
-        'import',
-        '--map',
-        `${fixtures}/figma.map.json`,
-        '--from-json',
-        `${fixtures}/button-set.json`,
-        '--replace',
-      ],
-      run.handle,
-    )
+    // No map and no --replace: the Button the project began with is replaced, with the notes that described it.
+    const code = await main(['figma', 'import', ...saved], run.handle)
     expect(run.err()).toBe('')
     expect(code).toBe(0)
     expect(run.out()).toContain('Imported Button from Figma.')
+    expect(run.out()).toContain('The map was worked out from the design and is in')
+    expect(run.out()).toContain('Next: npm install, npm run dev')
     for (const f of [
       'system/components/Button.tess',
       'system/components/Button.figma.browser.test.ts',
       'system/components/figma/Button/Button.figma.json',
+      'system/components/figma/Button/figma.map.json',
+      'system/tailwind/tokens/figma.tokens.json',
     ])
       expect(existsSync(join(root, f)), f).toBe(true)
-    expect(existsSync(join(root, 'system/tailwind/tokens/figma.tokens.json'))).toBe(true)
+    expect(readFileSync(join(root, 'system/components/Button.tess'), 'utf8')).toContain(
+      'figma-brand-600',
+    )
+    expect(existsSync(join(root, 'system/components/Button.docs.md'))).toBe(false)
     const design = JSON.parse(
       readFileSync(join(root, 'system/components/figma/Button/Button.figma.json'), 'utf8'),
     )
     expect(design.variants).toHaveLength(380)
     expect(design.threshold).toBe(0.01)
 
+    // The browser tests are set up too, as `tessera a11y` does.
+    expect(existsSync(join(root, 'system/components/a11y.browser.test.ts'))).toBe(true)
+    expect(existsSync(join(root, 'vitest.config.ts'))).toBe(true)
+
     // The tokens it made are enough: no raw value, no unknown token.
     const checked = io(root)
     expect(await main(['check'], checked.handle)).toBe(0)
     expect(checked.out()).toContain('0 errors, 0 warnings')
+
+    // A second import writes over the first, and over the map it left (an edited map is used with --map).
+    const again = io(root)
+    expect(await main(['figma', 'import', ...saved], again.handle)).toBe(0)
+    expect(again.out()).not.toContain('already there')
   }, 120_000)
 
-  it('does not overwrite a file without --replace, and says which it left', async () => {
+  it('uses a map it is given, and does not write one', async () => {
     const root = project()
     const run = io(root)
-    const args = [
-      'figma',
-      'import',
-      '--map',
-      `${fixtures}/figma.map.json`,
-      '--from-json',
-      `${fixtures}/button-set.json`,
-    ]
-    expect(await main(args, run.handle)).toBe(0)
-    // The preset's own Button is there, so it is left, and so is its (new) test only if it was written before.
+    const code = await main(
+      ['figma', 'import', '--map', `${fixtures}/figma.map.json`, ...saved],
+      run.handle,
+    )
+    expect(code).toBe(0)
+    expect(run.out()).not.toContain('The map was worked out')
+    expect(existsSync(join(root, 'system/components/figma/Button/figma.map.json'))).toBe(false)
+  }, 120_000)
+
+  it('does not overwrite a file of the person’s own, and says which it left', async () => {
+    const root = project()
+    writeFileSync(
+      join(root, 'system/components/Button.tess'),
+      '<template><button>mine</button></template>\n',
+    )
+    const run = io(root)
+    expect(await main(['figma', 'import', ...saved], run.handle)).toBe(0)
     expect(run.out()).toContain(
       'Left alone (already there; --replace writes it again): system/components/Button.tess',
     )
-    expect(readFileSync(join(root, 'system/components/Button.tess'), 'utf8')).not.toContain(
+    expect(readFileSync(join(root, 'system/components/Button.tess'), 'utf8')).toContain('mine')
+    // --replace is how a person says it is theirs to replace.
+    const forced = io(root)
+    expect(await main(['figma', 'import', ...saved, '--replace'], forced.handle)).toBe(0)
+    expect(readFileSync(join(root, 'system/components/Button.tess'), 'utf8')).toContain(
       'figma-brand-600',
     )
   }, 120_000)
@@ -410,32 +564,28 @@ describe('tessera figma import', () => {
   it('stops with --strict when a value has no style, and writes nothing', async () => {
     const root = project()
     const run = io(root)
-    const code = await main(
-      [
-        'figma',
-        'import',
-        '--map',
-        `${fixtures}/figma.map.json`,
-        '--from-json',
-        `${fixtures}/button-set.json`,
-        '--strict',
-      ],
-      run.handle,
-    )
+    const code = await main(['figma', 'import', ...saved, '--strict'], run.handle)
     expect(code).toBe(1)
     expect(run.err()).toMatch(/F014: \d+ values? (has|have) no style in the design/)
     expect(existsSync(join(root, 'system/components/Button.figma.browser.test.ts'))).toBe(false)
   }, 120_000)
 
-  it('needs a map, and a place to read from', async () => {
+  it('needs a token and a place to read from, and nothing else', async () => {
     const root = project()
-    const a = io(root)
-    expect(await main(['figma', 'import'], a.handle)).toBe(1)
-    expect(a.err()).toContain('Say which map to use: --map <file>.')
-    const b = io(root)
-    delete process.env.FIGMA_TOKEN
-    expect(await main(['figma', 'import', '--map', `${fixtures}/figma.map.json`], b.handle)).toBe(1)
-    expect(b.err()).toContain('F010: There is no Figma token.')
+    const saveToken = process.env.FIGMA_TOKEN
+    try {
+      delete process.env.FIGMA_TOKEN
+      const a = io(root)
+      expect(await main(['figma', 'import'], a.handle)).toBe(1)
+      expect(a.err()).toContain('F010: There is no Figma token.')
+      process.env.FIGMA_TOKEN = 'x'
+      const b = io(root)
+      expect(await main(['figma', 'import'], b.handle)).toBe(1)
+      expect(b.err()).toContain('F011: Say where the component is')
+    } finally {
+      if (saveToken === undefined) delete process.env.FIGMA_TOKEN
+      else process.env.FIGMA_TOKEN = saveToken
+    }
     const c = io(root)
     expect(await main(['figma', 'nope'], c.handle)).toBe(1)
     expect(c.err()).toContain('Unknown figma command "nope".')

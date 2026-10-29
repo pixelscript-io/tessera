@@ -1,0 +1,80 @@
+{
+  "component": "Buttons/Button",
+  "name": "Button",
+  "kind": "button",
+  "role": "button",
+  "description": "Triggers an action. Press it with a mouse, a finger, Enter or Space.",
+  "behavior": "press",
+  "props": {
+    "Size": {
+      "prop": "size",
+      "default": "sm"
+    },
+    "Hierarchy": {
+      "prop": "hierarchy",
+      "default": "Primary"
+    },
+    "Icon": {
+      "prop": "icon",
+      "default": "Default"
+    },
+    "State": {
+      "states": {
+        "Default": null,
+        "Hover": "hover",
+        "Focused": "focus-visible",
+        "Disabled": "disabled"
+      }
+    }
+  },
+  "ignore": {
+    "🔀 Icon leading swap#3466:91": "the icon is what the slot holds",
+    "🔀 Icon trailing swap#3466:852": "the icon is what the slot holds"
+  },
+  "parts": {
+    "root": "$",
+    "icon-leading": [
+      {
+        "property": ["⬅️ Icon leading#3287:1577", "🔀 Icon leading swap#3466:91"]
+      },
+      {
+        "beside": "label",
+        "side": "before"
+      }
+    ],
+    "label": [
+      {
+        "layer": "Text padding",
+        "text": "Text"
+      },
+      {
+        "layer": "Text",
+        "text": "Text"
+      }
+    ],
+    "icon-trailing": [
+      {
+        "property": ["➡️ Icon trailing#3287:2338", "🔀 Icon trailing swap#3466:852"]
+      },
+      {
+        "beside": "label",
+        "side": "after"
+      }
+    ]
+  },
+  "slots": {
+    "icon-leading": {
+      "description": "icon leading, before the label (optional)",
+      "side": "before"
+    },
+    "icon-trailing": {
+      "description": "icon trailing, after the label (optional)",
+      "side": "after"
+    }
+  },
+  "sample": "Button CTA",
+  "fidelity": {
+    "threshold": 0.01,
+    "ignore": ["icon-leading", "icon-trailing", "label"]
+  }
+}

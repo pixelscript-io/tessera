@@ -26,6 +26,7 @@ const WITH_VALUE = new Set([
   'version',
   'stdin-filepath',
   'url',
+  'component',
   'file',
   'node',
   'from-json',

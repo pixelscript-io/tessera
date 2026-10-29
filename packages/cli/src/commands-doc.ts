@@ -299,14 +299,18 @@ export const COMMANDS_DOC: CommandDoc[] = [
   {
     name: 'figma import',
     usage:
-      'tessera figma import --map <file> (--url <link> | --from-json <file>) [--out <folder>] [--replace] [--strict] [--no-images]',
+      'tessera figma import (--url <link> | --from-json <file>) [--component <name>] [--map <file>] [--out <folder>] [--replace] [--strict] [--no-images]',
     summary: 'Turn a Figma component set into a component, and test it against the design',
     details:
-      "Reads one component set of a Figma file (with a personal access token in `FIGMA_TOKEN`, or from a saved response) and writes a component, the tokens it needs, and a test. The map (`figma.map.json`, written by hand) says what the Figma properties, layers and states are in Tessera: which variant properties are props, which one is the state (and which pseudo-class each value is), which layer is which part, and the role and behavior. A property or layer the map does not mention is an error, never a guess. A value that uses a Figma style gets a token named after the style; a value with no style gets a token named after the value (`--strict` stops on those instead). The CSS is worked out from what the variants share, so the size alone decides what the size alone decides, and every variant is checked against it before anything is written. The test it writes mounts each variant and checks where every part is, and how the component looks against Figma's own picture of the variant. It never overwrites a file without `--replace`. The token is read from the environment only and is never written or printed. Only a button can be imported so far.",
+      "Reads one component set of a Figma file (with a personal access token in `FIGMA_TOKEN`, or from a saved response) and writes a component, the tokens it needs, and a test. It needs nothing but the link. The map that says what the Figma properties, layers and states are in Tessera (which variant properties are props, which one is the state and which pseudo-class each value is, which layer is which part, and what each icon switch controls) is worked out from the design and written next to the component as `figma.map.json`; `--map` gives your own, and a property or layer a given map does not mention is an error, never a guess. A link to a page with one component set is enough, and with several `--component` names the one. A value that uses a Figma style gets a token named after the style; a value with no style gets a token named after the value (`--strict` stops on those instead). The CSS is worked out from what the variants share, so the size alone decides what the size alone decides, and every variant is checked against it before anything is written. The test it writes mounts each variant and checks where every part is, and how the component looks against Figma's own picture of the variant. It sets up the browser tests that run it, as `tessera a11y` does. It writes over the starter's own Button and over what an earlier import wrote, and never over a file of yours without `--replace`. The token is read from the environment only and is never written or printed. Only a button can be imported so far.",
     options: [
       {
         flag: '--map <file>',
-        description: 'The map: which component set, and what its parts and properties are.',
+        description: 'A map of your own, instead of the one worked out from the design.',
+      },
+      {
+        flag: '--component <name>',
+        description: 'The component set to import, when the link has several.',
       },
       {
         flag: '--url <link>',

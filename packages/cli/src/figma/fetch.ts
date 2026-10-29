@@ -74,13 +74,10 @@ async function getJson(fetcher: Fetch, token: string, path: string): Promise<Rec
   return body
 }
 
-const find = (node: FigmaNode, test: (n: FigmaNode) => boolean): FigmaNode | undefined =>
-  test(node) ? node : (node.children ?? []).map((c) => find(c, test)).find(Boolean)
-
 /** Reads the component set called `name` from a page (or the set itself), with the styles it uses. */
 export async function fetchComponentSet(
   source: Source,
-  name: string,
+  name: string | undefined,
   token: string,
   fetcher: Fetch = fetch,
 ): Promise<ComponentSetFile> {
@@ -92,15 +89,38 @@ export async function fetchComponentSet(
   const entry = body.nodes?.[source.nodeId]
   if (!entry?.document)
     throw new FigmaError('F013', `The node ${source.nodeId} is not in the file.`)
-  const set = find(
-    entry.document as FigmaNode,
-    (n) => n.type === 'COMPONENT_SET' && n.name === name,
-  )
-  if (!set)
+  const sets: FigmaNode[] = []
+  const collect = (n: FigmaNode) => {
+    if (n.type === 'COMPONENT_SET') sets.push(n)
+    else n.children?.forEach(collect)
+  }
+  collect(entry.document as FigmaNode)
+  let set: FigmaNode | undefined
+  if (name !== undefined) {
+    set = sets.find((s) => s.name === name)
+    if (!set)
+      throw new FigmaError(
+        'F002',
+        'There is no component set called "' + name + '" at ' + source.nodeId + '.',
+        sets.length
+          ? 'The sets there: ' + sets.map((s) => '"' + s.name + '"').join(', ') + '.'
+          : undefined,
+      )
+  } else if (sets.length === 1) set = sets[0]
+  else if (!sets.length)
     throw new FigmaError(
-      'F002',
-      `There is no component set called "${name}" at ${source.nodeId}.`,
-      'The map\'s "component" must be the name of the set in Figma.',
+      'F013',
+      'There is no component set at ' + source.nodeId + '.',
+      'Select the page or the component set in Figma and use "Copy link to selection". A single variant is not a set.',
+    )
+  else
+    throw new FigmaError(
+      'F017',
+      sets.length +
+        ' component sets are there: ' +
+        sets.map((s) => '"' + s.name + '"').join(', ') +
+        '.',
+      'Say which one: --component "<name>", or link to the set itself.',
     )
   const used = new Set<string>()
   const walk = (n: FigmaNode) => {

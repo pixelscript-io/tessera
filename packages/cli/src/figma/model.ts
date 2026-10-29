@@ -61,6 +61,8 @@ export interface FigmaNode {
     textAlignHorizontal?: string
   }
   styles?: Record<string, string>
+  /** For a layer of a component: the component properties that control it (`visible`, `mainComponent`, `characters`). */
+  componentPropertyReferences?: Record<string, string>
   componentPropertyDefinitions?: Record<
     string,
     { type: string; defaultValue?: unknown; variantOptions?: string[] }
@@ -77,7 +79,13 @@ export interface ComponentSetFile {
 }
 
 /** A layer of a variant that becomes a part: the n-th layer with this name (depth first), and the text layer inside. */
-export type PartRef = '$' | { layer: string; index?: number; text?: string }
+export type PartRef =
+  | '$'
+  | { layer: string; index?: number; text?: string }
+  /** The layer that a component property of the set controls: its visibility (a boolean) or its instance (a swap). */
+  | { property: string[] }
+  /** The layer next to the label, in the row the root lays out: the one before it, or the one after it. */
+  | { beside: string; side: 'before' | 'after' }
 
 /** One layer, or several to try in order: a variant may draw the same part with another layer (a dot for an icon). */
 export type PartSpec = PartRef | PartRef[]
@@ -101,7 +109,7 @@ export interface FigmaMap {
   ignore?: Record<string, string>
   parts: Record<string, PartSpec>
   /** The slot a part is, for the parts that hold what the caller gives. */
-  slots?: Record<string, string>
+  slots?: Record<string, string | { description: string; side?: 'before' | 'after' }>
   /** What the label says in the preview and in the comparison. */
   sample?: string
   fidelity?: {
