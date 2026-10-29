@@ -8,6 +8,7 @@ import { openProjectAt } from '../project'
 import type { Ui } from '../ui'
 import { VERSION } from '../version'
 import { agentFileContents } from './agent'
+import { tokens } from './tokens'
 
 export const PRESETS = ['tailwind', 'unstyled', 'none'] as const
 export type Preset = (typeof PRESETS)[number]
@@ -259,6 +260,19 @@ export async function init(args: Args, io: Io): Promise<number> {
   }
   starter ??= 'page'
 
+  const givenImport = flag(args, 'import')
+  let sources =
+    typeof givenImport === 'string' ? givenImport.split('\n').map(unquote).filter(Boolean) : []
+  if (givenImport !== undefined && sources.length === 0) {
+    throw new CliError('Say what to import.', '--import <file, folder, URL or Figma link>')
+  }
+  if (sources.length && preset !== 'none') {
+    throw new CliError(
+      '--import is for the blank slate.',
+      'Start with --tokens none, or run tessera tokens import <source> in an existing project.',
+    )
+  }
+
   const linkFlag = flag(args, 'link')
   const link = typeof linkFlag === 'string' ? linkFlag : undefined
   const written: string[] = []
@@ -344,6 +358,20 @@ export async function init(args: Args, io: Io): Promise<number> {
     put('.prettierrc.json', PRETTIERRC)
   }
 
+  // A blank slate has no tokens: bring in the person's own now, so the files written next describe them.
+  let imported: 'none' | 'done' | 'failed' = 'none'
+  if (preset === 'none') {
+    if (!sources.length && io.ask) {
+      const answer = unquote(
+        await io.ask(
+          'Import your design tokens now? A file, folder, URL or Figma link (Enter to skip):',
+        ),
+      )
+      if (answer) sources = [answer]
+    }
+    if (sources.length) imported = (await importInto(target, sources, io)) ? 'done' : 'failed'
+  }
+
   // For an AI tool: what the project is and how it is written, and a way to look things up. A model should be able to
   // build in this folder without searching for Tessera first.
   try {
@@ -376,8 +404,16 @@ export async function init(args: Args, io: Io): Promise<number> {
 
   const where = args.positional[0]
   if (io.ui) {
-    printSummary(io, io.ui, { preset, starter, where, written, skipped, install: !hasDependency })
-    return 0
+    printSummary(io, io.ui, {
+      preset,
+      starter,
+      where,
+      written,
+      skipped,
+      install: !hasDependency,
+      imported,
+    })
+    return imported === 'failed' ? 1 : 0
   }
   io.out(
     `Started a Tessera project (${starter} starter, ${preset} tokens) in ${where ?? 'the current folder'}.`,
@@ -391,7 +427,38 @@ export async function init(args: Args, io: Io): Promise<number> {
   io.out('  npm run dev')
   io.out('')
   io.out('To format .tess files, add Prettier as a dev dependency, then run npm run format.')
-  return 0
+  if (preset === 'none' && imported !== 'done') io.out(IMPORT_HINT)
+  return imported === 'failed' ? 1 : 0
+}
+
+const IMPORT_HINT =
+  'No design tokens yet. Bring in yours: npx @pixelscriptio/tessera tokens import <file, folder, URL or Figma link>'
+
+/** A path pasted or dragged into a terminal often has quotes around it. */
+function unquote(text: string): string {
+  const t = text.trim()
+  return t.length > 1 && (t[0] === '"' || t[0] === "'") && t.endsWith(t[0])
+    ? t.slice(1, -1).trim()
+    : t
+}
+
+/** Runs `tokens import` for the project init just wrote. A failure is reported, and says how to try again. */
+async function importInto(root: string, sources: string[], io: Io): Promise<boolean> {
+  io.out('')
+  try {
+    const code = await tokens(
+      { positional: ['import', ...sources], flags: new Map([['root', root]]) },
+      io,
+    )
+    return code === 0
+  } catch (error) {
+    if (!(error instanceof CliError)) throw error
+    io.err(error.message + (error.hint ? `\n  ${error.hint}` : ''))
+    io.err(
+      'The project is ready without tokens. Try again with: npx @pixelscriptio/tessera tokens import <source>',
+    )
+    return false
+  }
 }
 
 /** What init did, for a person: the folders it filled, then the three commands to run. */
@@ -405,6 +472,7 @@ function printSummary(
     written: string[]
     skipped: string[]
     install: boolean
+    imported: 'none' | 'done' | 'failed'
   },
 ): void {
   const place = info.where ?? 'the current folder'
@@ -439,6 +507,7 @@ function printSummary(
   ]
   io.out(steps.map((step, i) => `  ${ui.dim(String(i + 1))}  ${ui.bold(step)}`).join('\n'))
   io.out('')
+  if (info.preset === 'none' && info.imported !== 'done') io.out(ui.warn(IMPORT_HINT) + '\n')
   io.out(
     ui.dim(
       'The docs for this design system open beside the app. Then: npm run check to validate, npx @pixelscriptio/tessera a11y for accessibility tests, npx @pixelscriptio/tessera add <Name> for more components.',

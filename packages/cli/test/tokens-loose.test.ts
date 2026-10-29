@@ -1,7 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
+import { main } from '../src'
+import type { Io } from '../src/io'
 import { read, run } from './helpers'
 
 const made: string[] = []
@@ -102,5 +104,88 @@ describe('tessera tokens import: token names that are not Tessera’s', () => {
     const checked = await run(dir, 'check')
     expect(checked.code).toBe(1)
     expect(checked.err + checked.out).toContain('T2103')
+  })
+})
+
+describe('tessera init --tokens none: the first import', () => {
+  const CSS_FIRST = ':root { --brand-600: #1d4ed8; --spacing-4: 1rem }'
+
+  it('imports a source given with --import, into a new folder, before the files for AI tools are written', async () => {
+    const dir = scratch()
+    writeFileSync(join(dir, 'globals.css'), CSS_FIRST)
+    const made = await run(dir, 'init', 'my-app', '--tokens', 'none', '--import', 'globals.css')
+    expect(made.code).toBe(0)
+    expect(made.out).toContain('Imported 1 token file')
+    expect(made.out).not.toContain('No design tokens yet')
+    expect(read(join(dir, 'my-app'), 'system/design/tokens/globals.tokens.json')).toContain('brand')
+    expect(read(join(dir, 'my-app'), '.tessera/manifest.json')).toContain('brand')
+    expect(read(join(dir, 'my-app'), 'tessera.config.ts')).toContain('tokenGroups')
+    expect((await run(join(dir, 'my-app'), 'check')).code).toBe(0)
+  })
+
+  it('takes more than one --import', async () => {
+    const dir = scratch()
+    writeFileSync(join(dir, 'a.css'), ':root { --gap-2: 8px }')
+    writeFileSync(join(dir, 'b.css'), ':root { --gap-3: 12px }')
+    const made = await run(
+      dir,
+      'init',
+      '--tokens',
+      'none',
+      '--import',
+      'a.css',
+      '--import',
+      'b.css',
+    )
+    expect(made.code).toBe(0)
+    expect(made.out).toContain('Imported 2 token files')
+  })
+
+  it('refuses --import for tokens that are not the blank slate, before writing anything', async () => {
+    const dir = scratch()
+    writeFileSync(join(dir, 'a.css'), CSS_FIRST)
+    const made = await run(dir, 'init', '--tokens', 'tailwind', '--import', 'a.css')
+    expect(made.code).toBe(1)
+    expect(made.err).toContain('--import is for the blank slate')
+    expect(existsSync(join(dir, 'package.json'))).toBe(false)
+  })
+
+  it('keeps the project and says how to try again when the source cannot be read', async () => {
+    const dir = scratch()
+    const made = await run(dir, 'init', '--tokens', 'none', '--import', 'nope.css')
+    expect(made.code).toBe(1)
+    expect(made.err).toContain('There is no file or folder "nope.css"')
+    expect(made.err).toContain('tokens import <source>')
+    expect(existsSync(join(dir, 'package.json'))).toBe(true)
+    expect(existsSync(join(dir, 'system/design/tokens/README.md'))).toBe(true)
+  })
+
+  it('asks for a source in a terminal, and Enter skips', async () => {
+    const dir = scratch()
+    writeFileSync(join(dir, 'globals.css'), CSS_FIRST)
+    const asked: string[] = []
+    const io = (answer: string): Io => ({
+      cwd: dir,
+      out: () => {},
+      err: () => {},
+      async choose() {
+        return 'none'
+      },
+      async ask(question) {
+        asked.push(question)
+        return answer
+      },
+    })
+    expect(await main(['init', 'a'], io('"globals.css"'))).toBe(0)
+    expect(asked[0]).toContain('Import your design tokens now?')
+    expect(existsSync(join(dir, 'a/system/design/tokens/globals.tokens.json'))).toBe(true)
+    expect(await main(['init', 'b'], io(''))).toBe(0)
+    expect(existsSync(join(dir, 'b/system/design/tokens/globals.tokens.json'))).toBe(false)
+  })
+
+  it('without a terminal and without --import it says how to bring tokens in', async () => {
+    const dir = scratch()
+    const made = await run(dir, 'init', '--tokens', 'none')
+    expect(made.out).toContain('No design tokens yet. Bring in yours')
   })
 })

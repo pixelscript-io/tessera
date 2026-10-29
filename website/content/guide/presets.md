@@ -62,7 +62,7 @@ The values come from Tailwind CSS, which is MIT licensed. The license is in `sys
 
 ## `none`: a blank slate
 
-No tokens and no components: `system/design/tokens/` holds only a README, `system/components/` holds `_example.tess.txt` (a commented example of how a component is written, ignored by Tessera), and the app is one page that uses no tokens. Nothing is guessed about your design. Bring your own tokens, under your own names, with `npx tessera tokens import <source>` (see [Importing and exporting tokens](/guide/interchange)).
+No tokens and no components: `system/design/tokens/` holds only a README, `system/components/` holds `_example.tess.txt` (a commented example of how a component is written, ignored by Tessera), and the app is one page that uses no tokens. Nothing is guessed about your design. Bring your own tokens, under your own names, with `npx tessera tokens import <source>` (see [Importing and exporting tokens](/guide/interchange)). In a terminal, `init` asks for a source as soon as you choose `none` (a file, folder, URL or Figma link; Enter skips), and `--import <source>` answers the question: `npx tessera init my-app --tokens none --import src/globals.css`. The import runs before `AGENTS.md` and the manifest are written, so an AI tool sees your tokens from the start.
 
 ## `unstyled`
 

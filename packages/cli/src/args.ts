@@ -21,6 +21,7 @@ const WITH_VALUE = new Set([
   'tokens',
   'var-prefix',
   'name',
+  'import',
   'format',
   'to',
   'version',
@@ -43,11 +44,14 @@ export function parseArgs(argv: string[]): Args {
             : true
       // `--map a=b --map c=d` is the same as `--map a=b,c=d`.
       const before = flags.get(name)
+      // `--import a --import b` is two sources. A source may hold commas (an address), so they join on a newline.
       flags.set(
         name,
         name === 'map' && typeof before === 'string' && typeof value === 'string'
           ? `${before},${value}`
-          : value,
+          : name === 'import' && typeof before === 'string' && typeof value === 'string'
+            ? `${before}\n${value}`
+            : value,
       )
     } else positional.push(arg)
   }

@@ -59,6 +59,8 @@ It asks two questions in a terminal, and the flags answer them:
 - **Starter app**, `--starter`: `todo` (a to-do list that adds, ticks off, filters and removes, kept in the browser; its list is shared state in `app/state/todos.ts`), `page` (a page that shows what Tessera does: a button that counts and a list from an API call) or `blank` (one empty page, no layout, no API).
 - **Tokens**, `--tokens`: `tailwind` (every color, the spacing scale, radii, type and shadows of Tailwind's default theme, with a light and a dark theme) or `none` (a blank slate with no tokens and no components, one empty page and a commented example of a component, to import your own tokens into; the starter app is always `blank`).
 
+- **Import**, `--import <source>` (with `--tokens none`, repeatable): the tokens to import as the project is made, from a file, folder, URL or Figma link. In a terminal `init` asks for one when you choose `none`.
+
 With no terminal and no flags it uses `page` and `tailwind` and says so. `--preset tailwind|unstyled|none` still works as the older spelling of `--tokens`. `npm create @pixelscriptio/tessera@latest my-app` runs it in a new folder with no prior install.
 
 ### `tessera add`
