@@ -608,7 +608,7 @@ function installationPage(): Page {
       { label: 'pnpm', html: command('pnpm create @pixelscriptio/tessera@latest') },
       { label: 'yarn', html: command('yarn create @pixelscriptio/tessera') },
       { label: 'bun', html: command('bun create @pixelscriptio/tessera@latest') },
-    ])}<p>Choose the <code>tailwind</code> preset for Tailwind's colors and spacing, or <code>unstyled</code> for a blank page to design on.</p></li>`,
+    ])}<p>Choose the <code>tailwind</code> preset for Tailwind's colors and spacing, or <code>none</code> for a blank slate to import your own tokens into.</p></li>`,
     `<li><h3>Add a component</h3>${runTabs(tabs, 'add Button')}<p>It goes in <code>system/components</code> with its docs file, and brings the components it uses. What it installed is recorded in <code>tessera.lock.json</code>. If the name is taken it asks whether to replace yours or add the new one under another name (<code>--replace</code>, <code>--as</code>). <code>--diff</code> shows what would change, and <code>--list</code> shows what is here.</p></li>`,
     `<li><h3>Make the tokens fit</h3><p>Before it writes a component, <code>add</code> compares the tokens the component uses with each design system in your project, and reports the ones that are missing or of the wrong type. Three ways to fix it:</p>${list(
       [

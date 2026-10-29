@@ -2,7 +2,7 @@
 
 Introduced in v0.1 (Milestone 12b); the presets were changed in v0.9 (Milestone 45).
 
-`tessera init` asks which starter app (`todo`, `page` or `blank`) and which tokens (`tailwind` or `none`, which is the `unstyled` preset below). You choose when you run it: in a terminal it asks, and `--starter` and `--tokens` answer. `--preset tailwind` or `--preset unstyled` is the older spelling of the tokens. This page describes the tokens and the `page` starter. The choice is made in `init`, not when you run `npm install`, because install scripts cannot prompt reliably (pnpm skips them by default, as do `--ignore-scripts` and most CI). With no terminal and no flag, `init` uses the `page` starter and `tailwind` and says so.
+`tessera init` asks which tokens (`tailwind` or `none`) and, with `tailwind`, which starter app (`todo`, `page` or `blank`). You choose when you run it: in a terminal it asks, and `--tokens` and `--starter` answer. `--preset tailwind`, `--preset unstyled` or `--preset none` is the older spelling of the tokens. `none` is a blank slate with no tokens and no components (see below); the starters are built from components, so with `none` the app is one empty page. This page describes the tokens and the `page` starter. The choice is made in `init`, not when you run `npm install`, because install scripts cannot prompt reliably (pnpm skips them by default, as do `--ignore-scripts` and most CI). With no terminal and no flag, `init` uses the `page` starter and `tailwind` and says so.
 
 Both presets write the same project, and differ only in the tokens:
 
@@ -60,6 +60,10 @@ How it is organized:
 
 The values come from Tailwind CSS, which is MIT licensed. The license is in `system/tailwind/tokens/TAILWIND-LICENSE`. The data is regenerated from Tailwind's own theme definition by a script in the Tessera repository, and a test checks the committed tokens match it. To update to a newer Tailwind, replace `packages/cli/tailwind/theme.css` and run `pnpm --filter @tessera/cli generate:tailwind`; nothing in your project depends on Tailwind's release schedule.
 
+## `none`: a blank slate
+
+No tokens and no components: `system/design/tokens/` holds only a README, `system/components/` holds `_example.tess.txt` (a commented example of how a component is written, ignored by Tessera), and the app is one page that uses no tokens. Nothing is guessed about your design. Bring your own tokens, under your own names, with `npx tessera tokens import <source>` (see [Importing and exporting tokens](/guide/interchange)).
+
 ## `unstyled`
 
 The same token names with plain values, in `system/unstyled/tokens/`: black on white, square corners, no shadows, and a dark theme. It defines every token the starter app and the components use, and about sixty in all, so the project builds and every check runs, but nothing has a look of its own. It is for people who want to make the design themselves.
@@ -111,7 +115,7 @@ The config is checked ([T2115](/reference/errors/T2115)): a system with no name,
 
 The presets are only starting points. To start from the other one, run `npx tessera init --preset unstyled` (or `tailwind`) in the same folder: it writes the files that are missing and leaves the rest, so your pages and components stay. Delete what you do not want, or edit the tokens: they are yours.
 
-If you used the `tessera` or `none` presets of an earlier version, `tessera` is now a design system you add (see [Tessera UI](/guide/tessera-ui)), and `none` is now `unstyled`.
+If you used the `tessera` or `none` presets of an earlier version, `tessera` is now a design system you add (see [Tessera UI](/guide/tessera-ui)), and `none` is now a blank slate with no tokens and no components (the plain-valued tokens are the `unstyled` preset).
 
 ## Next steps
 

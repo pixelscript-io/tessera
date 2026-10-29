@@ -47,7 +47,6 @@ Written 2026-10-26.
 **Design-system side**
 
 - A visual regression hook: screenshot every component, variant and theme and compare.
-- A draft `.tess` generator from Figma components (variants, tokens and structure, not behavior).
 
 **Reach and trust**
 

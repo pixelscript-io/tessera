@@ -1,0 +1,39 @@
+<!--
+  An example of how a component is written. It is a comment, so it does nothing: copy it to a file named after the
+  component (system/components/Badge.tess), remove the comment around it and change it.
+
+  <contract>
+  {
+    "name": "Badge",
+    "role": "generic",
+    "description": "A short label for a status or a count.",
+    "parts": ["root"],
+    "variants": {
+      "tone": ["neutral", "positive"] // first value is the default
+    },
+    "slots": { "default": "the label" },
+    "contrast": [{ "foreground": "root", "background": "root" }]
+  }
+  </contract>
+
+  <template>
+    <span class="root"><slot /></span>
+  </template>
+
+  <style>
+  .root {
+    /* $name reads a token, written with the names of your own tokens */
+    padding: $space.1 $space.2;
+    border-radius: $radius.sm;
+    background: $color.neutral.100;
+    color: $color.neutral.900;
+
+    &[data-tone='positive'] {
+      background: $color.green.100;
+    }
+  }
+  </style>
+
+  The contract lists the parts, variants and slots; the template uses them; the style reads tokens, never raw
+  values. Then `npx @pixelscriptio/tessera check` and `a11y` test the result.
+-->

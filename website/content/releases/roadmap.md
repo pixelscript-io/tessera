@@ -20,7 +20,6 @@ The runtime, the calls in `.tess` files, the `app/apis` folder and the descripti
 
 - Vue and Svelte wrappers for the custom elements (React exists), and watching slot content for changes.
 - Linting Sass, Less and Stylus, and a Stylelint plugin built on the same rules as `tessera lint`.
-- A draft `.tess` generator from Figma components: variants, tokens and structure, not behavior.
 - A Zed language extension.
 - An in-browser playground and versioned docs. The compiler core is browser-safe so the playground does not need a rewrite.
 - Type-checking of templates (`tessera check --types`) and source maps.

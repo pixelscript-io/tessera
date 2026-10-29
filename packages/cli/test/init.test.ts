@@ -76,9 +76,7 @@ for (const [preset, folder, name] of [
       const dir = scratch()
       const { code, out } = await run(dir, 'init', 'my-app', '--preset', preset)
       expect(code).toBe(0)
-      expect(out).toContain(
-        `Started a Tessera project (page starter, ${preset === 'unstyled' ? 'none' : preset} tokens) in my-app.`,
-      )
+      expect(out).toContain(`Started a Tessera project (page starter, ${preset} tokens) in my-app.`)
       expect(out).toContain('npm install')
       expect(out).toContain('npm run dev')
       const root = join(dir, 'my-app')
@@ -227,15 +225,16 @@ describe('earlier presets', () => {
     expect(tessera.err).toContain('There is no preset "tessera".')
     expect(tessera.err).toContain('--tokens tailwind')
     expect(tessera.err).toContain('tessera add tokens:tessera')
-    // `none` is the unstyled tokens now, so the old spelling works.
+    // `none` is a blank slate: no tokens and no components.
     const none = await run(dir, 'init', '--preset', 'none')
     expect(none.code).toBe(0)
-    expect(existsSync(join(dir, 'system/unstyled/tokens/colors.tokens.json'))).toBe(true)
+    expect(existsSync(join(dir, 'system/design/tokens/README.md'))).toBe(true)
+    expect(existsSync(join(dir, 'system/components/Button.tess'))).toBe(false)
   })
 })
 
 describe('tessera init: where and how it runs', () => {
-  it('asks which starter app and which tokens in a terminal, in that order, and takes the answers', async () => {
+  it('asks which tokens and then which starter app in a terminal, and takes the answers', async () => {
     const dir = scratch()
     const asked: string[] = []
     const io: Io = {
@@ -244,17 +243,59 @@ describe('tessera init: where and how it runs', () => {
       err: () => {},
       async choose(question, choices) {
         asked.push(`${question}: ${choices.map((c) => c.value).join(', ')}`)
-        return question.includes('starter') ? 'todo' : 'none'
+        return question.includes('starter') ? 'todo' : 'tailwind'
       },
     }
     expect(await main(['init'], io)).toBe(0)
     expect(asked).toEqual([
-      'Which starter app?: todo, page, blank',
       'Which tokens?: tailwind, none',
+      'Which starter app?: todo, page, blank',
     ])
     expect(existsSync(join(dir, 'app/state/todos.ts'))).toBe(true)
-    expect(existsSync(join(dir, 'system/unstyled/tokens/colors.tokens.json'))).toBe(true)
-    expect(existsSync(join(dir, 'system/tailwind'))).toBe(false)
+    expect(existsSync(join(dir, 'system/tailwind/tokens/colors.tokens.json'))).toBe(true)
+  })
+
+  it('with no tokens it does not ask for a starter: a blank slate has no components, only a commented example', async () => {
+    const dir = scratch()
+    const asked: string[] = []
+    const io: Io = {
+      cwd: dir,
+      out: () => {},
+      err: () => {},
+      async choose(question, choices) {
+        asked.push(`${question}: ${choices.map((c) => c.value).join(', ')}`)
+        return 'none'
+      },
+    }
+    expect(await main(['init'], io)).toBe(0)
+    expect(asked).toEqual(['Which tokens?: tailwind, none'])
+    expect(existsSync(join(dir, 'system/design/tokens/README.md'))).toBe(true)
+    expect(existsSync(join(dir, 'system/components/Button.tess'))).toBe(false)
+    expect(existsSync(join(dir, 'system/components/Card.tess'))).toBe(false)
+    expect(read(dir, 'system/components/_example.tess.txt')).toContain('<contract>')
+    expect(existsSync(join(dir, 'system/components/_example.tess'))).toBe(false)
+  })
+
+  it('with --tokens none a starter that needs components becomes the blank page, and the project checks clean', async () => {
+    const dir = scratch()
+    const made = await run(dir, 'init', '--tokens', 'none', '--starter', 'todo')
+    expect(made.code).toBe(0)
+    expect(made.out).toContain('using the blank page')
+    expect(existsSync(join(dir, 'app/state/todos.ts'))).toBe(false)
+    expect((await run(dir, 'check')).code).toBe(0)
+  })
+
+  it('takes the tokens a person imports into the blank slate under their own names', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--tokens', 'none')
+    writeFileSync(
+      join(dir, 'my.tokens.json'),
+      JSON.stringify({ brand: { '600': { $type: 'color', $value: '#1d4ed8' } } }),
+    )
+    const imported = await run(dir, 'tokens', 'import', 'my.tokens.json')
+    expect(imported.code).toBe(0)
+    expect(read(dir, 'system/design/tokens/my.tokens.json')).toContain('"brand"')
+    expect((await run(dir, 'check')).code).toBe(0)
   })
 
   it('does not ask what the flags answer, and uses the page starter and tailwind with no terminal and no flag, saying so', async () => {
@@ -286,7 +327,7 @@ describe('tessera init: where and how it runs', () => {
     const { code, err } = await run(scratch(), 'init', '--preset', 'bootstrap')
     expect(code).toBe(1)
     expect(err).toContain('There is no preset "bootstrap".')
-    expect(err).toContain('Presets: tailwind, unstyled.')
+    expect(err).toContain('Presets: tailwind, unstyled, none.')
   })
 
   it('rejects a starter or tokens that do not exist, and says which there are', async () => {

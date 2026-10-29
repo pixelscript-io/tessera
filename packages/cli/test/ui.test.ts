@@ -292,7 +292,7 @@ describe('other commands in a terminal', () => {
     const { out } = await runPretty(dir, pretty, 'init', 'my-app', '--preset', 'unstyled')
     const text = stripAnsi(out)
     expect(text).toContain(`Tessera ${VERSION}`)
-    expect(text).toContain('✓ Started a Tessera project in my-app (page starter, none tokens)')
+    expect(text).toContain('✓ Started a Tessera project in my-app (page starter, unstyled tokens)')
     expect(text).toMatch(/app\/ +\d+ files/)
     expect(text).toContain('1  cd my-app')
     expect(text).toContain('2  npm install')

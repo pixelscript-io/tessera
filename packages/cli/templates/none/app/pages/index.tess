@@ -1,0 +1,21 @@
+<page>
+{ "title": "My Tessera app" }
+</page>
+
+<template>
+  <main class="root">
+    <h1>Hello</h1>
+    <p>
+      Import your design tokens, then build with them: npx @pixelscriptio/tessera tokens import
+      &lt;file, folder, URL or Figma link&gt;.
+    </p>
+  </main>
+</template>
+
+<style>
+.root {
+  max-width: 40rem;
+  margin: 0 auto;
+  font-family: system-ui, sans-serif;
+}
+</style>

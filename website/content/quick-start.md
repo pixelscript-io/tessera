@@ -59,7 +59,7 @@ If you would rather not install first, `npm create @pixelscriptio/tessera@latest
 | Tokens     | What you get                                                                                                                           |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `tailwind` | Tokens built from Tailwind's default theme (every color, the spacing scale, radii, type, shadows and more) with light and dark themes. |
-| `none`     | The same token names with plain values: black on white, square corners, no shadows. For making the design yourself.                    |
+| `none`     | A blank slate: no tokens and no components, one empty page. Import your own tokens with `tessera tokens import`.                       |
 
 Every project also gets a Button and a Card in `system/components`.
 
@@ -119,7 +119,7 @@ This writes `app/components/Note.tess` with a valid contract. Use `<Note>` in an
 
 ## Change a token
 
-With the `tailwind` preset, open `system/tailwind/tokens/semantic.tokens.json` and change `color.action.primary.bg` to another color, say `{color.emerald.600}`. (With `unstyled`, set it in `system/unstyled/tokens/colors.tokens.json`.) The buttons change everywhere, and `npx tessera check` still passes unless the new color has too little contrast with white text, in which case it says which pair fails.
+With the `tailwind` preset, open `system/tailwind/tokens/semantic.tokens.json` and change `color.action.primary.bg` to another color, say `{color.emerald.600}`. The buttons change everywhere, and `npx tessera check` still passes unless the new color has too little contrast with white text, in which case it says which pair fails.
 
 Then try the opposite on purpose: in a component's `<style>`, write `padding: 13px`.
 
@@ -134,7 +134,7 @@ ERROR  T2102  app/components/Note.tess:14:12
 
 ## Add Tessera to an existing codebase
 
-Run `npx tessera init --preset unstyled` in a folder that already has a `package.json`. It adds the scripts and the dependency, writes the files that are missing, and never overwrites one. Then record today's violations as a baseline, so enforcement fails only on new ones:
+Run `npx tessera init --tokens none` in a folder that already has a `package.json`. It adds the scripts and the dependency, writes the files that are missing, and never overwrites one. Then record today's violations as a baseline, so enforcement fails only on new ones:
 
 ```bash
 npx tessera baseline
