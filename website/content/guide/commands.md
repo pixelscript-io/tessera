@@ -33,7 +33,6 @@ Every command:
 | [`tessera tokens build`](#tessera-tokens-build)   | Resolve the tokens and write CSS, types and a manifest.                        |
 | [`tessera tokens import`](#tessera-tokens-import) | Bring in tokens from DTCG, Tokens Studio or Penpot.                            |
 | [`tessera tokens export`](#tessera-tokens-export) | Write the tokens as strict DTCG or as Tokens Studio sets.                      |
-| [`tessera figma import`](#tessera-figma-import)   | Turn a Figma component set into a component, and test it against the design.   |
 | [`tessera docs`](#tessera-docs)                   | Documentation for your design system, generated from its contracts and tokens. |
 | [`tessera elements`](#tessera-elements)           | Build the design system as custom elements, with React wrappers.               |
 | [`tessera diff`](#tessera-diff)                   | What changed in the design system since a git ref, and what breaks.            |
@@ -190,14 +189,6 @@ Writes the project's tokens for other tools. `dtcg`, the default, writes strict 
 
 ```bash
 npx tessera tokens export --format tokens-studio --out exports
-```
-
-### `tessera figma import`
-
-Turns one component set of a Figma file into a component, the tokens it needs, and a test that compares it with the design. It needs nothing but the link: the map that says which Figma properties are props, which one is the state, which layer is which part and what each icon switch controls is worked out from the design and written next to the component (`--map` gives your own; a property or layer a given map does not mention is an error, never a guess). The data is read with a personal access token in `FIGMA_TOKEN` (never written or printed), or from a saved response with `--from-json`. The styles are worked out from what the variants share and every variant is checked against them before anything is written. It never overwrites a file without `--replace`. A button, or a label in a row with something optionally before and after it (a badge, a tag, a chip), can be imported so far; anything with more layers than that is refused, with the layers named, instead of coming out half made. See [Importing a component from Figma](/guide/figma).
-
-```bash
-npx tessera figma import --url "https://www.figma.com/design/KEY/Name?node-id=1-1183"
 ```
 
 ### `tessera docs`

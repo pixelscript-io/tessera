@@ -26,4 +26,3 @@ packages/cli/templates/*/system/*/tokens
 registry-dist
 packages/ui/.site
 packages/ui/.site-test
-packages/cli/test/fixtures

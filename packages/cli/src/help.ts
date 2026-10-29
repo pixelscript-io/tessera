@@ -15,7 +15,6 @@ const GROUPS: Array<{ title: string; commands: string[] }> = [
       'tokens build',
       'tokens import',
       'tokens export',
-      'figma import',
       'new component',
       'new page',
       'format',
