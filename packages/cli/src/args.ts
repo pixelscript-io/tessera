@@ -25,6 +25,10 @@ const WITH_VALUE = new Set([
   'to',
   'version',
   'stdin-filepath',
+  'url',
+  'file',
+  'node',
+  'from-json',
 ])
 
 /** `tessera check --fix --root app` becomes positional `[]` and flags `fix`, `root=app`. */

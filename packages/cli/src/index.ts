@@ -10,6 +10,7 @@ import { docs } from './commands/docs'
 import { elements } from './commands/elements'
 import { format } from './commands/format'
 import { explain } from './commands/explain'
+import { figma } from './commands/figma'
 import { init } from './commands/init'
 import { lint } from './commands/lint'
 import { newCommand } from './commands/new'
@@ -36,6 +37,7 @@ const COMMANDS: Record<string, Command> = {
   baseline,
   report,
   tokens,
+  figma,
   api,
   new: newCommand,
   explain,

@@ -16,6 +16,7 @@ const guide = [
   { text: 'The command line', link: '/guide/cli' },
   { text: 'Every command', link: '/guide/commands' },
   { text: 'Importing and exporting tokens', link: '/guide/interchange' },
+  { text: 'Importing a component from Figma', link: '/guide/figma' },
   { text: 'The design system docs', link: '/guide/docs-app' },
   { text: 'Custom elements and React', link: '/guide/elements' },
   { text: 'Linting any project', link: '/guide/lint' },

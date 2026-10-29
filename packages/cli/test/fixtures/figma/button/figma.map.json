@@ -1,0 +1,75 @@
+{
+  "component": "Buttons/Button",
+  "name": "Button",
+  "kind": "button",
+  "role": "button",
+  "description": "Triggers an action. Press it with a mouse, a finger, Enter or Space.",
+  "behavior": "press",
+  "props": {
+    "Size": {
+      "prop": "size",
+      "default": "md"
+    },
+    "Hierarchy": {
+      "prop": "hierarchy",
+      "default": "Primary"
+    },
+    "Icon": {
+      "prop": "icon",
+      "default": "Default"
+    },
+    "State": {
+      "states": {
+        "Default": null,
+        "Hover": "hover",
+        "Focused": "focus-visible",
+        "Disabled": "disabled"
+      }
+    }
+  },
+  "ignore": {
+    "⬅️ Icon leading#3287:1577": "an icon is a slot: it shows when the slot has something in it",
+    "➡️ Icon trailing#3287:2338": "an icon is a slot: it shows when the slot has something in it",
+    "🔀 Icon leading swap#3466:91": "the icon is what the slot holds",
+    "🔀 Icon trailing swap#3466:852": "the icon is what the slot holds"
+  },
+  "parts": {
+    "root": "$",
+    "icon": [
+      {
+        "layer": "placeholder",
+        "index": 0
+      },
+      {
+        "layer": "_Dot"
+      }
+    ],
+    "label": [
+      {
+        "layer": "Text padding",
+        "text": "Text"
+      },
+      {
+        "layer": "Text",
+        "text": "Text"
+      }
+    ],
+    "icon-end": {
+      "layer": "placeholder",
+      "index": 1
+    }
+  },
+  "slots": {
+    "icon": "optional icon before the label",
+    "icon-end": "optional icon after the label"
+  },
+  "sample": "Button CTA",
+  "fidelity": {
+    "threshold": 0.01,
+    "ignore": [
+      "icon",
+      "icon-end",
+      "label"
+    ]
+  }
+}
