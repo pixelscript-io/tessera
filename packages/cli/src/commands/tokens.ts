@@ -17,7 +17,14 @@ import { flag, has } from '../args'
 import type { Io } from '../io'
 import { CliError } from '../io'
 import { figmaTokenFromEnv, isFigmaLink, tokensFromFigma } from '../figma-styles'
-import { addTokenGroups, classifyTokens, tokenGroupsSource } from '../classify'
+import {
+  addSetting,
+  addTokenGroups,
+  classifyTokens,
+  isOneTier,
+  ONE_TIER,
+  tokenGroupsSource,
+} from '../classify'
 import { openProject } from '../project'
 
 const FORMATS = ['dtcg', 'tokens-studio']
@@ -235,20 +242,49 @@ function describeTokens(io: Io, root: string, dir: string): void {
       `  Not placed: ${lines(u.count, `${u.type} token`)} in "${u.group}", for example "${u.example}": no spacing, radius or font size name. Name the group (space, radius, font.size) or set tokenGroups in tessera.config.ts.`,
     )
   }
-  if (!Object.keys(result.tokenGroups).length) return
-  const snippet = tokenGroupsSource(result.tokenGroups)
   const configPath = join(root, 'tessera.config.ts')
+  const settings: Array<{
+    snippet: string
+    done: string
+    apply(text: string): ReturnType<typeof addSetting>
+  }> = []
+  if (Object.keys(result.tokenGroups).length) {
+    const snippet = tokenGroupsSource(result.tokenGroups)
+    settings.push({
+      snippet,
+      done: `Set ${snippet} in tessera.config.ts, so styles may use these groups.`,
+      apply: (text) => addTokenGroups(text, result.tokenGroups),
+    })
+  }
+  // Plain values only: there is no semantic tier to prefer, so the warning for using a primitive would fire on every use.
+  if (isOneTier(built.manifest.tokens)) {
+    settings.push({
+      snippet: ONE_TIER.source,
+      done: `Your ${lines(built.manifest.tokens.length, 'token')} are all plain values (none is an alias of another), so styles may use them directly: set ${ONE_TIER.source} in tessera.config.ts. Use 'warn' once you add aliases and want styles to use those.`,
+      apply: (text) => addSetting(text, 'primitives', ONE_TIER.source, ONE_TIER.comment),
+    })
+  }
+  if (!settings.length) return
   if (!existsSync(configPath)) {
-    io.out(`Add this to tessera.config.ts so styles may use them: ${snippet}`)
+    for (const s of settings) io.out(`Add this to tessera.config.ts: ${s.snippet}`)
     return
   }
-  const edited = addTokenGroups(readFileSync(configPath, 'utf8'), result.tokenGroups)
-  if ('reason' in edited) {
-    io.out(`Not changing tessera.config.ts (${edited.reason}). Set this there: ${snippet}`)
-    return
+  let text = readFileSync(configPath, 'utf8')
+  let changed = false
+  for (const s of settings) {
+    const edited = s.apply(text)
+    if ('reason' in edited) {
+      // A setting the person already made is theirs; say nothing about it.
+      if (!edited.reason.includes('already sets primitives')) {
+        io.out(`Not changing tessera.config.ts (${edited.reason}). Set this there: ${s.snippet}`)
+      }
+      continue
+    }
+    text = edited.text
+    changed = true
+    io.out(s.done)
   }
-  writeFileSync(configPath, edited.text)
-  io.out(`Set ${snippet} in tessera.config.ts, so styles may use these groups.`)
+  if (changed) writeFileSync(configPath, text)
 }
 
 async function exportCommand(args: Args, io: Io): Promise<number> {

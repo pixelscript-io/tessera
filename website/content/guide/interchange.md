@@ -102,6 +102,8 @@ Set tokenGroups: { space: ['layout.gap', 'spacing'], radius: ['rounded'], fontSi
 
 A dimension or number token in no recognizable group (`sizes.px`, `z.modal`) is counted in a "Not placed" line, not guessed: name its group `space`, `radius` or `font.size`, or set `tokenGroups` for it.
 
+**One tier of tokens.** Tessera asks styles to use *semantic* tokens (an alias of a plain value, such as `action.bg` pointing at `brand.600`) over primitives, and warns ([T2105](/reference/errors/T2105)) when a style uses a plain value directly. A team that imports only plain values has nothing to prefer, so the warning would fire on every use. When no imported token is an alias, the import sets `primitives: 'off'` in `tessera.config.ts` and says so. Add aliases later and set it to `'warn'` to ask for them. A setting already in the file is left alone.
+
 ## From Figma styles
 
 A link to a page or a frame of a Figma file is a source like any file. `tessera tokens import` reads the styles used under it through Figma's REST API and makes one token file of them:

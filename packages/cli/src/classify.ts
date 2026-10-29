@@ -204,24 +204,47 @@ export function tokenGroupsSource(tokenGroups: Classification['tokenGroups']): s
 }
 
 /**
- * Puts `tokenGroups` into the object a config file exports, or says why it did not. A config that already has
- * `tokenGroups` is left to the person; one whose shape this does not know is too.
+ * Puts a setting into the object a config file exports, or says why it did not. A config that already sets `key` is
+ * left to the person; one whose shape this does not know is too.
  */
-export function addTokenGroups(
+export function addSetting(
   config: string,
-  tokenGroups: Classification['tokenGroups'],
+  key: string,
+  source: string,
+  comment: string,
 ): { text: string } | { reason: string } {
-  if (/\btokenGroups\s*:/.test(config))
-    return { reason: 'tessera.config.ts already sets tokenGroups' }
+  if (new RegExp(`\\b${key}\\s*:`).test(config)) {
+    return { reason: `tessera.config.ts already sets ${key}` }
+  }
   const open = /export\s+default\s+(?:defineConfig\(\s*)?\{[^\S\r\n]*(\r?\n)?/.exec(config)
   if (!open) return { reason: 'tessera.config.ts does not start with "export default {"' }
   const eol = config.includes('\r\n') ? '\r\n' : '\n'
-  const insert = [
-    '  // Written by `tessera tokens import`: the groups of your tokens that hold each kind of value. Edit freely.',
-    `  ${tokenGroupsSource(tokenGroups)},`,
-    '',
-  ].join(eol)
+  const insert = [`  // ${comment}`, `  ${source},`, ''].join(eol)
   const at = open.index + open[0].length
   const lead = open[1] ? '' : eol
   return { text: config.slice(0, at) + lead + insert + config.slice(at) }
 }
+
+/** `tokenGroups`: which groups of the person's tokens hold each kind of value. */
+export function addTokenGroups(
+  config: string,
+  tokenGroups: Classification['tokenGroups'],
+): { text: string } | { reason: string } {
+  return addSetting(
+    config,
+    'tokenGroups',
+    tokenGroupsSource(tokenGroups),
+    'Written by `tessera tokens import`: the groups of your tokens that hold each kind of value. Edit freely.',
+  )
+}
+
+/** Tokens that are all plain values have no tier to prefer, so asking for a "semantic" one only warns every time. */
+export const ONE_TIER = {
+  source: "primitives: 'off'",
+  comment:
+    'Written by `tessera tokens import`: your tokens are all plain values, so none is more "primitive" than another. Use \'warn\' once you add aliases (semantic tokens) and want styles to use those.',
+}
+
+/** True when there are tokens and none is an alias to another: a single tier. */
+export const isOneTier = (tokens: Array<{ tier: string }>): boolean =>
+  tokens.length > 0 && tokens.every((t) => t.tier === 'primitive')

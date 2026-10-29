@@ -189,3 +189,48 @@ describe('tessera init --tokens none: the first import', () => {
     expect(made.out).toContain('No design tokens yet. Bring in yours')
   })
 })
+
+describe('tessera tokens import: one tier of tokens', () => {
+  const PAGE =
+    '<template><p class="p">Hi</p></template>\n<style>\n.p { background: $brand.600; }\n</style>\n'
+
+  it('turns the primitive warning off when every token is a plain value, so using one does not warn', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--tokens', 'none')
+    writeFileSync(join(dir, 'app/pages/index.tess'), PAGE)
+    writeFileSync(join(dir, 'a.css'), ':root { --brand-600: #1d4ed8; --brand-700: #1e40af }')
+    const imported = await run(dir, 'tokens', 'import', 'a.css')
+    expect(imported.out).toContain('all plain values')
+    expect(read(dir, 'tessera.config.ts')).toContain("primitives: 'off'")
+    const checked = await run(dir, 'check')
+    expect(checked.code).toBe(0)
+    expect(checked.out + checked.err).not.toContain('T2105')
+  })
+
+  it('keeps the warning when there are aliases, because there is a second tier to prefer', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--tokens', 'none')
+    writeFileSync(
+      join(dir, 'a.css'),
+      ':root { --brand-600: #1d4ed8; --action-bg: var(--brand-600) }',
+    )
+    const imported = await run(dir, 'tokens', 'import', 'a.css')
+    expect(imported.out).not.toContain('all plain values')
+    expect(read(dir, 'tessera.config.ts')).not.toContain('primitives')
+  })
+
+  it('leaves a primitives setting the person already made, and says nothing about it', async () => {
+    const dir = scratch()
+    await run(dir, 'init', '--tokens', 'none')
+    const config = read(dir, 'tessera.config.ts').replace(
+      'export default {',
+      "export default {\n  primitives: 'error',",
+    )
+    writeFileSync(join(dir, 'tessera.config.ts'), config)
+    writeFileSync(join(dir, 'a.css'), ':root { --brand-600: #1d4ed8 }')
+    const imported = await run(dir, 'tokens', 'import', 'a.css')
+    expect(imported.out).not.toContain('primitives')
+    expect(read(dir, 'tessera.config.ts')).toContain("primitives: 'error'")
+    expect(read(dir, 'tessera.config.ts')).not.toContain("primitives: 'off'")
+  })
+})
